@@ -1,0 +1,17 @@
+--- a/include/quiche.h
++++ b/include/quiche.h
+@@ -34,12 +34,11 @@
+ #include <stdint.h>
+ #include <stdbool.h>
+ #include <stddef.h>
+-#ifdef __unix__
+-#include <sys/types.h>
+-#endif
+ #ifdef _MSC_VER
+ #include <BaseTsd.h>
+ #define ssize_t SSIZE_T
++#else
++#include <sys/types.h>
+ #endif
+
+ // QUIC transport API.
