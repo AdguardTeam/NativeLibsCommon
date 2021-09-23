@@ -6,7 +6,7 @@ import os
 # https://github.com/protocolbuffers/protobuf/issues/6503
 class ProtobufConan(ConanFile):
     name = "protobuf"
-    version = "3.18.0" % version
+    version = "3.18.0"
     source_subfolder = "protobuf-%s/src" % version
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
