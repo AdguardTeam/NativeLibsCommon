@@ -9,7 +9,7 @@ class CurlConan(ConanFile):
     default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
     generators = "cmake"
     requires = "openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon", \
-               "nghttp2/1.44.0-2021-09-14@AdguardTeam/NativeLibsCommon"
+               "nghttp2/1.44.0@AdguardTeam/NativeLibsCommon"
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def config_options(self):
