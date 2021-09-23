@@ -24,7 +24,7 @@ class ProtobufConan(ConanFile):
               % (self.version, self.version)
         # downloading here manually (not via git) is a workaround for strange "No such file" errors
         # on Windows
-        tools.download(url, zip_name)
+        tools.download(url, zip_name, sha256="627e80a0c8ee6733a218813b75babd5414af5a46cb08d0421cd346fd6c45b76d")
         tools.unzip(zip_name)
         os.unlink(zip_name)
 
