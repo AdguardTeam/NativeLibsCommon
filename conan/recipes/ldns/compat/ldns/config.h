@@ -558,7 +558,8 @@
 /* #undef ss_family */
 
 #ifdef _WIN32
-typedef intptr_t ssize_t;
+#include <basetsd.h>
+typedef SSIZE_T ssize_t;
 #endif
 
 /* Define to `unsigned short' if <sys/types.h> does not define. */
