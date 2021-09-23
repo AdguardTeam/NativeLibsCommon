@@ -8,7 +8,7 @@ class LdnsConan(ConanFile):
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
     generators = "cmake"
-    requires = ["libevent/2.1.11", "spdlog/1.8.5"]
+    requires = ["libevent/2.1.11"]
     exports_sources = ["compat/*", "windows/*", "*.patch", "CMakeLists.txt"]
 
     def config_options(self):
