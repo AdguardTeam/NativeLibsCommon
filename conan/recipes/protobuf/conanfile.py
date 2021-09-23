@@ -5,11 +5,9 @@ import os
 # Needed because `protobuf` from the center cannot be built on Windows with clang-cl
 # https://github.com/protocolbuffers/protobuf/issues/6503
 class ProtobufConan(ConanFile):
-    lib_version = "3.18.0"
-    source_subfolder = "protobuf-%s/src" % lib_version
-
     name = "protobuf"
-    version = "%s-2021-09-17" % lib_version
+    version = "3.18.0" % version
+    source_subfolder = "protobuf-%s/src" % version
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
@@ -23,7 +21,7 @@ class ProtobufConan(ConanFile):
     def source(self):
         zip_name = "protobuf.zip"
         url = "https://github.com/protocolbuffers/protobuf/releases/download/v%s/protobuf-cpp-%s.zip" \
-              % (self.lib_version, self.lib_version)
+              % (self.version, self.version)
         # downloading here manually (not via git) is a workaround for strange "No such file" errors
         # on Windows
         tools.download(url, zip_name)

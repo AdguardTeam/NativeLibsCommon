@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class LdnsConan(ConanFile):
     name = "ldns"
-    version = "2021-09-23"
+    version = "2021-03-29"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}

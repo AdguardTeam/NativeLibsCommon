@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class LibeventConan(ConanFile):
     name = "libevent"
-    version = "2.1.11-2021-09-22"
+    version = "2.1.11"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
