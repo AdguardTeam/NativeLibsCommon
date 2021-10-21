@@ -1,6 +1,8 @@
+diff --git a/include/quiche.h b/include/quiche.h
+index 54726ad..0d3ae3a 100644
 --- a/include/quiche.h
 +++ b/include/quiche.h
-@@ -34,12 +34,11 @@
+@@ -34,12 +34,11 @@ extern "C" {
  #include <stdint.h>
  #include <stdbool.h>
  #include <stddef.h>
@@ -13,5 +15,5 @@
 +#else
 +#include <sys/types.h>
  #endif
-
+ 
  // QUIC transport API.

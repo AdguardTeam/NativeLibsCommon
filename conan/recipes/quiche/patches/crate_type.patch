@@ -1,28 +1,30 @@
 diff --git a/Cargo.toml b/Cargo.toml
-index 12bddf8..8db296f 100644
+index 470dbce..ccc5253 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -75,4 +75,5 @@ debug = true
+@@ -72,4 +72,5 @@ debug = true
  debug = true
-
+ 
  [lib]
 -crate-type = ["lib", "staticlib", "cdylib"]
 +#crate-type = ["lib", "staticlib", "cdylib"]
 +crate-type = ["staticlib"]
 diff --git a/src/build.rs b/src/build.rs
-index 875f556..9a036f1 100644
+index 70697c9..8092204 100644
 --- a/src/build.rs
 +++ b/src/build.rs
-@@ -255,9 +255,9 @@ fn main() {
+@@ -228,10 +228,10 @@ fn main() {
+         println!("cargo:rustc-link-lib=static=ssl");
      }
-
-     // MacOS: Allow cdylib to link with undefined symbols
+ 
+-    // MacOS: Allow cdylib to link with undefined symbols
 -    if cfg!(target_os = "macos") {
 -        println!("cargo:rustc-cdylib-link-arg=-Wl,-undefined,dynamic_lookup");
 -    }
++    // // MacOS: Allow cdylib to link with undefined symbols
 +    // if cfg!(target_os = "macos") {
 +    //     println!("cargo:rustc-cdylib-link-arg=-Wl,-undefined,dynamic_lookup");
 +    // }
-
+ 
      if cfg!(feature = "pkg-config-meta") {
          write_pkg_config();

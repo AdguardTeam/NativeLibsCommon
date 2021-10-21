@@ -4,7 +4,7 @@ from os import environ
 
 class QuicheConan(ConanFile):
     name = "quiche"
-    version = "0.9.0"
+    version = "0.10.0"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
@@ -16,10 +16,9 @@ class QuicheConan(ConanFile):
 
     def source(self):
         self.run("git clone https://github.com/cloudflare/quiche.git source_subfolder")
-        self.run("cd source_subfolder && git checkout 0.9.0")
+        self.run("cd source_subfolder && git checkout 0.10.0")
         tools.patch(base_path="source_subfolder", patch_file="patches/crate_type.patch")
         tools.patch(base_path="source_subfolder", patch_file="patches/ssize_t.patch")
-        tools.patch(base_path="source_subfolder", patch_file="patches/idle_timeout.patch")
 
     def build(self):
         environ["RUSTFLAGS"] = "%s -C relocation-model=pic" \
