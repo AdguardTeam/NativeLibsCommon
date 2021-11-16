@@ -23,6 +23,7 @@ class LibeventConan(ConanFile):
         tools.patch(base_path="source_subfolder", patch_file="patches/bufferevent-socket-connect-error.patch")
         tools.patch(base_path="source_subfolder", patch_file="patches/evutil_socket_error_to_string_lang.patch")
         tools.patch(base_path="source_subfolder", patch_file="patches/reinit_notifyfds.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/win32-disable-evsig.patch")
 
     def build(self):
         cmake = CMake(self)
