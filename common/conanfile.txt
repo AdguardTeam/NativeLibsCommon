@@ -4,6 +4,7 @@ gtest/1.11.0
 [requires]
 fmt/8.0.1
 libevent/2.1.11@AdguardTeam/NativeLibsCommon
+pcre2/10.37@AdguardTeam/NativeLibsCommon
 
 [generators]
 cmake

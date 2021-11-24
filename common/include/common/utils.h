@@ -21,7 +21,7 @@
 #include <cctype>
 
 /**
- * Macros to create constexpr value and type to check expression
+ * Macros to create constexpr m_value and type to check expression
  * @example AG_UTILS_DECLARE_CHECK_EXPRESSION(has_f, std::declval<T>().f)
  *          // Generates template<typename T> inline constexpr bool has_f;
  *          ...
@@ -50,7 +50,7 @@ template<typename T> \
 inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T>::value;
 
 /**
- * Macros to create constexpr value and type to check expression depended from number of parameters
+ * Macros to create constexpr m_value and type to check expression depended from number of parameters
  * @example AG_UTILS_DECLARE_CHECK_EXPRESSION(can_init, T((Is, ConvertibleToAny{})...))
  *          // Generates template<typename T, size_t N> inline constexpr bool can_init;
  *          ...
@@ -292,7 +292,7 @@ static inline constexpr auto make_string_view_impl(const T& value) {
 /**
  * Create string view from container or C array
  * @param value Value
- * @return String view pointed to value's data and size
+ * @return String view pointed to m_value's data and size
  */
 template<typename T>
 static inline constexpr auto make_string_view(const T& value) {
@@ -303,7 +303,7 @@ static inline constexpr auto make_string_view(const T& value) {
  * Create string view from initializer list
  * @tparam T Value type (can be deduced)
  * @param value Value
- * @return String view pointed to value's data and size
+ * @return String view pointed to m_value's data and size
  */
 template<typename T>
 static inline constexpr auto make_string_view(std::initializer_list<T> value) {
@@ -313,7 +313,7 @@ static inline constexpr auto make_string_view(std::initializer_list<T> value) {
 /**
  * Create std::array from C array with known size S
  * @param value Value
- * @return Array with copy of value and size S
+ * @return Array with copy of m_value and size S
  */
 template<typename T, size_t S>
 static inline auto to_array(const T (&value)[S]) {
@@ -326,7 +326,7 @@ static inline auto to_array(const T (&value)[S]) {
 /**
  * Create std::array from array with size S and type T
  * @param value Value
- * @return Array with copy of value and size S
+ * @return Array with copy of m_value and size S
  */
 template<size_t S, typename T>
 static inline auto to_array(const T *value) {
@@ -339,7 +339,7 @@ static inline auto to_array(const T *value) {
  * Conditionally returns optional or nullopt
  * @param condition Condition
  * @param value Value
- * @return Optional with value if condition true, nullopt otherwise
+ * @return Optional with m_value if condition true, nullopt otherwise
  */
 template<typename T>
 static inline constexpr auto make_optional_if(bool condition, T&& value) {
@@ -361,9 +361,9 @@ static inline AllocatedPtr<T> make_allocated_unique(T *ptr) noexcept {
 class Timer {
 public:
     /**
-     * Returns elapsed time duration since creating object
+     * Returns elapsed time m_duration since creating object
      * @tparam T Duration type
-     * @return Elapsed time duration since creating object
+     * @return Elapsed time m_duration since creating object
      */
     template<typename T>
     T elapsed() const {
@@ -414,7 +414,7 @@ struct ConvertibleToAny {
 } // namespace detail
 
 /**
- * Defines value list_initializable_with_n_params<T, N> to checks is possible to list init T{...with N params...}
+ * Defines m_value list_initializable_with_n_params<T, N> to checks is possible to list init T{...with N params...}
  */
 AG_UTILS_DECLARE_CHECK_EXPRESSION_WITH_N(list_initializable_with_n_params, T{(Is, ConvertibleToAny{})...})
 
@@ -453,9 +453,9 @@ inline constexpr ssize_t list_init_params_count = detail::list_init_params_count
  *              void error() {}
  *          };
  *          ...
- *          static_assert(has_error<result>, "result has `error` member value");
- *          static_assert(has_error<other_result> == false, "other_result has no `error` member value");
- *          static_assert(has_error<another_result> == false, "another_result has no `error` member value");
+ *          static_assert(has_error<result>, "result has `error` member m_value");
+ *          static_assert(has_error<other_result> == false, "other_result has no `error` member m_value");
+ *          static_assert(has_error<another_result> == false, "another_result has no `error` member m_value");
  */
 AG_UTILS_DECLARE_CHECK_EXPRESSION(has_error, std::declval<T>().error)
 
