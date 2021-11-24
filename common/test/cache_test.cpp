@@ -22,13 +22,13 @@ protected:
     }
 };
 
-TEST_F(LruCacheTest, clear) {
+TEST_F(LruCacheTest, Clear) {
     ASSERT_NE(m_cache.size(), 0u);
     m_cache.clear();
     ASSERT_EQ(m_cache.size(), 0u);
 }
 
-TEST_F(LruCacheTest, insert_and_get) {
+TEST_F(LruCacheTest, InsertAndGet) {
     // check that values were inserted
     for (size_t i = 0; i < CACHE_SIZE; ++i) {
         auto v = m_cache.get(i);
@@ -55,7 +55,7 @@ TEST_F(LruCacheTest, insert_and_get) {
     }
 }
 
-TEST_F(LruCacheTest, erase) {
+TEST_F(LruCacheTest, Erase) {
     // erase every second entry
     for (size_t i = 0; i < CACHE_SIZE; i += 2) {
         m_cache.erase(i);
@@ -74,7 +74,7 @@ TEST_F(LruCacheTest, erase) {
     }
 }
 
-TEST_F(LruCacheTest, make_lru) {
+TEST_F(LruCacheTest, MakeLru) {
     auto acc = m_cache.get(CACHE_SIZE - 1);
     ASSERT_TRUE(acc);
     m_cache.make_lru(acc);
@@ -86,7 +86,7 @@ TEST_F(LruCacheTest, make_lru) {
     ASSERT_EQ(CACHE_SIZE, m_cache.size());
 }
 
-TEST_F(LruCacheTest, displace_order) {
+TEST_F(LruCacheTest, DisplaceOrder) {
     // check that the least recent used values are being displaced first
     size_t j = 0;
     size_t i = CACHE_SIZE;
@@ -96,7 +96,7 @@ TEST_F(LruCacheTest, displace_order) {
     }
 }
 
-TEST_F(LruCacheTest, refresh_on_insert) {
+TEST_F(LruCacheTest, RefreshOnInsert) {
     // check that inserting existing key refreshes entry
     m_cache.insert(0, "42");
     m_cache.insert(CACHE_SIZE, std::to_string(CACHE_SIZE));
@@ -107,7 +107,7 @@ TEST_F(LruCacheTest, refresh_on_insert) {
     ASSERT_TRUE(m_cache.get(CACHE_SIZE));
 }
 
-TEST_F(LruCacheTest, refresh_on_get) {
+TEST_F(LruCacheTest, RefreshOnGet) {
     // check that getting key refreshes entry
     ASSERT_TRUE(m_cache.get(0));
     m_cache.insert(CACHE_SIZE, std::to_string(CACHE_SIZE));
@@ -117,7 +117,7 @@ TEST_F(LruCacheTest, refresh_on_get) {
     ASSERT_TRUE(m_cache.get(CACHE_SIZE));
 }
 
-TEST_F(LruCacheTest, update_capacity) {
+TEST_F(LruCacheTest, UpdateCapacity) {
     // check that changing capacity to lower m_value removes LRU entries
     m_cache.set_capacity(CACHE_SIZE / 2);
     ASSERT_EQ(m_cache.size(), CACHE_SIZE / 2);

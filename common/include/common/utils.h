@@ -207,7 +207,6 @@ inline constexpr bool is_string_or_string_view = std::disjunction_v<IsSameValueT
 /**
  * Join parts into a single std::string
  * @param parts Container or C array with std::string or std::string_view
- * @return std::string with copy of data from parts
  */
 template<typename T>
 static inline std::enable_if_t<detail::is_string_or_string_view<T>, std::string> join(const T &parts)
@@ -263,14 +262,12 @@ static inline uint32_t hash(Uint8View v) {
 /**
  * Convert UTF-8 string to wide char string
  * @param sv UTF-8 string
- * @return Wide char string
  */
 std::wstring to_wstring(std::string_view sv);
 
 /**
  * Convert wide char string to UTF-8 string
  * @param wsv Wide char string
- * @return UTF-8 string
  */
 std::string from_wstring(std::wstring_view wsv);
 
@@ -292,7 +289,6 @@ static inline constexpr auto make_string_view_impl(const T& value) {
 /**
  * Create string view from container or C array
  * @param value Value
- * @return String view pointed to value's data and size
  */
 template<typename T>
 static inline constexpr auto make_string_view(const T& value) {
@@ -303,7 +299,6 @@ static inline constexpr auto make_string_view(const T& value) {
  * Create string view from initializer list
  * @tparam T Value type (can be deduced)
  * @param value Value
- * @return String view pointed to value's data and size
  */
 template<typename T>
 static inline constexpr auto make_string_view(std::initializer_list<T> value) {
@@ -313,7 +308,6 @@ static inline constexpr auto make_string_view(std::initializer_list<T> value) {
 /**
  * Create std::array from C array with known size S
  * @param value Value
- * @return Array with copy of value and size S
  */
 template<typename T, size_t S>
 static inline auto to_array(const T (&value)[S]) {
@@ -326,7 +320,6 @@ static inline auto to_array(const T (&value)[S]) {
 /**
  * Create std::array from array with size S and type T
  * @param value Value
- * @return Array with copy of value and size S
  */
 template<size_t S, typename T>
 static inline auto to_array(const T *value) {
@@ -339,7 +332,6 @@ static inline auto to_array(const T *value) {
  * Conditionally returns optional or nullopt
  * @param condition Condition
  * @param value Value
- * @return Optional with value if condition true, nullopt otherwise
  */
 template<typename T>
 static inline constexpr auto make_optional_if(bool condition, T&& value) {
@@ -356,14 +348,13 @@ static inline AllocatedPtr<T> make_allocated_unique(T *ptr) noexcept {
 }
 
 /**
- * Timer measures time since creating object
+ * Timer measures time since create object
  */
 class Timer {
 public:
     /**
-     * Returns elapsed time m_duration since creating object
+     * Returns elapsed time duration since create object
      * @tparam T Duration type
-     * @return Elapsed time m_duration since creating object
      */
     template<typename T>
     T elapsed() const {

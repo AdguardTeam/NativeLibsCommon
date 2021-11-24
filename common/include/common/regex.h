@@ -36,12 +36,12 @@ public:
     }
 
     /**
-     * @brief      Check if Regex compiled successfully
+     * Check if Regex compiled successfully
      */
     bool is_valid() const { return this->m_re != nullptr; }
 
     /**
-     * @brief      Match string against Regex
+     * Match string against Regex
      * @param[in]  str   string to match
      * @return     True if matches, false otherwise
      */
@@ -61,7 +61,7 @@ public:
     }
 
     /**
-     * @brief      Replace string by Regex
+     * Replace string by Regex
      * @param[in]  subject      string to process
      * @param[in]  replacement  replacement string
      * @return     Apply result (empty in case of error)
