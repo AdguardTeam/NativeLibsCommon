@@ -638,7 +638,7 @@ function(conan_cmake_setup_conanfile)
     conan_parse_arguments(${ARGV})
     if(ARGUMENTS_CONANFILE)
         get_filename_component(_CONANFILE_NAME ${ARGUMENTS_CONANFILE} NAME)
-        # configure_file will make sure cmake m_re-runs when conanfile is updated
+        # configure_file will make sure cmake re-runs when conanfile is updated
         configure_file(${ARGUMENTS_CONANFILE} ${CMAKE_CURRENT_BINARY_DIR}/${_CONANFILE_NAME}.junk COPYONLY)
         file(REMOVE ${CMAKE_CURRENT_BINARY_DIR}/${_CONANFILE_NAME}.junk)
     else()
