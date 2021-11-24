@@ -13,7 +13,7 @@ public:
     {}
 
     ~Regex() {
-        pcre2_code_free(this->m_re);
+        pcre2_code_free(m_re);
     }
 
     Regex(const Regex &other) {
@@ -25,20 +25,19 @@ public:
     }
 
     Regex &operator=(const Regex &other) {
-        this->m_re = pcre2_code_copy(other.m_re);
+        m_re = pcre2_code_copy(other.m_re);
         return *this;
     }
 
     Regex &operator=(Regex &&other) {
-        this->m_re = other.m_re;
-        other.m_re = nullptr;
+        std::swap(m_re, other.m_re);
         return *this;
     }
 
     /**
      * Check if Regex compiled successfully
      */
-    bool is_valid() const { return this->m_re != nullptr; }
+    bool is_valid() const { return m_re != nullptr; }
 
     /**
      * Match string against Regex
@@ -50,8 +49,8 @@ public:
             return false;
         }
 
-        pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(this->m_re, nullptr);
-        int retval = pcre2_match(this->m_re, (PCRE2_SPTR8)str.data(), str.length(),
+        pcre2_match_data *match_data = pcre2_match_data_create_from_pattern(m_re, nullptr);
+        int retval = pcre2_match(m_re, (PCRE2_SPTR8)str.data(), str.length(),
                                  0, 0, match_data, nullptr);
         pcre2_match_data_free(match_data);
         if (retval < 0 && retval != PCRE2_ERROR_NOMATCH && retval != PCRE2_ERROR_PARTIAL) {
@@ -75,13 +74,13 @@ public:
         size_t result_length = subject.length() + 1;
         result.resize(result_length - 1);
 
-        int retval = pcre2_substitute(this->m_re,
+        int retval = pcre2_substitute(m_re,
             (PCRE2_SPTR8)subject.data(), subject.length(), 0, options, nullptr, nullptr,
             (PCRE2_SPTR8)replacement.data(), replacement.length(),
             (PCRE2_UCHAR8*)result.data(), &result_length);
         if (retval == PCRE2_ERROR_NOMEMORY) {
             result.resize(result_length - 1);
-            retval = pcre2_substitute(this->m_re,
+            retval = pcre2_substitute(m_re,
                 (PCRE2_SPTR8)subject.data(), subject.length(), 0, options, nullptr, nullptr,
                 (PCRE2_SPTR8)replacement.data(), replacement.length(),
                 (PCRE2_UCHAR8*)result.data(), &result_length);

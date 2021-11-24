@@ -72,27 +72,27 @@ public:
     ExpiringValue &operator=(ExpiringValue &&other) = default;
 
     ExpiringValue &operator=(T v) {
-        this->m_value = std::move(v);
-        this->m_expire_timestamp = SteadyClock::now() + this->m_duration;
+        m_value = std::move(v);
+        m_expire_timestamp = SteadyClock::now() + m_duration;
         return *this;
     }
 
     [[nodiscard]] bool is_timed_out() const {
-        return this->m_expire_timestamp.has_value()
-               && SteadyClock::now() > this->m_expire_timestamp.value();
+        return m_expire_timestamp.has_value()
+               && SteadyClock::now() > m_expire_timestamp.value();
     }
 
     const T &get() const {
-        if (this->is_timed_out()) {
-            this->m_value = defaultValue;
-            this->m_expire_timestamp.reset();
+        if (is_timed_out()) {
+            m_value = defaultValue;
+            m_expire_timestamp.reset();
         }
-        return this->m_value;
+        return m_value;
     }
 
     void reset() {
-        this->m_value = defaultValue;
-        this->m_expire_timestamp.reset();
+        m_value = defaultValue;
+        m_expire_timestamp.reset();
     }
 
 private:
