@@ -46,7 +46,7 @@ private:
     static duration m_time_shift;
 };
 
-template<class T, T defaultValue>
+template<class T, T DEFAULT_VALUE>
 class ExpiringValue {
 public:
     using Duration = std::chrono::nanoseconds;
