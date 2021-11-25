@@ -58,12 +58,12 @@ public:
     {}
 
     explicit ExpiringValue(Duration d)
-        : m_value(defaultValue)
+        : m_value(DEFAULT_VALUE)
         , m_duration(d)
     {}
 
     ExpiringValue()
-        : m_value(defaultValue)
+        : m_value(DEFAULT_VALUE)
     {}
 
     ExpiringValue(const ExpiringValue &other) = default;
@@ -84,14 +84,14 @@ public:
 
     const T &get() const {
         if (is_timed_out()) {
-            m_value = defaultValue;
+            m_value = DEFAULT_VALUE;
             m_expire_timestamp.reset();
         }
         return m_value;
     }
 
     void reset() {
-        m_value = defaultValue;
+        m_value = DEFAULT_VALUE;
         m_expire_timestamp.reset();
     }
 
