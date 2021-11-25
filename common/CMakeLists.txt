@@ -13,8 +13,10 @@ include(cmake/conan_bootstrap.cmake)
 conan_bootstrap(SRCROOT "${COMMON_DIR}" CONANFILE "${COMMON_DIR}/conanfile.txt" SCOPE_NAME commonlibs)
 
 set(SOURCE_FILES
-        ${COMMON_DIR}/utils.cpp
-        ${COMMON_DIR}/socket_address.cpp
+        utils.cpp
+        socket_address.cpp
+        logger.cpp
+        time_utils.cpp
         )
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SOURCE_FILES})
@@ -31,3 +33,5 @@ link_libraries(native_libs_common)
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 
 add_unit_test(utils_test ${TEST_DIR} "" TRUE TRUE)
+add_unit_test(logger_test ${TEST_DIR} "" TRUE TRUE)
+add_unit_test(time_utils_test ${TEST_DIR} "" TRUE TRUE)

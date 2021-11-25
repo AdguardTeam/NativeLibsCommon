@@ -52,6 +52,7 @@ class LibeventConan(ConanFile):
 
     def package_info(self):
         if self.settings.os == "Windows":
+            self.cpp_info.system_libs = ["ws2_32"]
             self.cpp_info.libs = ["event", "event_core", "event_extra", "event_openssl"]
         else:
             self.cpp_info.libs = ["event", "event_core", "event_extra", "event_pthreads", "event_openssl"]

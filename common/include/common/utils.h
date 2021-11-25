@@ -379,18 +379,6 @@ private:
 };
 
 /**
- * Create string using from time since epoch
- * @param timer Time since epoch
- * @param format Format string
- * @return String representation of Timer
- */
-static inline std::string time_to_str(time_t timer, std::string_view format = "%Y-%m-%d %H:%M:%S %z %Z") {
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&timer), format.data());
-    return ss.str();
-}
-
-/**
  * Like std::async(std::launch::async, f, vs...) but result future does not block on destructor
  * @param f Function to execute
  * @param vs Function parameters
