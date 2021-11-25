@@ -2,7 +2,7 @@
 #include "common/utils.h"
 #include "common/socket_address.h"
 
-TEST(utils, generally_work) {
+TEST(utils, GenerallyWork) {
     ASSERT_TRUE(ag::utils::is_valid_ip6("::"));
     ASSERT_TRUE(ag::utils::is_valid_ip6("::1"));
     ASSERT_TRUE(ag::utils::is_valid_ip4("0.0.0.0"));

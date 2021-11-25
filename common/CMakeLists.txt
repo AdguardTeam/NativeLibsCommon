@@ -17,15 +17,17 @@ set(SOURCE_FILES
         socket_address.cpp
         logger.cpp
         time_utils.cpp
+        clock.cpp
         )
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SOURCE_FILES})
 
-target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
-
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 
-target_link_libraries(${PROJECT_NAME} CONAN_PKG::fmt CONAN_PKG::libevent)
+target_compile_definitions(${PROJECT_NAME} PUBLIC PCRE2_STATIC=1 PCRE2_CODE_UNIT_WIDTH=8)
+target_link_libraries(${PROJECT_NAME} CONAN_PKG::fmt CONAN_PKG::libevent
+        CONAN_PKG::pcre2)
+target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
 
 enable_testing()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/add_unit_test.cmake)
@@ -35,3 +37,4 @@ set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 add_unit_test(utils_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(logger_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(time_utils_test ${TEST_DIR} "" TRUE TRUE)
+add_unit_test(cache_test ${TEST_DIR} "" TRUE TRUE)
