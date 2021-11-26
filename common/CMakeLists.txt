@@ -31,6 +31,7 @@ target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt
 if (NOT MSVC)
     target_compile_options(${PROJECT_NAME}  PRIVATE -fno-exceptions)
 endif()
+target_compile_definitions(${PROJECT_NAME}  PUBLIC FMT_EXCEPTIONS=0)
 
 enable_testing()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/add_unit_test.cmake)
