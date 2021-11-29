@@ -90,7 +90,8 @@ std::pair<size_t, tm> parse_time(const std::string &s, const char *format) {
         return std::make_pair(std::string::npos, (tm){});
     }
 #endif // _MSC_VER
-    size_t ret_pos = (input.tellg() == std::string::npos) ? s.size() : (size_t)input.tellg();
+    bool whole_string_parsed = (input.tellg() == -1);
+    size_t ret_pos = whole_string_parsed ? s.size() : (size_t)input.tellg();
     return std::make_pair(ret_pos, tm_info);
 }
 
