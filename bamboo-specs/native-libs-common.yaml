@@ -1,0 +1,200 @@
+---
+version: 2
+plan:
+  project-key: CL
+  key: NRT
+  name: NativeLibsCommon - Run tests
+stages:
+  - Builds:
+      manual: false
+      final: false
+      jobs:
+        - Win build
+        - Linux build
+        - Mac build
+Win build:
+  key: WB
+  tasks:
+    - checkout:
+        force-clean-build: 'true'
+        description: Checkout Default Repository
+    - script:
+        interpreter: BINSH_OR_CMDEXE
+        scripts:
+          - |-
+            call vcvars32
+
+            set CMAKE=cmake
+            set CTEST=ctest
+            set CMAKE_MAKE_PROGRAM=ninja
+            set CMAKE_MAKE_FLAGS=""
+            set CMAKE_GENERATOR="Ninja"
+            set CL_GIT_ROOT=%cd%
+            cd common
+            set CL_ROOT=%cd%
+
+            if exist build\ rmdir /s /q build || exit /b 1
+            mkdir build || exit /b 1
+            cd build || exit /b 1
+
+            %CMAKE% -DCMAKE_BUILD_TYPE=Debug ^
+                -DCMAKE_C_COMPILER="C:/Program Files (x86)/LLVM/bin/clang-cl.exe" ^
+                -DCMAKE_CXX_COMPILER="C:/Program Files (x86)/LLVM/bin/clang-cl.exe" ^
+                -DCMAKE_C_FLAGS="--target=i686-pc-windows-msvc /MT" ^
+                -DCMAKE_CXX_FLAGS="--target=i686-pc-windows-msvc /MT" ^
+                -DCMAKE_C_FLAGS_DEBUG="/MT" ^
+                -DCMAKE_CXX_FLAGS_DEBUG="/MT" ^
+                -DCMAKE_EXE_LINKER_FLAGS="/MT" ^
+                -DCMAKE_MAKE_PROGRAM=%CMAKE_MAKE_PROGRAM% ^
+                -G "%CMAKE_GENERATOR%" ^
+                ..
+
+            %CMAKE_MAKE_PROGRAM% tests || exit /b 1
+            %CTEST% -D ExperimentalTest --no-compress-output || exit /b 1
+        description: build 32
+  final-tasks:
+    - any-task:
+        plugin-key: fr.cstb.bamboo.plugins.ctest.bamboo-ctest-plugin:test
+        configuration:
+          testFilePathPattern: '**/Testing/*/*.xml'
+        description: Parse tests result
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            REM Upload built binaries
+            conan upload -r art --all -c "*" > upload.txt 2>&1
+            REM Clean up local cache
+            conan remove -f '*'
+            conan remove --locks
+  requirements:
+    - system.builder.msbuild.MSBuild v4.0 (32bit)
+  artifact-subscriptions: []
+Linux build:
+  key: LB
+  tasks:
+    - checkout:
+        force-clean-build: 'true'
+        description: Checkout Default Repository
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            # Clean up local cache
+            conan remove -f '*'
+
+            # Build tests
+            cd common
+            mkdir -p build
+            cd build
+            cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
+                -DCMAKE_C_COMPILER=clang \
+                -DCMAKE_CXX_COMPILER=clang++ \
+                -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+                ..
+
+            ninja tests
+
+            # Run tests
+            ctest -D ExperimentalTest --no-compress-output
+  final-tasks:
+    - any-task:
+        plugin-key: fr.cstb.bamboo.plugins.ctest.bamboo-ctest-plugin:test
+        configuration:
+          testFilePathPattern: '**/Testing/*/*.xml'
+        description: Parse tests result
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            # Upload built
+            conan upload -r art --all -c '*' > upload.txt 2>&1
+            # Clean up local cache
+            conan remove -f '*'
+            # Conan remove locks
+            conan remove --locks
+  requirements:
+    - android-sdk-linux
+  artifact-subscriptions: []
+Mac build:
+  key: JOB1
+  tasks:
+    - checkout:
+        force-clean-build: 'true'
+        description: Checkout Default Repository
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            # Clean up local cache
+            conan remove -f '*'
+
+            # Build tests
+            cd common
+            mkdir -p build
+            cd build
+            cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
+                -DTARGET_OS=macos \
+                -DCMAKE_C_COMPILER=clang \
+                -DCMAKE_CXX_COMPILER=clang++ \
+                -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+                ..
+
+            ninja tests
+
+            # Run tests
+            ctest -D ExperimentalTest --no-compress-output
+  final-tasks:
+    - any-task:
+        plugin-key: fr.cstb.bamboo.plugins.ctest.bamboo-ctest-plugin:test
+        configuration:
+          testFilePathPattern: '**/Testing/*/*.xml'
+        description: Parse tests result
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            # Upload built
+            conan upload -r art --all -c '*' > upload.txt 2>&1
+            # Clean up local cache
+            conan remove -f '*'
+            # Conan remove locks
+            conan remove --locks
+  requirements:
+    - system.builder.xcode.macOS 10.14
+  artifact-subscriptions: []
+repositories:
+  - core-libs/native-libs-common:
+      scope: global
+branches:
+  create: for-pull-request
+  delete: never
+  integration:
+    push-on-success: false
+    merge-from: NativeLibsCommon - Run tests
+  link-to-jira: true
+notifications: []
+labels: []
+other:
+  concurrent-build-plugin: system-default
+---
+version: 2
+plan:
+  key: CL-NRT
+plan-permissions:
+  - users:
+      - sfionov
+    permissions:
+      - view
+      - edit
+      - build
+      - clone
+      - admin
+  - groups:
+      - libs-developers
+    permissions:
+      - view
+      - edit
+      - build
+      - clone
+...
