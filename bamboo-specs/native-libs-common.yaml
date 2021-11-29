@@ -1,3 +1,4 @@
+---
 version: 2
 plan:
   project-key: CL
@@ -175,15 +176,3 @@ notifications: []
 labels: []
 other:
   concurrent-build-plugin: system-default
----
-version: 2
-plan:
-  key: CL-NRT
-plan-permissions:
-  - groups:
-      - libs-developers
-    permissions:
-      - view
-      - edit
-      - build
-      - clone
