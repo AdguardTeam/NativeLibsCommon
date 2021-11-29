@@ -1,4 +1,3 @@
----
 version: 2
 plan:
   project-key: CL
@@ -40,11 +39,10 @@ Win build:
             %CMAKE% -DCMAKE_BUILD_TYPE=Debug ^
                 -DCMAKE_C_COMPILER="C:/Program Files (x86)/LLVM/bin/clang-cl.exe" ^
                 -DCMAKE_CXX_COMPILER="C:/Program Files (x86)/LLVM/bin/clang-cl.exe" ^
-                -DCMAKE_C_FLAGS="--target=i686-pc-windows-msvc /MT" ^
-                -DCMAKE_CXX_FLAGS="--target=i686-pc-windows-msvc /MT" ^
+                -DCMAKE_C_FLAGS="--target=i686-pc-windows-msvc" ^
+                -DCMAKE_CXX_FLAGS="--target=i686-pc-windows-msvc" ^
                 -DCMAKE_C_FLAGS_DEBUG="/MT" ^
                 -DCMAKE_CXX_FLAGS_DEBUG="/MT" ^
-                -DCMAKE_EXE_LINKER_FLAGS="/MT" ^
                 -DCMAKE_MAKE_PROGRAM=%CMAKE_MAKE_PROGRAM% ^
                 -G "%CMAKE_GENERATOR%" ^
                 ..
@@ -182,14 +180,6 @@ version: 2
 plan:
   key: CL-NRT
 plan-permissions:
-  - users:
-      - sfionov
-    permissions:
-      - view
-      - edit
-      - build
-      - clone
-      - admin
   - groups:
       - libs-developers
     permissions:
@@ -197,4 +187,3 @@ plan-permissions:
       - edit
       - build
       - clone
-...
