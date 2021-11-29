@@ -22,7 +22,7 @@ TEST(TimeUtils, Test) {
 
     auto tp1 = timepoint_from_gmtime(tm1);
     auto tp2 = timepoint_from_gmtime(tm2);
-    ASSERT_EQ(to_secs((tp1 - tp2)).count(), timezone);
+    ASSERT_EQ(to_secs((tp1 - tp2)).count(), get_timezone());
 
     std::string time3 = "2009-02-13 23:31:30";
     constexpr auto fmt3 = "%Y-%m-%d %H:%M:%S";

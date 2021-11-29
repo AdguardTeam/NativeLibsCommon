@@ -216,4 +216,13 @@ timeval timeval_from_timepoint(SystemTime timepoint) {
              .tv_usec = decltype(timeval::tv_usec)(micros % 1000000) };
 }
 
+long get_timezone(){
+#if defined(_WIN32)
+    _tzset();
+    return _timezone;
+#else
+    tzset();
+    return timezone;
+#endif
+}
 } // namespace ag

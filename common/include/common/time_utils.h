@@ -97,4 +97,10 @@ std::string format_localtime(const tm &time, const char *format = DEFAULT_LOCALT
  */
 timeval timeval_from_timepoint(SystemTime timepoint);
 
+/**
+ *
+ * @return timezone platform dependent
+ */
+long get_timezone();
+
 } // namespace ag
