@@ -10,7 +10,7 @@ set(COMMON_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 message(${COMMON_DIR})
 
 include(cmake/conan_bootstrap.cmake)
-conan_bootstrap(SRCROOT "${COMMON_DIR}" CONANFILE "${COMMON_DIR}/conanfile.txt" SCOPE_NAME commonlibs)
+conan_bootstrap(SRCROOT "${COMMON_DIR}" CONANFILE "${COMMON_DIR}/conanfile.py" SCOPE_NAME commonlibs)
 
 set(SOURCE_FILES
         utils.cpp
