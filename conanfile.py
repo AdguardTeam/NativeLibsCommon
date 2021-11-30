@@ -2,7 +2,7 @@ from conans import ConanFile, CMake
 
 
 class NativeLibsCommon(ConanFile):
-    name = "native-libs-common"
+    name = "native_libs_common"
     version = "777"  # use the `commit_hash` option to select the desired library version
     license = "Apache-2.0"
     author = "AdguardTeam"
@@ -55,7 +55,7 @@ class NativeLibsCommon(ConanFile):
     def package(self):
         MODULES = ["common"]
         for m in MODULES:
-            self.copy("*.h", dst="include", src="source_subfolder/%s/include" % m, keep_path=False)
+            self.copy("*.h", dst="common/include", src="source_subfolder/%s/include" % m, keep_path=False)
 
         self.copy("*.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
@@ -64,9 +64,9 @@ class NativeLibsCommon(ConanFile):
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
-        self.cpp_info.name = "Native-libs-common"
+        self.cpp_info.name = "native_libs_common"
         self.cpp_info.includedirs = ["include"]
-        self.cpp_info.libs = ["native_libs_common"]
+        self.cpp_info.libs = ["common"]
         self.cpp_info.libdirs = ["lib"]
         self.cpp_info.requires = [
             "pcre2::pcre2",
