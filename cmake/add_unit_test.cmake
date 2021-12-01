@@ -4,8 +4,8 @@ if(NOT TARGET tests)
     add_custom_target(tests)
 endif(NOT TARGET tests)
 
-# `EXPAND_GTEST` prevents ctest from expanding test cases in the report which
-# is useful if the test has a parametrized gtest case, it often makes the report unreadable
+# `EXPAND_GTEST` is useful if the test has a parametrized gtest case, it often makes the report
+# unreadable
 function(add_unit_test TEST_NAME TEST_DIR EXTRA_INCLUDES IS_GTEST EXPAND_GTEST)
     set(FILE_NO_EXT ${TEST_DIR}/${TEST_NAME})
     if (EXISTS "${FILE_NO_EXT}.cpp")

@@ -4,10 +4,8 @@ project(common_lib)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
 include(../cmake/conan_bootstrap.cmake)
-conan_bootstrap(SRCROOT "${ROOT_DIR}" CONANFILE "${ROOT_DIR}/conanfile.py" SCOPE_NAME commonlibs)
+conan_bootstrap(SRCROOT ".." CONANFILE "../conanfile.py" SCOPE_NAME commonlibs)
 
 set(SOURCE_FILES
         utils.cpp
