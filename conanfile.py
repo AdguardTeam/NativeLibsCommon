@@ -37,24 +37,24 @@ class NativeLibsCommon(ConanFile):
             del self.options.fPIC
 
     def source(self):
-        self.run("git clone https://github.com/AdguardTeam/NativeLibsCommon.git source_subfolder")
+        self.run("git clone ssh://git@bit.adguard.com:7999/adguard-core-libs/native-libs-common.git source_subfolder")
+        self.run("cd source_subfolder && git checkout %s" % self.options.commit_hash)
 
-        if self.options.commit_hash:
-            self.run("cd source_subfolder && git checkout %s" % self.options.commit_hash)
+#        if self.options.commit_hash:
 #        else:
 #            Err()
 
     def build(self):
         cmake = CMake(self)
         # A better way to pass these was not found :(
-        if self.settings.os == "Linux":
-            if self.settings.compiler.libcxx:
-                cmake.definitions["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % self.settings.compiler.libcxx
-            if self.settings.compiler.version:
-                cmake.definitions["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
-        if self.settings.os == "Macos":
-            cmake.definitions["TARGET_OS"] = "macos"
-        cmake.configure()
+        #if self.settings.os == "Linux":
+        #    if self.settings.compiler.libcxx:
+        #        cmake.definitions["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % self.settings.compiler.libcxx
+        #    if self.settings.compiler.version:
+        #        cmake.definitions["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
+        #if self.settings.os == "Macos":
+        #    cmake.definitions["TARGET_OS"] = "macos"
+        cmake.configure(source_folder="source_subfolder")
         cmake.build(target="native_libs_common")
 
     def package(self):
