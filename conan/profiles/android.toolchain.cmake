@@ -40,7 +40,7 @@ message(FATAL_ERROR "Please specify valid toolchain in CMAKE_ANDROID_TOOLCHAIN e
 endif()
 
 # Use conan paths instead of NDK paths for find
-set(CMAKE_FIND_ROOT_PATH /)
+set(CMAKE_FIND_ROOT_PATH .)
 set(CMAKE_FIND_USE_CMAKE_PATH OFF)
 
 # We don't need to export any symbol implicitly, and also disable C++ exceptions, and enable unwind tables.

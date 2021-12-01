@@ -4,13 +4,10 @@ project(common_lib)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-set(COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(COMMON_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-message(${COMMON_DIR})
-
-include(cmake/conan_bootstrap.cmake)
-conan_bootstrap(SRCROOT "${COMMON_DIR}" CONANFILE "${COMMON_DIR}/../conanfile.py" SCOPE_NAME commonlibs)
+include(../cmake/conan_bootstrap.cmake)
+conan_bootstrap(SRCROOT "${ROOT_DIR}" CONANFILE "${ROOT_DIR}/conanfile.py" SCOPE_NAME commonlibs)
 
 set(SOURCE_FILES
         utils.cpp
@@ -34,7 +31,7 @@ endif()
 target_compile_definitions(${PROJECT_NAME}  PUBLIC FMT_EXCEPTIONS=0)
 
 enable_testing()
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/add_unit_test.cmake)
+include(../cmake/add_unit_test.cmake)
 link_libraries(common_lib)
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 

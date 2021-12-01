@@ -50,18 +50,17 @@ class NativeLibsCommon(ConanFile):
                 cmake.definitions["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % self.settings.compiler.libcxx
             if self.settings.compiler.version:
                 cmake.definitions["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
+        if self.settings.os == "Macos":
+            cmake.definitions["TARGET_OS"] = "macos"
+        cmake.configure(source_folder="source_subfolder")
         cmake.build(target="native_libs_common")
 
     def package(self):
         MODULES = ["common"]
         for m in MODULES:
-            self.copy("*.h", dst="common/include", src="source_subfolder/%s/include" % m, keep_path=False)
-
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.dylib", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
+            self.copy("*.h", dst="include", src="source_subfolder/%s/include" % m, keep_path=False)
+            self.copy("*.lib", dst="lib", src="source_subfolder/%s" % m, keep_path=False)
+            self.copy("*.a", dst="lib", src="source_subfolder/%s" % m, keep_path=False)
 
     def package_info(self):
         self.cpp_info.name = "native_libs_common"

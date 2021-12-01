@@ -298,11 +298,11 @@ endfunction()
 
 function(conan_cmake_detect_unix_libcxx result)
     # Take into account any -stdlib in compile options
-    get_directory_property(compile_options DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMPILE_OPTIONS)
+    get_directory_property(compile_options DIRECTORY . COMPILE_OPTIONS)
     string(GENEX_STRIP "${compile_options}" compile_options)
 
     # Take into account any _GLIBCXX_USE_CXX11_ABI in compile definitions
-    get_directory_property(defines DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMPILE_DEFINITIONS)
+    get_directory_property(defines DIRECTORY . COMPILE_DEFINITIONS)
     string(GENEX_STRIP "${defines}" defines)
 
     foreach(define ${defines})
