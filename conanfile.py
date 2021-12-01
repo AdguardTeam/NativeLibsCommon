@@ -41,6 +41,8 @@ class NativeLibsCommon(ConanFile):
 
         if self.options.commit_hash:
             self.run("cd source_subfolder && git checkout %s" % self.options.commit_hash)
+#        else:
+#            Err()
 
     def build(self):
         cmake = CMake(self)
@@ -52,7 +54,7 @@ class NativeLibsCommon(ConanFile):
                 cmake.definitions["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
         if self.settings.os == "Macos":
             cmake.definitions["TARGET_OS"] = "macos"
-        cmake.configure(source_folder="source_subfolder")
+        cmake.configure()
         cmake.build(target="native_libs_common")
 
     def package(self):
