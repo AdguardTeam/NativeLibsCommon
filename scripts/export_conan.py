@@ -9,6 +9,6 @@ recipes_dir = os.path.join(project_dir, 'conan', 'recipes')
 for folder in os.listdir(recipes_dir):
     path = os.path.join(recipes_dir, folder)
     if os.path.isdir(path):
-        os.system("conan export %s AdguardTeam/NativeLibsCommon" % path)
+        os.system(f"conan export {path} AdguardTeam/NativeLibsCommon")
 
-os.system("conan export %s AdguardTeam/NativeLibsCommon" % project_dir)
+os.system(f"conan export {project_dir} AdguardTeam/NativeLibsCommon")
