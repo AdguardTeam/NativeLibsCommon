@@ -1,2 +1,4 @@
 ---
 !include 'native-libs-common.yaml'
+---
+!include 'upload-conan-recipes.yaml'

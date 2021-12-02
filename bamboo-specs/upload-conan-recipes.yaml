@@ -1,0 +1,55 @@
+---
+version: 2
+plan:
+  project-key: CL
+  key: NUCP
+  name: NativeLibsCommon - Upload conan recipes
+stages:
+  - Default Stage:
+      manual: false
+      final: false
+      jobs:
+        - Default Job
+Default Job:
+  key: JOB1
+  tasks:
+    - checkout:
+        force-clean-build: 'true'
+        description: Checkout
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            # Clean up local cache
+            conan remove -f '*'
+
+            # Export packages
+            cd scripts
+            ./export_conan.py
+
+            # Upload packages
+            conan upload -r art --all -c '*' > upload.txt 2>&1
+            echo conan upload finished with status $?
+  final-tasks:
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            # Clean up
+            conan remove -f '*'
+            conan remove --locks
+        description: Clean up
+  requirements:
+    - android-sdk-linux
+  artifact-subscriptions: []
+repositories:
+  - core-libs/native-libs-common:
+      scope: global
+branches:
+  create: manually
+  delete: never
+  link-to-jira: true
+notifications: []
+labels: []
+other:
+  concurrent-build-plugin: system-default
