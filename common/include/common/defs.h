@@ -55,4 +55,11 @@ using IpAddress = std::variant<std::monostate, Ipv4Address, Ipv6Address>;
 /** Network interface name or index */
 using IfIdVariant = std::variant<std::monostate, uint32_t, std::string>;
 
+// Convenient struct to tie a value and its mutex together
+template<typename T, typename Mutex = std::mutex>
+struct WithMtx {
+    T val;
+    Mutex mtx;
+};
+
 } // namespace ag
