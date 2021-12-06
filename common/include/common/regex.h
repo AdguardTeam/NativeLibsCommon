@@ -97,7 +97,7 @@ public:
     }
 
 private:
-    pcre2_code *m_re;
+    pcre2_code *m_re{nullptr};
 
     static pcre2_code *compile_regex(std::string_view text, uint32_t options) {
         int err = 0;
