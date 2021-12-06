@@ -4,10 +4,12 @@
 #include <chrono>
 #include <string>
 #include <event2/util.h>
+#include "common/defs.h"
 
 namespace ag {
 
 using SystemTime = std::chrono::system_clock::time_point;
+using SystemClock = std::chrono::system_clock;
 
 static constexpr const char *DEFAULT_GMTIME_FORMAT = "%Y-%m-%d %H:%M:%S GMT";
 static constexpr const char *DEFAULT_LOCALTIME_FORMAT = "%Y-%m-%d %H:%M:%S %z";
@@ -15,17 +17,17 @@ static constexpr const char *DEFAULT_LOCALTIME_FORMAT = "%Y-%m-%d %H:%M:%S %z";
 /**
  * Split timepoint into parts in GMT timezone
  */
-tm gmtime_from_timepoint(SystemTime t);
+tm gmtime_from_system_time(SystemTime t);
 
 /**
  * Join time parts in GMT timezone into timepoint
  */
-SystemTime timepoint_from_gmtime(const tm &tm);
+SystemTime system_time_from_gmtime(const tm &tm);
 
 /**
  * Split UNIX timestamp into parts in local timezone
  */
-tm localtime_from_timepoint(SystemTime t);
+tm localtime_from_system_time(SystemTime t);
 
 /**
  * @return Duration in microseconds
@@ -78,6 +80,13 @@ std::string format_gmtime(SystemTime time, const char *format = DEFAULT_GMTIME_F
 std::string format_gmtime(const tm &tm_info, const char *format = DEFAULT_GMTIME_FORMAT);
 
 /**
+ * Format GMT time
+ * @param time_since_epoch Epoch time (will be converted to SystemTime)
+ * @param format Format string in strftime() format, extended by "%f" for microseconds.
+ */
+std::string format_gmtime(SystemTime::duration time_since_epoch, const char *format = DEFAULT_GMTIME_FORMAT);
+
+/**
  * Format local time
  * @param time System time
  * @param format Format string in strftime() format, extended by "%f" for microseconds.
@@ -90,6 +99,13 @@ std::string format_localtime(SystemTime time, const char *format = DEFAULT_LOCAL
  * @param format Format string in strftime() format, extended by "%f" for microseconds.
  */
 std::string format_localtime(const tm &time, const char *format = DEFAULT_LOCALTIME_FORMAT);
+
+/**
+ * Format local time
+ * @param time_since_epoch Epoch time (will be converted to SystemTime)
+ * @param format Format string in strftime() format, extended by "%f" for microseconds.
+ */
+std::string format_localtime(SystemTime::duration time_since_epoch, const char *format = DEFAULT_LOCALTIME_FORMAT);
 
 /**
  * @return Timeval from timepoint

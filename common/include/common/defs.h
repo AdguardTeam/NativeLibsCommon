@@ -20,12 +20,17 @@ typedef SSIZE_T ssize_t;
 #include <unordered_set>
 #include <variant>
 #include <vector>
+#include <chrono>
 
 namespace ag {
 
 // Functor template for zero-storage static deleters in unique_ptr
 template<auto func>
 using Ftor = std::integral_constant<decltype(func), func>;
+
+using Secs = std::chrono::seconds;
+using Millis = std::chrono::milliseconds;
+using Micros = std::chrono::microseconds;
 
 using OptString = std::optional<std::string>;
 using ErrString = OptString;

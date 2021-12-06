@@ -12,7 +12,7 @@
 
 namespace ag {
 
-tm gmtime_from_timepoint(SystemTime timepoint) {
+tm gmtime_from_system_time(SystemTime timepoint) {
     int64_t t = to_secs(timepoint.time_since_epoch()).count();
     tm tm_info{};
 
@@ -29,7 +29,7 @@ tm gmtime_from_timepoint(SystemTime timepoint) {
     return tm_info;
 }
 
-SystemTime timepoint_from_gmtime(const tm &tm_info) {
+SystemTime system_time_from_gmtime(const tm &tm_info) {
     return SystemTime{std::chrono::seconds{
 #if defined(_WIN32)
             _mkgmtime64(const_cast<tm *>(&tm_info))
@@ -43,7 +43,7 @@ SystemTime timepoint_from_gmtime(const tm &tm_info) {
     }};
 }
 
-tm localtime_from_timepoint(SystemTime timepoint) {
+tm localtime_from_system_time(SystemTime timepoint) {
     int64_t t = to_secs(timepoint.time_since_epoch()).count();
     tm tm_info{};
 
@@ -196,9 +196,13 @@ std::string format_gmtime(const tm &tm_info, const char *format) {
 }
 
 std::string format_gmtime(SystemTime time, const char *format) {
-    tm tm_info = gmtime_from_timepoint(time);
+    tm tm_info = gmtime_from_system_time(time);
     int64_t us = to_micros(time.time_since_epoch() - to_secs(time.time_since_epoch())).count();
     return format_time(tm_info, us, true, format);
+}
+
+std::string format_gmtime(SystemTime::duration time_since_epoch, const char *format) {
+    return format_gmtime(SystemTime{time_since_epoch}, format);
 }
 
 std::string format_localtime(const tm &tm_info, const char *format) {
@@ -206,9 +210,13 @@ std::string format_localtime(const tm &tm_info, const char *format) {
 }
 
 std::string format_localtime(SystemTime time, const char *format) {
-    tm tm_info = localtime_from_timepoint(time);
+    tm tm_info = localtime_from_system_time(time);
     int64_t us = to_micros(time.time_since_epoch() - to_secs(time.time_since_epoch())).count();
     return format_time(tm_info, us, false, format);
+}
+
+std::string format_localtime(SystemTime::duration time_since_epoch, const char *format) {
+    return format_localtime(SystemTime{time_since_epoch}, format);
 }
 
 timeval timeval_from_timepoint(SystemTime timepoint) {
