@@ -4,6 +4,7 @@
 #include <list>
 #include "common/defs.h"
 #include <mutex>
+#include <cassert>
 
 namespace ag {
 
