@@ -13,6 +13,7 @@ set(SOURCE_FILES
         logger.cpp
         time_utils.cpp
         clock.cpp
+        regex.cpp
         )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
