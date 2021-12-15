@@ -14,6 +14,8 @@ set(SOURCE_FILES
         time_utils.cpp
         clock.cpp
         regex.cpp
+        file.cpp
+        base64.cpp
         )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
@@ -26,6 +28,10 @@ target_link_libraries(${PROJECT_NAME} CONAN_PKG::fmt CONAN_PKG::libevent
 target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
 if (NOT MSVC)
     target_compile_options(${PROJECT_NAME}  PRIVATE -fno-exceptions)
+else ()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+            WIN32_LEAN_AND_MEAN
+            NOMINMAX)
 endif()
 target_compile_definitions(${PROJECT_NAME}  PUBLIC FMT_EXCEPTIONS=0)
 

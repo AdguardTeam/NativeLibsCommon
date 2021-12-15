@@ -28,6 +28,8 @@ namespace ag {
 template<auto func>
 using Ftor = std::integral_constant<decltype(func), func>;
 
+using SystemClock = std::chrono::system_clock;
+using SystemTime = SystemClock::time_point;
 using Secs = std::chrono::seconds;
 using Millis = std::chrono::milliseconds;
 using Micros = std::chrono::microseconds;

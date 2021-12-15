@@ -8,9 +8,6 @@
 
 namespace ag {
 
-using SystemTime = std::chrono::system_clock::time_point;
-using SystemClock = std::chrono::system_clock;
-
 static constexpr const char *DEFAULT_GMTIME_FORMAT = "%Y-%m-%d %H:%M:%S GMT";
 static constexpr const char *DEFAULT_LOCALTIME_FORMAT = "%Y-%m-%d %H:%M:%S %z";
 
