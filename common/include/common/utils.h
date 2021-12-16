@@ -19,6 +19,7 @@
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 #include <cctype>
+#include <charconv>
 
 /**
  * Macros to create constexpr value and type to check expression
@@ -86,12 +87,12 @@ inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T, N>::value;
 namespace ag::utils {
 
 /**
- * Transform string in lowercase
+ * Transform string to lowercase
  */
-        static inline std::string to_lower(std::string_view str) {
-            std::string lwr;
-            lwr.reserve(str.length());
-            std::transform(str.cbegin(), str.cend(), std::back_inserter(lwr), (int (*)(int))std::tolower);
+static inline std::string to_lower(std::string_view str) {
+    std::string lwr;
+    lwr.reserve(str.length());
+    std::transform(str.cbegin(), str.cend(), std::back_inserter(lwr), (int (*)(int))std::tolower);
     return lwr;
 }
 
@@ -270,6 +271,22 @@ std::wstring to_wstring(std::string_view sv);
  * @param wsv Wide char string
  */
 std::string from_wstring(std::wstring_view wsv);
+
+/**
+ * Convert `str` to integer in base `base`. On failure, return `std::nullopt`.
+ * The entirety of `str` must be a string representation of an integer in
+ * range of the target type, without any leading or trailing whitespace.
+ */
+template <typename Int, std::enable_if_t<std::is_integral_v<Int>, int> = 0>
+constexpr std::optional<Int> to_integer(std::string_view str, int base = 10) {
+    Int result;
+    const char *last_in = str.data() + str.size();
+    auto[last_out, ec] = std::from_chars(str.data(), last_in, result, base);
+    if (last_out == last_in && ec == std::errc()) {
+        return result;
+    }
+    return std::nullopt;
+}
 
 namespace detail {
 
