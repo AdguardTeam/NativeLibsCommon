@@ -47,11 +47,11 @@ using HashSet = std::unordered_set<K>;
 template<size_t S>
 using Uint8Array = std::array<uint8_t, S>;
 
-template<typename T>
-using AllocatedPtr = std::unique_ptr<T, Ftor<&std::free>>;
-
 template<typename T, auto D>
 using UniquePtr = std::unique_ptr<T, Ftor<D>>;
+
+template<typename T>
+using AllocatedPtr = UniquePtr<T, &std::free>;
 
 constexpr size_t IPV4_ADDRESS_SIZE = 4;
 constexpr size_t IPV6_ADDRESS_SIZE = 16;
