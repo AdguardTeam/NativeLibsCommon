@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "common/utils.h"
 #include "common/socket_address.h"
+#include "common/cesu8.h"
 
 TEST(utils, GenerallyWork) {
     ASSERT_TRUE(ag::utils::is_valid_ip6("::"));
@@ -40,4 +41,15 @@ TEST(utils, GenerallyWork) {
     ASSERT_FALSE(ag::utils::to_integer<uint16_t>("+1"));
     ASSERT_FALSE(ag::utils::to_integer<uint16_t>("1asdf"));
     ASSERT_FALSE(ag::utils::to_integer<uint16_t>("asdf1"));
+
+    ASSERT_EQ(ag::utf8_to_cesu8("asdasd"), "asdasd");
+    ASSERT_EQ(ag::utf8_to_cesu8("12345678"), "12345678");
+    ASSERT_EQ(ag::utf8_to_cesu8("фыва"), "фыва");
+    ASSERT_EQ(ag::utf8_to_cesu8("фы1ва"), "фы1ва");
+    ASSERT_EQ(ag::utf8_to_cesu8("\xff\xff"), "��");
+    ASSERT_EQ(ag::utf8_to_cesu8("\xF0\x90\x90\x80"), "\xED\xA0\x81\xED\xB0\x80");
+    ASSERT_EQ(ag::cesu8_len("\xF0\x9F\x98\x81"), 6);
+    ASSERT_EQ(ag::cesu8_len("asdasd"), 6);
+    ASSERT_EQ(ag::cesu8_len("12345678"), 8);
+    ASSERT_EQ(ag::cesu8_len(""), 0);
 }

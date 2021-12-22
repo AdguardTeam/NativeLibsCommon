@@ -16,6 +16,7 @@ set(SOURCE_FILES
         regex.cpp
         file.cpp
         base64.cpp
+        cesu8.cpp
         )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
