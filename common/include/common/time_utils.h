@@ -111,6 +111,13 @@ std::string format_localtime(SystemTime::duration time_since_epoch, const char *
 timeval timeval_from_timepoint(SystemTime timepoint);
 
 /**
+ * Converts duration (microsecond resolution) to timeval structure
+ * @param usecs Microseconds
+ * @return Timeval with microsecond resolution
+ */
+timeval duration_to_timeval(Micros usecs);
+
+/**
  *
  * @return timezone platform dependent
  */

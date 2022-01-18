@@ -17,6 +17,8 @@ set(SOURCE_FILES
         file.cpp
         base64.cpp
         cesu8.cpp
+        route_resolver.cpp
+        net_utils.cpp
         )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})

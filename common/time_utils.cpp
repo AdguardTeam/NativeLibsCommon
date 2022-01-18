@@ -225,6 +225,14 @@ timeval timeval_from_timepoint(SystemTime timepoint) {
              .tv_usec = decltype(timeval::tv_usec)(micros % 1000000) };
 }
 
+timeval duration_to_timeval(Micros usecs) {
+    static constexpr intmax_t denom = decltype(usecs)::period::den;
+    return {
+            .tv_sec = static_cast<decltype(timeval::tv_sec)>(usecs.count() / denom),
+            .tv_usec = static_cast<decltype(timeval::tv_usec)>(usecs.count() % denom)
+    };
+}
+
 long get_timezone(){
 #if defined(_WIN32)
     _tzset();
