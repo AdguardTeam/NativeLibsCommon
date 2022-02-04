@@ -52,4 +52,8 @@ bool Logger::is_enabled(LogLevel level) const {
     return level <= g_log_level;
 }
 
+LogLevel Logger::get_log_level() {
+    return g_log_level;
+}
+
 } // namespace ag

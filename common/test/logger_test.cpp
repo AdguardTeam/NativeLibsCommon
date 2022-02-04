@@ -6,7 +6,7 @@ TEST(Logger, Works) {
     Logger logger("TEST_LOGGER");
 
     logger.log(LOG_LEVEL_INFO, FMT_STRING("{}"), "Hello, world!");
-
+    ASSERT_EQ(ag::Logger::get_log_level(), ag::LOG_LEVEL_INFO);
     int counter;
     Logger::set_callback([&counter](LogLevel level, std::string_view message){
         Logger::LOG_TO_STDERR(level, message);

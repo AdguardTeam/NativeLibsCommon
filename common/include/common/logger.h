@@ -58,6 +58,11 @@ public:
     static void set_log_level(LogLevel level);
 
     /**
+     * @return Current logger log level
+     */
+     static LogLevel get_log_level();
+
+    /**
      * Set common logger callback
      * @param callback Logger callback
      */
