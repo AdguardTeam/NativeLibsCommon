@@ -19,7 +19,7 @@ set(SOURCE_FILES
         cesu8.cpp
         route_resolver.cpp
         net_utils.cpp
-        )
+        error.cpp)
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
@@ -47,3 +47,4 @@ add_unit_test(utils_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(logger_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(time_utils_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(cache_test ${TEST_DIR} "" TRUE TRUE)
+add_unit_test(error_test ${TEST_DIR} "" TRUE TRUE)
