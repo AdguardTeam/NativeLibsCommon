@@ -587,4 +587,9 @@ int for_each_line(std::string_view str, LineAction, void *arg);
  */
 std::optional<std::string_view> read_line(std::string_view str, size_t pos);
 
+/**
+ * @return Thread id
+ */
+uint32_t gettid(void);
+
 } // namespace ag::utils

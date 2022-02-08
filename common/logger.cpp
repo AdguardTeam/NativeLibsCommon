@@ -28,7 +28,7 @@ static void log_to_stderr(LogLevel level, std::string_view message) {
     std::string_view level_str = (level >= 0 && level < ENUM_NAMES_NUMBER) ? ENUM_NAMES[level] : "UNKNOWN";
     SystemTime now = std::chrono::system_clock::now();
     std::string ts = format_localtime(now, TIME_FORMAT);
-    std::clog << AG_FMT("{} {:5} [{}] {}\n", ts, level_str, std::this_thread::get_id(), message);
+    std::clog << AG_FMT("{} {:5} [{}] {}\n", ts, level_str, utils::gettid(), message);
 }
 
 void Logger::set_log_level(LogLevel level) {

@@ -170,4 +170,39 @@ std::optional<std::string_view> utils::read_line(std::string_view str, size_t po
 
     return utils::trim({&str[start], end - start});
 }
+
+#ifdef __linux__
+#include <unistd.h>
+#include <sys/types.h>
+#ifdef ANDROID
+#include <pthread.h>
+#else
+#include <sys/syscall.h>
+#if __GLIBC__ == 2 && __GLIBC_MINOR__ < 30
+uint32_t utils::gettid(void){
+    return syscall(SYS_gettid);
+}
+#endif // __GLIBC__ == 2 && __GLIBC_MINOR__ < 30
+#endif //ANDROID
+#endif //__linux__
+
+#ifdef __MACH__
+#include <pthread.h>
+uint32_t utils::gettid(void){
+    uint64_t tid;
+    if (0 != pthread_threadid_np(NULL, &tid))
+        return 0;
+    return (uint32_t)tid;
+}
+#endif //__MACH__
+
+#ifdef _WIN32
+#include <winbase.h>
+#include <process.h>
+#include <windows.h>
+uint32_t utils::gettid(void){
+    return GetCurrentThreadId();
+}
+#endif // _WIN32
+
 }// namespace ag

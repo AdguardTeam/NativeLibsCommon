@@ -10,7 +10,7 @@
 #include <unistd.h>
 #elif defined(_WIN32)
 #include <windows.h>
-    #include <io.h>
+#include <io.h>
 #endif
 
 namespace ag::file {
