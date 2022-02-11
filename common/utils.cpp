@@ -185,6 +185,10 @@ uint32_t utils::gettid(void) {
 uint32_t utils::gettid(void) {
     return syscall(SYS_gettid);
 }
+#else
+uint32_t utils::gettid(void) {
+    return ::gettid();
+}
 #endif // __GLIBC__ == 2 && __GLIBC_MINOR__ < 30
 #endif //ANDROID
 #endif //__linux__
