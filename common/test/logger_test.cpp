@@ -1,6 +1,23 @@
 #include "common/logger.h"
 #include <gtest/gtest.h>
 
+class FileHandler {
+public:
+    FileHandler(std::string_view filename) : m_filename(filename) {
+        m_file = std::fopen(filename.data(), "w");
+    }
+    ~FileHandler() {
+        std::fclose(m_file);
+        std::remove(m_filename.data());
+    }
+    FILE* get_file() {
+        return m_file;
+    }
+private:
+    std::string m_filename;
+    FILE *m_file;
+};
+
 TEST(Logger, Works) {
     using namespace ag;
     Logger logger("TEST_LOGGER");
@@ -41,4 +58,10 @@ TEST(Logger, Works) {
     warnlog(logger, "{}", "Hello, world!");
     errlog(logger, "{}", "Hello, world!");
     ASSERT_EQ(counter, 5);
+
+    Logger::set_log_level(LOG_LEVEL_DEBUG);
+    FileHandler logfile{"logfile.txt"};
+    Logger::LogToFile logtofile{logfile.get_file()};
+    ag::Logger::set_callback(logtofile);
+    dbglog(logger, "{}", "Hello, world!");
 }

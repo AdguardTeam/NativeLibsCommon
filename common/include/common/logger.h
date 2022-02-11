@@ -67,6 +67,25 @@ public:
      * @param callback Logger callback
      */
     static void set_callback(LoggerCallback callback);
+
+    /**
+     * Functor for logging to file
+     * LogToFile doesn't take file ownership. You need to close manually
+     */
+    class LogToFile {
+    public:
+        /**
+         * Create functor with file name to open
+         * @param file File
+         */
+        explicit LogToFile(FILE *file) : m_file(file) {}
+
+        void operator()(LogLevel level, std::string_view message);
+
+    private:
+        FILE *m_file;
+    };
+
 private:
     void vlog(LogLevel level, fmt::string_view format, fmt::format_args args) const;
 
