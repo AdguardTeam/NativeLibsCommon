@@ -64,4 +64,5 @@ TEST(Logger, Works) {
     Logger::LogToFile logtofile{logfile.get_file()};
     ag::Logger::set_callback(logtofile);
     dbglog(logger, "{}", "Hello, world!");
+    ag::Logger::set_callback(ag::Logger::LOG_TO_STDERR);
 }

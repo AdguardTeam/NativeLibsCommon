@@ -174,12 +174,15 @@ std::optional<std::string_view> utils::read_line(std::string_view str, size_t po
 #ifdef __linux__
 #include <unistd.h>
 #include <sys/types.h>
+uint32_t utils::gettid(void) {
+    ::gettid();
+}
 #ifdef ANDROID
 #include <pthread.h>
 #else
 #include <sys/syscall.h>
 #if __GLIBC__ == 2 && __GLIBC_MINOR__ < 30
-uint32_t utils::gettid(void){
+uint32_t utils::gettid(void) {
     return syscall(SYS_gettid);
 }
 #endif // __GLIBC__ == 2 && __GLIBC_MINOR__ < 30
@@ -188,7 +191,7 @@ uint32_t utils::gettid(void){
 
 #ifdef __MACH__
 #include <pthread.h>
-uint32_t utils::gettid(void){
+uint32_t utils::gettid(void) {
     uint64_t tid;
     if (0 != pthread_threadid_np(NULL, &tid))
         return 0;
@@ -200,7 +203,7 @@ uint32_t utils::gettid(void){
 #include <winbase.h>
 #include <process.h>
 #include <windows.h>
-uint32_t utils::gettid(void){
+uint32_t utils::gettid(void) {
     return GetCurrentThreadId();
 }
 #endif // _WIN32
