@@ -165,13 +165,13 @@ constexpr std::string_view pretty_func(std::string_view pretty_function, std::st
 }
 
 #ifndef _WIN32
-#define ERROR_PRETTY_FUNC pretty_func(__PRETTY_FUNCTION__, __func__)
+#define ERROR_PRETTY_FUNC ::ag::pretty_func(__PRETTY_FUNCTION__, __func__)
 #else
-#define ERROR_PRETTY_FUNC pretty_func(__FUNCSIG__, __func__)
+#define ERROR_PRETTY_FUNC ::ag::pretty_func(__FUNCSIG__, __func__)
 #endif
 
 // TODO: Move to std::source_location when c++20 will be enabled
-#define make_error(...) make_error_func((SourceLocation){ERROR_PRETTY_FUNC, __LINE__}, __VA_ARGS__)
+#define make_error(...) make_error_func((::ag::SourceLocation){ERROR_PRETTY_FUNC, __LINE__}, __VA_ARGS__)
 
 /**
  * Makes std::errc from errno
