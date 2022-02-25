@@ -24,7 +24,7 @@ else
   fi
 fi
 
-COMMIT_HASH=$(git rev-parse HEAD)
+COMMIT_HASH=$(git rev-parse master)
 echo "Last commit hash is ${COMMIT_HASH}"
 
-[[ ! -z "$NEW_VERSION" ]] && (echo "  \"${NEW_VERSION}\":\n    hash: \"${COMMIT_HASH}\"" | tee -a ../conandata.yml)
+[[ ! -z "$NEW_VERSION" ]] && (printf "  \"${NEW_VERSION}\":\n    hash: \"${COMMIT_HASH}\"" | tee -a ../conandata.yml)
