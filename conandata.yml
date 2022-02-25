@@ -1,0 +1,9 @@
+requirements:
+  - "fmt/8.0.1"
+  - "libevent/2.1.11@AdguardTeam/NativeLibsCommon"
+  - "pcre2/10.37@AdguardTeam/NativeLibsCommon"
+commit_hash:
+  "1.0.0":
+    hash: "2c6d661e70117bf1d716f148ec6da508e0ff9fb5"
+  "1.0.1":
+    hash: "5ef5eedc7ab3c4f5628031c378b9e0fbcbdd66a7"

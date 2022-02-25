@@ -3,7 +3,6 @@ from conans import ConanFile, CMake
 
 class NativeLibsCommon(ConanFile):
     name = "native_libs_common"
-    version = "777"  # use the `commit_hash` option to select the desired library version
     license = "Apache-2.0"
     author = "AdguardTeam"
     url = "https://github.com/AdguardTeam/NativeLibsCommon"
@@ -22,9 +21,8 @@ class NativeLibsCommon(ConanFile):
     }
 
     def requirements(self):
-        self.requires("fmt/8.0.1")
-        self.requires("libevent/2.1.11@AdguardTeam/NativeLibsCommon")
-        self.requires("pcre2/10.37@AdguardTeam/NativeLibsCommon")
+        for req in self.conan_data["requirements"]:
+            self.requires(req)
 
     def build_requirements(self):
         self.build_requires("gtest/1.11.0")
@@ -39,8 +37,12 @@ class NativeLibsCommon(ConanFile):
     def source(self):
         self.run("git clone https://github.com/AdguardTeam/NativeLibsCommon.git source_subfolder")
 
-        if self.options.commit_hash:
-            self.run("cd source_subfolder && git checkout %s" % self.options.commit_hash)
+        if self.version == "777":
+            if self.options.commit_hash:
+                self.run("cd source_subfolder && git checkout %s" % self.options.commit_hash)
+        else:
+            version_hash = self.conan_data["commit_hash"][self.version]["hash"]
+            self.run("cd source_subfolder && git checkout %s" % version_hash)
 
     def build(self):
         cmake = CMake(self)
