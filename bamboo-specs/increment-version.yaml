@@ -1,0 +1,60 @@
+---
+version: 2
+plan:
+  project-key: CL
+  key: NIV
+  name: NativeLibsCommon - Increment version
+stages:
+- Default Stage:
+    manual: false
+    final: false
+    jobs:
+    - Default Job
+Default Job:
+  key: JOB1
+  tasks:
+  - checkout:
+      path: native-libs-common
+      force-clean-build: 'false'
+      description: Checkout
+  - script:
+      interpreter: SHELL
+      scripts:
+      - |-
+        set -x
+
+        case "${bamboo_repository_branch_name}" in
+        master|stable-*)
+            cd scripts
+            ./increment_version.sh
+
+            cd ..
+            git remote set-url origin ${bamboo.planRepository.repositoryUrl}
+            git pull
+            git reset
+            git add conandata.yml
+            git commit -m "skipci: Automatic version increment by Bamboo"
+            git push
+
+            BAMBOO_HOST=$(echo ${bamboo_resultsUrl} | sed -e 's|\(https://[^/]\+\)/.*|\1|')
+            curl -H "Authorization: Bearer ${bamboo.bambooTriggerTokenSecret}" \
+                "https://${BAMBOO_HOST}/rest/api/latest/queue/CL-NUCP" -X POST -d "executeAllStages=1"
+
+            ;;
+        esac
+      working-dir: native-libs-common
+      description: Increment version
+  requirements:
+  - android-sdk-linux
+  artifact-subscriptions: []
+repositories:
+- core-libs/native-libs-common:
+    scope: global
+branches:
+  create: manually
+  delete: never
+  link-to-jira: true
+notifications: []
+labels: []
+other:
+  concurrent-build-plugin: system-default
