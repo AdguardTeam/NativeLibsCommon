@@ -49,6 +49,7 @@ branches:
   create: manually
   delete: never
   link-to-jira: true
+triggers: []
 notifications: []
 labels: []
 other:
