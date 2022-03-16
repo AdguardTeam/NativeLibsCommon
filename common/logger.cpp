@@ -26,8 +26,11 @@ void Logger::set_log_level(LogLevel level) {
 }
 
 void Logger::set_callback(LoggerCallback callback) {
-    std::atomic_store(&g_log_callback, std::make_shared<LoggerCallback>(
-            callback ? std::move(callback) : LOG_TO_STDERR));
+    if (callback) {
+        std::atomic_store(&g_log_callback, std::make_shared<LoggerCallback>(std::move(callback)));
+    } else {
+        std::atomic_store(&g_log_callback, std::make_shared<LoggerCallback>(LOG_TO_STDERR));
+    }
 }
 
 void Logger::vlog(LogLevel level, fmt::string_view format, fmt::format_args args) const {
