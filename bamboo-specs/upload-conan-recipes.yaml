@@ -25,6 +25,7 @@ Default Job:
 
             # Export packages
             cd scripts
+            python3 -m pip install -r requirements.txt
             ./export_conan.py
 
             # Upload packages
