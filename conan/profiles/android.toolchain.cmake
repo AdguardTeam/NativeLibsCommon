@@ -45,4 +45,4 @@ set(CMAKE_FIND_USE_CMAKE_PATH OFF)
 
 # We don't need to export any symbol implicitly, and also disable C++ exceptions, and enable unwind tables.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fno-exceptions -funwind-tables")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fno-exceptions -funwind-tables")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden -fno-exceptions -funwind-tables")
