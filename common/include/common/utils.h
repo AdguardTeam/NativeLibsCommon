@@ -15,11 +15,12 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <common/defs.h>
 #include <fmt/format.h>
 #include <fmt/chrono.h>
 #include <cctype>
 #include <charconv>
+
+#include "common/defs.h"
 
 /**
  * Macros to create constexpr value and type to check expression
@@ -169,11 +170,11 @@ std::array<std::string_view, 2> rsplit2_by(std::string_view str, int delim);
 AG_UTILS_DECLARE_CHECK_EXPRESSION(has_reserve, std::declval<T>().reserve(std::declval<size_t>()))
 
 /**
- * Join parts into a single container with result type R
+ * Concatenate parts into a single container with result type R
  * @tparam R Result container type (required)
  */
 template<typename R, typename T>
-static inline R join(const T &parts) {
+static inline R concat(const T &parts) {
     R result;
     if constexpr (has_reserve<R>) {
         size_t size = 0;
@@ -206,28 +207,49 @@ inline constexpr bool is_string_or_string_view = std::disjunction_v<IsSameValueT
 } // namespace detail
 
 /**
- * Join parts into a single std::string
+ * Concatenate parts into a single std::string
  * @param parts Container or C array with std::string or std::string_view
  */
 template<typename T>
-static inline std::enable_if_t<detail::is_string_or_string_view<T>, std::string> join(const T &parts)
+static inline std::enable_if_t<detail::is_string_or_string_view<T>, std::string> concat(const T &parts)
 {
-    return (join<std::string>)(parts);
+    return (concat<std::string>)(parts);
 }
 
 /**
- * Join parts into a single container from comma-separated parts with possibly different types
+ * Concatenate parts into a single container from comma-separated parts with possibly different types
  * @tparam R Result container type (required)
  * @param parts Comma-separated containers or C arrays (possibly with different types)
  * @return Container with type R with copy of data from parts
  */
 template<typename R, typename... Ts>
-static inline std::enable_if_t<sizeof...(Ts) >= 2, R> join(const Ts&... parts) {
+static inline std::enable_if_t<sizeof...(Ts) >= 2, R> concat(const Ts&... parts) {
     R result;
     if constexpr (has_reserve<R>) {
         result.reserve((... + std::size(parts)));
     }
     (... , static_cast<void>(result.insert(std::cend(result), std::cbegin(parts), std::cend(parts))));
+    return result;
+}
+
+/**
+ * Joins vector of string to string with delimiter between parts
+ * @param begin Begin iterator of vector of strings
+ * @param end End iterator of vector of strings
+ * @param delimiter String to separate parts
+ * @return Joined string
+ */
+template<typename Iterator>
+std::string join(Iterator begin, Iterator end, std::string_view delimiter) {
+    std::string result;
+    if (begin != end) {
+        result.append(begin->begin(), begin->end());
+        ++begin;
+    }
+    for (; begin != end; ++begin) {
+        result.append(delimiter);
+        result.append(begin->begin(), begin->end());
+    }
     return result;
 }
 

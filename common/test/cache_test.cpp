@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "common/cache.h"
 
 static constexpr size_t CACHE_SIZE = 1000u;

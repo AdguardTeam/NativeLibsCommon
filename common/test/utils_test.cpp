@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "common/utils.h"
 #include "common/socket_address.h"
 #include "common/cesu8.h"
@@ -52,4 +53,12 @@ TEST(utils, GenerallyWork) {
     ASSERT_EQ(ag::cesu8_len("asdasd"), 6);
     ASSERT_EQ(ag::cesu8_len("12345678"), 8);
     ASSERT_EQ(ag::cesu8_len(""), 0);
+
+    std::vector<std::string> string_vec{"111", "222", "333", "444"};
+    ASSERT_EQ(ag::utils::join(string_vec.begin(), string_vec.end(), ":"), "111:222:333:444");
+    ASSERT_EQ(ag::utils::join(string_vec.begin() + 2, string_vec.end(), ":"), "333:444");
+
+    std::vector<std::string_view> string_view_vec{"111", "222", "333", "444"};
+    ASSERT_EQ(ag::utils::join(string_view_vec.begin(), string_view_vec.end(), ":"), "111:222:333:444");
+    ASSERT_EQ(ag::utils::join(string_view_vec.begin() + 2, string_view_vec.end(), ":"), "333:444");
 }

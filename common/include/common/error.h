@@ -5,6 +5,7 @@
 #include <memory>
 #include <variant>
 #include <fmt/format.h>
+
 #include "common/logger.h"
 
 namespace ag {

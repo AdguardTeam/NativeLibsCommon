@@ -5,8 +5,10 @@
 #include <array>
 #include <locale>
 #include <codecvt>
-#include <common/utils.h>
-#include <common/socket_address.h>
+#include <numeric>
+
+#include "common/utils.h"
+#include "common/socket_address.h"
 
 namespace ag {
 
@@ -39,7 +41,7 @@ std::vector<std::string_view> utils::split_by(std::string_view str,
         }
         size_t length = end - start;
         if (length != 0) {
-            std::string_view s = trim(str.substr(seek, length));
+            std::string_view s = utils::trim(str.substr(seek, length));
             if (include_empty || !s.empty()) {
                 out.push_back(s);
             }
@@ -75,7 +77,7 @@ std::vector<std::string_view> utils::split_by_any_of(std::string_view str,
         }
         size_t length = end - start;
         if (length != 0) {
-            std::string_view s = trim(str.substr(seek, length));
+            std::string_view s = utils::trim(str.substr(seek, length));
             if (include_empty || !s.empty()) {
                 out.push_back(s);
             }

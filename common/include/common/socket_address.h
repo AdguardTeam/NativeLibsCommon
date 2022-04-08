@@ -6,7 +6,8 @@
 #ifdef __ANDROID__
 #include <netinet/in.h> // not building on android if not included
 #endif // __ANDROID__
-#include "defs.h"
+
+#include "common/defs.h"
 
 namespace ag {
 

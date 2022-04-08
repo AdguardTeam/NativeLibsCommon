@@ -1,7 +1,7 @@
+#include <gtest/gtest.h>
+
 #include "common/time_utils.h"
 #include "common/utils.h"
-
-#include <gtest/gtest.h>
 
 TEST(TimeUtils, Test) {
     using namespace ag;

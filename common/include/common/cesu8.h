@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common/defs.h"
 #include <string_view>
+
+#include "common/defs.h"
 
 namespace ag {
 

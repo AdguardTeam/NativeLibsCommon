@@ -1,14 +1,15 @@
 #pragma once
 
-#include<chrono>
+#include <chrono>
 #include <ctime>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <utility>
+#include <event2/event.h>
+
 #include "common/defs.h"
 #include "common/socket_address.h"
-#include <event2/event.h>
 
 namespace ag::utils {
 

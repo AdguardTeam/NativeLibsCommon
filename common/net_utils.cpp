@@ -1,9 +1,10 @@
-#include "common/utils.h"
-#include <common/net_utils.h>
-#include "common/socket_address.h"
 #include <event2/util.h>
 #include <event2/thread.h>
 #include <csignal>
+
+#include "common/utils.h"
+#include "common/net_utils.h"
+#include "common/socket_address.h"
 
 #ifndef _WIN32
 #include <net/if.h> // For if_nametoindex/if_indextoname

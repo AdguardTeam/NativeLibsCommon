@@ -1,9 +1,10 @@
 #pragma once
 
-#include "common/logger.h"
 #include <string_view>
 #include <string>
 #include <pcre2.h>
+
+#include "common/logger.h"
 
 namespace ag {
 

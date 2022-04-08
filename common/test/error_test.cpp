@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
-#include "common/error.h"
 #include <algorithm>
+
+#include "common/error.h"
 
 using namespace ag;
 

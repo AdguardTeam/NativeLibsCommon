@@ -1,4 +1,4 @@
-#include <common/route_resolver.h>
+#include "common/route_resolver.h"
 
 #if defined(__APPLE__) && defined(__MACH__)
 
@@ -6,19 +6,17 @@
 #include <vector>
 #include <algorithm>
 #include <mutex>
+#include <sys/sysctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <TargetConditionals.h>
 
 #include "common/defs.h"
 #include "common/utils.h"
 #include "common/logger.h"
 #include "common/net_utils.h"
 #include "common/clock.h"
-
-#include <sys/sysctl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <net/if.h>
-
-#include <TargetConditionals.h>
 
 #if TARGET_OS_IPHONE
 #define RTF_UP          0x1             /* route usable */

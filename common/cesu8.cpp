@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+
 #include "common/cesu8.h"
 
 namespace ag {
