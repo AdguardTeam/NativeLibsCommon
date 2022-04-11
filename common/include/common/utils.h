@@ -243,12 +243,12 @@ template<typename Iterator>
 std::string join(Iterator begin, Iterator end, std::string_view delimiter) {
     std::string result;
     if (begin != end) {
-        result.append(begin->begin(), begin->end());
+        result.append(*begin);
         ++begin;
     }
     for (; begin != end; ++begin) {
         result.append(delimiter);
-        result.append(begin->begin(), begin->end());
+        result.append(*begin);
     }
     return result;
 }

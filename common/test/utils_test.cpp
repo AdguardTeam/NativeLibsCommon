@@ -61,4 +61,8 @@ TEST(utils, GenerallyWork) {
     std::vector<std::string_view> string_view_vec{"111", "222", "333", "444"};
     ASSERT_EQ(ag::utils::join(string_view_vec.begin(), string_view_vec.end(), ":"), "111:222:333:444");
     ASSERT_EQ(ag::utils::join(string_view_vec.begin() + 2, string_view_vec.end(), ":"), "333:444");
+
+    const char* str_array[] = {"aaa", "bbb", "ccc", "ddd"};
+    ASSERT_EQ(ag::utils::join(std::begin(str_array), std::end(str_array), "::"), "aaa::bbb::ccc::ddd");
+    ASSERT_EQ(ag::utils::join(std::begin(str_array) + 1, std::end(str_array), "::"), "bbb::ccc::ddd");
 }
