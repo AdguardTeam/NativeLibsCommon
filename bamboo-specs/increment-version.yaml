@@ -12,6 +12,12 @@ stages:
     - Default Job
 Default Job:
   key: JOB1
+  docker:
+    image: adguard/core-libs:latest
+    volumes:
+      ${bamboo.git.cache.directory}: ${bamboo.git.cache.directory}
+      ${system.HOME}/.ssh: /root/.ssh
+    docker-run-arguments: [ ]
   tasks:
   - checkout:
       path: native-libs-common
@@ -44,8 +50,13 @@ Default Job:
         esac
       working-dir: native-libs-common
       description: Increment version
+  final-tasks:
+    - script:
+        - |-
+          # Grant write right for Bamboo to git cache directories created during Docker run
+          find ${bamboo.git.cache.directory} -type d -user root -exec chmod 777 {} + || true
   requirements:
-  - android-sdk-linux
+  - adg-privileged-docker
   artifact-subscriptions: []
 repositories:
 - core-libs/native-libs-common:

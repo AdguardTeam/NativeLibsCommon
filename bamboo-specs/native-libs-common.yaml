@@ -71,10 +71,19 @@ Win build:
   artifact-subscriptions: []
 Linux build:
   key: LB
+  docker:
+    image: adguard/core-libs:latest
+    docker-run-arguments: [ ]
   tasks:
     - checkout:
         force-clean-build: 'true'
         description: Checkout Default Repository
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            conan remote add -i 0 art ${bamboo.conanRepoUrl} || true
+        description: Add remote conan
     - script:
         interpreter: SHELL
         scripts:
@@ -113,7 +122,7 @@ Linux build:
             # Conan remove locks
             conan remove --locks
   requirements:
-    - android-sdk-linux
+    - adg-privileged-docker
   artifact-subscriptions: []
 Mac build:
   key: JOB1
