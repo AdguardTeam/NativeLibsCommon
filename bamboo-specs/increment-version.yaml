@@ -29,6 +29,9 @@ Default Job:
       - |-
         set -x
 
+        git config user.name "Bamboo"
+        git config user.email "Bamboo"
+
         case "${bamboo_repository_branch_name}" in
         master|stable-*)
             cd scripts
