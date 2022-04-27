@@ -176,7 +176,9 @@ repositories:
       scope: global
 branches:
   create: for-pull-request
-  delete: never
+  delete:
+    after-deleted-days: 5
+    after-inactive-days: 30
   integration:
     push-on-success: false
     merge-from: NativeLibsCommon - Run tests
