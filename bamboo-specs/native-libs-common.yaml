@@ -79,11 +79,8 @@ Linux build:
         force-clean-build: 'true'
         description: Checkout Default Repository
     - script:
-        interpreter: SHELL
-        scripts:
-          - |-
-            conan remote add -i 0 art ${bamboo.conanRepoUrl} || true
-        description: Add remote conan
+        - |-
+          conan remote add -i 0 art ${bamboo.conanRepoUrl} || true
     - script:
         interpreter: SHELL
         scripts:
