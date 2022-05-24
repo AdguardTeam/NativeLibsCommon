@@ -20,5 +20,6 @@ SpaceAfterCStyleCast: true
 BreakBeforeBinaryOperators: true
 AlignAfterOpenBracket: DontAlign
 AlignOperands: DontAlign
+AlwaysBreakTemplateDeclarations: Yes
 # LLVM 15: InsertBraces: true
 ---

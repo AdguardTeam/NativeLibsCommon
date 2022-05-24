@@ -1,9 +1,9 @@
 #pragma once
 
-#include <unordered_map>
+#include <cassert>
 #include <list>
 #include <mutex>
-#include <cassert>
+#include <unordered_map>
 
 #include "common/defs.h"
 
