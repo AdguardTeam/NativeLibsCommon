@@ -67,7 +67,7 @@ TEST_F(CidrRangeTest, testUtilMethods) {
     ASSERT_EQ(std::vector<uint8_t>({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1}), addr2.value());
     auto addr3 = CidrRange::get_address_from_string("2001:db8:a::1");
     ASSERT_EQ(std::vector<uint8_t>({0x20, 0x01, 0xd, (uint8_t) 0xb8, 0, 0xa, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
-              addr3.value());
+            addr3.value());
 }
 
 TEST_F(CidrRangeTest, testCreate) {
@@ -85,8 +85,8 @@ TEST_F(CidrRangeTest, testCreate) {
     ASSERT_EQ(IPADDR_LOOPBACK, loopBack.to_uint32());
 }
 
-static void test_split_with_params(const std::string &original, const std::string &splitted_left,
-                                   const std::string &splitted_right) {
+static void test_split_with_params(
+        const std::string &original, const std::string &splitted_left, const std::string &splitted_right) {
     CidrRange range(original);
     CidrRange range_left_exp(splitted_left);
     CidrRange range_right_exp(splitted_right);
@@ -121,8 +121,8 @@ TEST_F(CidrRangeTest, testContains) {
     ASSERT_FALSE(range2.contains(small_range2));
 }
 
-static void test_excluding_ranges(const std::vector<CidrRange> &original_ranges,
-                                  const std::vector<CidrRange> &excluded_ranges) {
+static void test_excluding_ranges(
+        const std::vector<CidrRange> &original_ranges, const std::vector<CidrRange> &excluded_ranges) {
     const std::vector<CidrRange> &resulting_ranges = CidrRange::exclude(original_ranges, excluded_ranges);
     for (auto &resulting_range : resulting_ranges) {
         std::cout << resulting_range.to_string() << std::endl;
@@ -147,13 +147,13 @@ static void test_excluding_ranges(const std::vector<CidrRange> &original_ranges,
     __int128_t num = number_of_ips(original_ranges);
 
     std::cout << AG_FMT("Number of IPs in original ranges:               {0:#16x}{0:#16x}\n", (long long) (num >> 64),
-                        (long long) num);
+            (long long) num);
     std::cout << AG_FMT("Number of IPs in excluded ranges:               {0:#16x}{0:#16x}\n",
-                        (long long) (ips_num_exc >> 64), (long long) ips_num_exc);
+            (long long) (ips_num_exc >> 64), (long long) ips_num_exc);
     std::cout << AG_FMT("Number of IPs in resulting ranges:              {0:#16x}{0:#16x}\n",
-                        (long long) (ips_num >> 64), (long long) ips_num);
+            (long long) (ips_num >> 64), (long long) ips_num);
     std::cout << AG_FMT("Number of IPs in excluded and resulting ranges: {0:#16x}{0:#16x}\n",
-                        (long long) (ips_num_with_exc >> 64), (long long) ips_num_with_exc);
+            (long long) (ips_num_with_exc >> 64), (long long) ips_num_with_exc);
 
     ASSERT_EQ(number_of_ips(original_ranges), ips_num_with_exc);
 #endif // _WIN32
