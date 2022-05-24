@@ -17,5 +17,8 @@ AllowShortFunctionsOnASingleLine: None
 AllowShortLambdasOnASingleLine: Empty
 BreakConstructorInitializers: BeforeComma
 SpaceAfterCStyleCast: true
+BreakBeforeBinaryOperators: true
+AlignAfterOpenBracket: DontAlign
+AlignOperands: DontAlign
 # LLVM 15: InsertBraces: true
 ---
