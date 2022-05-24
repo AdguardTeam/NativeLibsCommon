@@ -1,7 +1,7 @@
+#include <chrono>
+#include <cstring>
 #include <iomanip>
 #include <sstream>
-#include <cstring>
-#include <chrono>
 
 #include "common/time_utils.h"
 #include "common/utils.h"
@@ -92,7 +92,7 @@ std::pair<size_t, tm> parse_time(const std::string &s, const char *format) {
     }
 #endif // _MSC_VER
     bool whole_string_parsed = (input.tellg() == -1);
-    size_t ret_pos = whole_string_parsed ? s.size() : (size_t)input.tellg();
+    size_t ret_pos = whole_string_parsed ? s.size() : (size_t) input.tellg();
     return std::make_pair(ret_pos, tm_info);
 }
 
@@ -102,20 +102,17 @@ size_t validate_gmt_tz(std::string_view s) {
 
     std::string_view str = ag::utils::trim(s);
     auto start_offset = size_t(str.data() - s.data());
-    bool may_be_alpha_code = ag::utils::starts_with(str, "GMT")
-                             || ag::utils::starts_with(str, "UTC");
+    bool may_be_alpha_code = ag::utils::starts_with(str, "GMT") || ag::utils::starts_with(str, "UTC");
     // github.com sends Set-Cookie header with timezone "-0000"
-    bool may_be_digital_code = !may_be_alpha_code
-                               && (ag::utils::starts_with(str, "-") || ag::utils::starts_with(str, "+"))
-                               && ag::utils::starts_with(str.substr(1), "0000");
+    bool may_be_digital_code = !may_be_alpha_code &&
+                               (ag::utils::starts_with(str, "-") || ag::utils::starts_with(str, "+")) &&
+                               ag::utils::starts_with(str.substr(1), "0000");
     if (!may_be_alpha_code && !may_be_digital_code) {
         return std::string_view::npos;
     }
 
     char c = may_be_alpha_code ? str[ALPHA_TZ_LEN] : str[DIGIT_TZ_LEN];
-    if (isdigit((uint8_t) c)
-            || (c >= 'a' && c <= 'z')
-            || (c >= 'A' && c <= 'Z')) {
+    if (isdigit((uint8_t) c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
         return std::string_view::npos;
     }
 
@@ -135,49 +132,46 @@ static std::string inject_microseconds_and_gmt(int64_t us, bool gmt, std::string
     std::string format_string, us_string;
     format_string.reserve(format.size() + 10);
 
-    enum {
-        DEFAULT,
-        AFTER_PERCENT
-    } state = DEFAULT;
+    enum { DEFAULT, AFTER_PERCENT } state = DEFAULT;
     for (auto &ch : format) {
         switch (state) {
-            state_default:
-            case DEFAULT: {
-                if (ch == '%') {
-                    state = AFTER_PERCENT;
-                } else {
-                    format_string.push_back(ch);
+        state_default:
+        case DEFAULT: {
+            if (ch == '%') {
+                state = AFTER_PERCENT;
+            } else {
+                format_string.push_back(ch);
+            }
+            break;
+        }
+        case AFTER_PERCENT: {
+            switch (ch) {
+            case 'f': {
+                if (us_string.empty()) {
+                    us_string = AG_FMT("{:06}", us);
                 }
+                format_string += us_string;
+                state = DEFAULT;
                 break;
             }
-            case AFTER_PERCENT: {
-                switch (ch) {
-                    case 'f': {
-                        if (us_string.empty()) {
-                            us_string = AG_FMT("{:06}", us);
-                        }
-                        format_string += us_string;
-                        state = DEFAULT;
-                        break;
-                    }
-                    case '%':
-                        format_string += "%%";
-                        state = DEFAULT;
-                        break;
-                    case 'z':
-                    case 'Z':
-                        if (gmt) {
-                            format_string += (ch == 'z') ? "+0000" : "GMT";
-                            state = DEFAULT;
-                            break;
-                        }
-                        [[fallthrough]];
-                    default:
-                        format_string.push_back('%');
-                        state = DEFAULT;
-                        goto state_default;
+            case '%':
+                format_string += "%%";
+                state = DEFAULT;
+                break;
+            case 'z':
+            case 'Z':
+                if (gmt) {
+                    format_string += (ch == 'z') ? "+0000" : "GMT";
+                    state = DEFAULT;
+                    break;
                 }
+                [[fallthrough]];
+            default:
+                format_string.push_back('%');
+                state = DEFAULT;
+                goto state_default;
             }
+        }
         }
     }
     if (state == AFTER_PERCENT) {
@@ -222,19 +216,17 @@ std::string format_localtime(SystemTime::duration time_since_epoch, const char *
 
 timeval timeval_from_timepoint(SystemTime timepoint) {
     int64_t micros = to_micros(timepoint.time_since_epoch()).count();
-    return { .tv_sec = decltype(timeval::tv_sec)(micros / 1000000),
-             .tv_usec = decltype(timeval::tv_usec)(micros % 1000000) };
+    return {.tv_sec = decltype(timeval::tv_sec)(micros / 1000000),
+            .tv_usec = decltype(timeval::tv_usec)(micros % 1000000)};
 }
 
 timeval duration_to_timeval(Micros usecs) {
     static constexpr intmax_t denom = decltype(usecs)::period::den;
-    return {
-            .tv_sec = static_cast<decltype(timeval::tv_sec)>(usecs.count() / denom),
-            .tv_usec = static_cast<decltype(timeval::tv_usec)>(usecs.count() % denom)
-    };
+    return {.tv_sec = static_cast<decltype(timeval::tv_sec)>(usecs.count() / denom),
+            .tv_usec = static_cast<decltype(timeval::tv_usec)>(usecs.count() % denom)};
 }
 
-long get_timezone(){
+long get_timezone() {
 #if defined(_WIN32)
     _tzset();
     return _timezone;

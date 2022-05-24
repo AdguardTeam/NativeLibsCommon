@@ -1,17 +1,18 @@
+#include <cerrno>
 #include <cstring>
-#include "common/file.h"
-#include "common/utils.h"
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <fcntl.h>
-#include <cerrno>
 
 #if defined(__linux__) || defined(__LINUX__) || defined(__MACH__)
 #include <unistd.h>
 #elif defined(_WIN32)
-#include <windows.h>
 #include <io.h>
+#include <windows.h>
 #endif
+
+#include "common/file.h"
+#include "common/utils.h"
 
 namespace ag::file {
 
@@ -22,21 +23,21 @@ static int clarify_flags(int flags) {
         ret_val |= O_CREAT;
     }
     switch (flags & 0x0003) {
-        case RDONLY:
-            ret_val |= O_RDONLY;
-            break;
-        case WRONLY:
-            ret_val |= O_WRONLY;
-            break;
-        case RDWR:
-            ret_val |= O_RDWR;
-            break;
+    case RDONLY:
+        ret_val |= O_RDONLY;
+        break;
+    case WRONLY:
+        ret_val |= O_WRONLY;
+        break;
+    case RDWR:
+        ret_val |= O_RDWR;
+        break;
     }
 #elif defined(_WIN32)
     if ((flags & CREAT)) {
-    ret_val |= _O_CREAT;
-}
-switch (flags & 0x0003) {
+        ret_val |= _O_CREAT;
+    }
+    switch (flags & 0x0003) {
     case RDONLY:
         ret_val |= _O_RDONLY;
         break;
@@ -46,7 +47,7 @@ switch (flags & 0x0003) {
     case RDWR:
         ret_val |= _O_RDWR;
         break;
-}
+    }
 #endif
     return ret_val;
 }
@@ -165,7 +166,7 @@ SystemTime get_modification_time(Handle f) {
 }
 
 #else
-    #error not supported
+#error not supported
 #endif
 
 int for_each_line(const Handle f, LineAction action, void *arg) {
@@ -176,7 +177,7 @@ int for_each_line(const Handle f, LineAction action, void *arg) {
         return -1;
     }
 
-    const size_t chunk_size = std::min(MAX_CHUNK_SIZE, (size_t)file_size);
+    const size_t chunk_size = std::min(MAX_CHUNK_SIZE, (size_t) file_size);
 
     std::vector<char> buffer(chunk_size);
     std::string line;
@@ -200,7 +201,7 @@ int for_each_line(const Handle f, LineAction action, void *arg) {
         file_idx += r;
     }
 
-    if ((size_t)(file_size - 1) > line_idx) {
+    if ((size_t) (file_size - 1) > line_idx) {
         std::string_view line_view = ag::utils::trim(line);
         action(line_idx, line_view, arg);
     }

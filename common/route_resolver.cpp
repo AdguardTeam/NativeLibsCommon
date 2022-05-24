@@ -2,67 +2,67 @@
 
 #if defined(__APPLE__) && defined(__MACH__)
 
-#include <array>
-#include <vector>
-#include <algorithm>
-#include <mutex>
-#include <sys/sysctl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <net/if.h>
 #include <TargetConditionals.h>
+#include <algorithm>
+#include <array>
+#include <mutex>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+#include <vector>
 
+#include "common/clock.h"
 #include "common/defs.h"
-#include "common/utils.h"
 #include "common/logger.h"
 #include "common/net_utils.h"
-#include "common/clock.h"
+#include "common/utils.h"
 
 #if TARGET_OS_IPHONE
-#define RTF_UP          0x1             /* route usable */
-#define RTF_STATIC      0x800           /* manually added */
-#define RTF_WASCLONED   0x20000         /* route generated through cloning */
-#define RTF_IFSCOPE     0x1000000       /* has valid interface scope */
+#define RTF_UP 0x1            /* route usable */
+#define RTF_STATIC 0x800      /* manually added */
+#define RTF_WASCLONED 0x20000 /* route generated through cloning */
+#define RTF_IFSCOPE 0x1000000 /* has valid interface scope */
 
-#define RTAX_DST        0       /* destination sockaddr present */
-#define RTAX_NETMASK    2       /* netmask sockaddr present */
-#define RTAX_MAX        8       /* size of array to allocate */
+#define RTAX_DST 0     /* destination sockaddr present */
+#define RTAX_NETMASK 2 /* netmask sockaddr present */
+#define RTAX_MAX 8     /* size of array to allocate */
 
 struct rt_metrics {
-    u_int32_t       rmx_locks;      /* Kernel leaves these values alone */
-    u_int32_t       rmx_mtu;        /* MTU for this path */
-    u_int32_t       rmx_hopcount;   /* max hops expected */
-    int32_t         rmx_expire;     /* lifetime for route, e.g. redirect */
-    u_int32_t       rmx_recvpipe;   /* inbound delay-bandwidth product */
-    u_int32_t       rmx_sendpipe;   /* outbound delay-bandwidth product */
-    u_int32_t       rmx_ssthresh;   /* outbound gateway buffer limit */
-    u_int32_t       rmx_rtt;        /* estimated round trip time */
-    u_int32_t       rmx_rttvar;     /* estimated rtt variance */
-    u_int32_t       rmx_pksent;     /* packets sent using this route */
-    u_int32_t       rmx_state;      /* route state */
-    u_int32_t       rmx_filler[3];  /* will be used for TCP's peer-MSS cache */
+    u_int32_t rmx_locks;     /* Kernel leaves these values alone */
+    u_int32_t rmx_mtu;       /* MTU for this path */
+    u_int32_t rmx_hopcount;  /* max hops expected */
+    int32_t rmx_expire;      /* lifetime for route, e.g. redirect */
+    u_int32_t rmx_recvpipe;  /* inbound delay-bandwidth product */
+    u_int32_t rmx_sendpipe;  /* outbound delay-bandwidth product */
+    u_int32_t rmx_ssthresh;  /* outbound gateway buffer limit */
+    u_int32_t rmx_rtt;       /* estimated round trip time */
+    u_int32_t rmx_rttvar;    /* estimated rtt variance */
+    u_int32_t rmx_pksent;    /* packets sent using this route */
+    u_int32_t rmx_state;     /* route state */
+    u_int32_t rmx_filler[3]; /* will be used for TCP's peer-MSS cache */
 };
 
 struct rt_msghdr2 {
-	u_short rtm_msglen;     /* to skip over non-understood messages */
-	u_char  rtm_version;    /* future binary compatibility */
-	u_char  rtm_type;       /* message type */
-	u_short rtm_index;      /* index for associated ifp */
-	int     rtm_flags;      /* flags, incl. kern & message, e.g. DONE */
-	int     rtm_addrs;      /* bitmask identifying sockaddrs in msg */
-	int32_t rtm_refcnt;     /* reference count */
-	int     rtm_parentflags; /* flags of the parent route */
-	int     rtm_reserved;   /* reserved field set to 0 */
-	int     rtm_use;        /* from rtentry */
-	u_int32_t rtm_inits;    /* which metrics we are initializing */
-	struct rt_metrics rtm_rmx; /* metrics themselves */
+    u_short rtm_msglen;        /* to skip over non-understood messages */
+    u_char rtm_version;        /* future binary compatibility */
+    u_char rtm_type;           /* message type */
+    u_short rtm_index;         /* index for associated ifp */
+    int rtm_flags;             /* flags, incl. kern & message, e.g. DONE */
+    int rtm_addrs;             /* bitmask identifying sockaddrs in msg */
+    int32_t rtm_refcnt;        /* reference count */
+    int rtm_parentflags;       /* flags of the parent route */
+    int rtm_reserved;          /* reserved field set to 0 */
+    int rtm_use;               /* from rtentry */
+    u_int32_t rtm_inits;       /* which metrics we are initializing */
+    struct rt_metrics rtm_rmx; /* metrics themselves */
 };
 #else
 #include <net/route.h>
 #endif
 
 // Routing socket alignment requirements
-#define ROUNDUP(a) ((a) > 0 ? (1 + (((a) - 1) | (sizeof(uint32_t) - 1))) : sizeof(uint32_t))
+#define ROUNDUP(a) ((a) > 0 ? (1 + (((a) -1) | (sizeof(uint32_t) - 1))) : sizeof(uint32_t))
 
 namespace ag {
 
@@ -118,8 +118,8 @@ public:
         }
 
         if (log.is_enabled(LogLevel::LOG_LEVEL_DEBUG)) {
-            tracelog(log, "Using {} table ({} entries, {}):",
-                     ipv4 ? "IPv4" : "IPv6", table_ptr->size(), cached ? "cached" : "just read");
+            tracelog(log, "Using {} table ({} entries, {}):", ipv4 ? "IPv4" : "IPv6", table_ptr->size(),
+                     cached ? "cached" : "just read");
             for (auto &route : *table_ptr) {
                 auto addr = utils::addr_to_str({route.address.data(), (size_t) (ipv4 ? 4 : 16)});
                 uint32_t prefix_len = 0;
@@ -206,11 +206,8 @@ private:
             // (e.g. what the user would get if they ran `route get n.n.n.n`)
             // and Apple OSes will NOT use these routes by default:
             // https://superuser.com/questions/441075/what-traffic-uses-an-interface-bound-route-rtf-ifscope-flag
-            if (!(rtm->rtm_flags & RTF_UP)
-                || !(rtm->rtm_flags & RTF_STATIC)
-                || (rtm->rtm_flags & RTF_WASCLONED)
-                || (rtm->rtm_flags & RTF_IFSCOPE))
-            {
+            if (!(rtm->rtm_flags & RTF_UP) || !(rtm->rtm_flags & RTF_STATIC) || (rtm->rtm_flags & RTF_WASCLONED) ||
+                (rtm->rtm_flags & RTF_IFSCOPE)) {
                 continue;
             }
 
@@ -284,7 +281,7 @@ RouteResolverPtr RouteResolver::create() {
     return std::make_unique<AppleRouteResolver>();
 }
 
-} // namesapce ag
+} // namespace ag
 
 #else // defined(__APPLE__) && defined(__MACH__)
 
@@ -305,6 +302,6 @@ RouteResolverPtr RouteResolver::create() {
     return std::make_unique<NoopRouteResolver>();
 }
 
-} // namesapce ag
+} // namespace ag
 
 #endif // defined(__APPLE__) && defined(__MACH__)

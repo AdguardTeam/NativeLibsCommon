@@ -1,5 +1,5 @@
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
@@ -65,11 +65,11 @@ std::string utf8_to_cesu8(std::string_view utf8) {
                 if (utf_chars_remaining == 0) {
                     if (current_uchar <= 0x7ff) {
                         modified_utf.push_back(0xc0 + ((current_uchar >> 6) & 0x1f));
-                        modified_utf.push_back(0x80 + ((current_uchar) & 0x3f));
+                        modified_utf.push_back(0x80 + (current_uchar & 0x3f));
                     } else if (current_uchar <= 0xffff) {
                         modified_utf.push_back(0xe0 + ((current_uchar >> 12) & 0x0f));
                         modified_utf.push_back(0x80 + ((current_uchar >> 6) & 0x3f));
-                        modified_utf.push_back(0x80 + ((current_uchar) & 0x3f));
+                        modified_utf.push_back(0x80 + (current_uchar & 0x3f));
                     } else {
                         // (current_uchar <= 0x10ffff) is always true
                         // Split into CESU-8 surrogate pair

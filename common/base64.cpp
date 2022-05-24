@@ -1,6 +1,6 @@
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <array>
 #include <vector>
 
 #include "common/base64.h"
@@ -12,16 +12,16 @@ using Basis = std::array<uint8_t, 256>;
 
 static constexpr Base64Table url_safe_base64_table(const Base64Table &xs) noexcept {
     Base64Table result = xs;
-    for (auto &x: result) {
+    for (auto &x : result) {
         switch (x) {
-            case '+':
-                x = '-';
-                continue;
-            case '/':
-                x = '_';
-                continue;
-            default:
-                continue;
+        case '+':
+            x = '-';
+            continue;
+        case '/':
+            x = '_';
+            continue;
+        default:
+            continue;
         }
     }
     return result;
@@ -51,29 +51,22 @@ static constexpr size_t decode_base64_size(size_t len) noexcept {
 static constexpr Base64Table BASE64_TABLE_DEFAULT{"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"};
 static constexpr Base64Table BASE64_TABLE_URL_SAFE = url_safe_base64_table(BASE64_TABLE_DEFAULT);
 static constexpr Basis BASIS_DEFAULT{
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 62, 77, 77, 77, 63,
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 77, 77, 77, 77, 77, 77,
-    77,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14,
-    15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 77, 77, 77, 77, 77,
-    77, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
-    41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 77, 77, 77, 77, 77,
+        77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
+        77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 62, 77, 77, 77, 63, 52, 53, 54, 55,
+        56, 57, 58, 59, 60, 61, 77, 77, 77, 77, 77, 77, 77, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+        13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 77, 77, 77, 77, 77, 77, 26, 27, 28, 29, 30, 31, 32,
+        33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 77, 77, 77, 77, 77,
 
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-    77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
+        77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
+        77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
+        77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
+        77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
+        77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
 };
 static constexpr Basis BASIS_URL_SAFE = url_safe_basis(BASIS_DEFAULT);
 static constexpr auto PADDING = '=';
 
-std::string encode_to_base64(Uint8View data, bool url_safe)
-{
+std::string encode_to_base64(Uint8View data, bool url_safe) {
     const auto &base64_table = url_safe ? BASE64_TABLE_URL_SAFE : BASE64_TABLE_DEFAULT;
     auto in_pos = data.data();
     auto end = data.data() + data.size();
@@ -104,8 +97,7 @@ std::string encode_to_base64(Uint8View data, bool url_safe)
     return result;
 }
 
-std::optional<std::vector<uint8_t>> decode_base64(const std::string_view &data, bool url_safe)
-{
+std::optional<std::vector<uint8_t>> decode_base64(const std::string_view &data, bool url_safe) {
     const auto &basis = url_safe ? BASIS_URL_SAFE : BASIS_DEFAULT;
     auto src = data.data();
     auto src_len = data.size();

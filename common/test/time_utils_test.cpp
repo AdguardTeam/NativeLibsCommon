@@ -9,7 +9,7 @@ TEST(TimeUtils, Test) {
     using namespace std::string_view_literals;
     auto tm1 = gmtime_from_system_time(SystemTime{1234567890s});
     ASSERT_EQ(tm1.tm_year, 109); // 2009
-    ASSERT_EQ(tm1.tm_mon, 1); // February (0 is January)
+    ASSERT_EQ(tm1.tm_mon, 1);    // February (0 is January)
     ASSERT_EQ(tm1.tm_mday, 13);
     ASSERT_EQ(tm1.tm_hour, 23);
     ASSERT_EQ(tm1.tm_min, 31);

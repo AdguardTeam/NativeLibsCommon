@@ -4,24 +4,21 @@
 
 using namespace ag;
 
-#define IPADDR_LOOPBACK ((uint32_t)0x7f000001UL)
+#define IPADDR_LOOPBACK ((uint32_t) 0x7f000001UL)
 
 class CidrRangeTest : public ::testing::Test {
 protected:
-
     void SetUp() override {
-
     }
 
     void TearDown() override {
-
     }
 };
 
 #ifndef _WIN32
 static __int128_t number_of_ips(const CidrRange &range) {
     int pow = range.get_address().size() * 8 - range.get_prefix_len();
-    return ((__int128_t)1) << pow;
+    return ((__int128_t) 1) << pow;
 }
 
 static __int128_t number_of_ips(const std::vector<CidrRange> &ranges) {
@@ -69,7 +66,8 @@ TEST_F(CidrRangeTest, testUtilMethods) {
     auto addr2 = CidrRange::get_address_from_string("::ffff:127.0.0.1");
     ASSERT_EQ(std::vector<uint8_t>({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1}), addr2.value());
     auto addr3 = CidrRange::get_address_from_string("2001:db8:a::1");
-    ASSERT_EQ(std::vector<uint8_t>({0x20, 0x01, 0xd, (uint8_t)0xb8, 0, 0xa, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}), addr3.value());
+    ASSERT_EQ(std::vector<uint8_t>({0x20, 0x01, 0xd, (uint8_t) 0xb8, 0, 0xa, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+              addr3.value());
 }
 
 TEST_F(CidrRangeTest, testCreate) {
@@ -87,7 +85,8 @@ TEST_F(CidrRangeTest, testCreate) {
     ASSERT_EQ(IPADDR_LOOPBACK, loopBack.to_uint32());
 }
 
-static void test_split_with_params(const std::string &original, const std::string &splitted_left, const std::string &splitted_right) {
+static void test_split_with_params(const std::string &original, const std::string &splitted_left,
+                                   const std::string &splitted_right) {
     CidrRange range(original);
     CidrRange range_left_exp(splitted_left);
     CidrRange range_right_exp(splitted_right);
@@ -96,7 +95,6 @@ static void test_split_with_params(const std::string &original, const std::strin
     ASSERT_EQ(range_left_exp, splitted_range->first);
     ASSERT_EQ(range_right_exp, splitted_range->second);
 }
-
 
 TEST_F(CidrRangeTest, testSplit) {
     test_split_with_params("::/0", "::/1", "8000::/1");
@@ -148,10 +146,14 @@ static void test_excluding_ranges(const std::vector<CidrRange> &original_ranges,
     __int128_t ips_num_with_exc = ips_num + ips_num_exc;
     __int128_t num = number_of_ips(original_ranges);
 
-    std::cout << AG_FMT("Number of IPs in original ranges:               {0:#16x}{0:#16x}\n", (long long)(num >> 64), (long long)num);
-    std::cout << AG_FMT("Number of IPs in excluded ranges:               {0:#16x}{0:#16x}\n", (long long)(ips_num_exc >> 64), (long long)ips_num_exc);
-    std::cout << AG_FMT("Number of IPs in resulting ranges:              {0:#16x}{0:#16x}\n", (long long)(ips_num >> 64), (long long)ips_num);
-    std::cout << AG_FMT("Number of IPs in excluded and resulting ranges: {0:#16x}{0:#16x}\n", (long long)(ips_num_with_exc >> 64), (long long)ips_num_with_exc);
+    std::cout << AG_FMT("Number of IPs in original ranges:               {0:#16x}{0:#16x}\n", (long long) (num >> 64),
+                        (long long) num);
+    std::cout << AG_FMT("Number of IPs in excluded ranges:               {0:#16x}{0:#16x}\n",
+                        (long long) (ips_num_exc >> 64), (long long) ips_num_exc);
+    std::cout << AG_FMT("Number of IPs in resulting ranges:              {0:#16x}{0:#16x}\n",
+                        (long long) (ips_num >> 64), (long long) ips_num);
+    std::cout << AG_FMT("Number of IPs in excluded and resulting ranges: {0:#16x}{0:#16x}\n",
+                        (long long) (ips_num_with_exc >> 64), (long long) ips_num_with_exc);
 
     ASSERT_EQ(number_of_ips(original_ranges), ips_num_with_exc);
 #endif // _WIN32
@@ -170,7 +172,6 @@ TEST_F(CidrRangeTest, testExcludeIpv6) {
 
     test_excluding_ranges(original_ranges, excluded_ranges);
 }
-
 
 TEST_F(CidrRangeTest, testExcludeIpv4) {
     CidrRange range("0.0.0.0/0");

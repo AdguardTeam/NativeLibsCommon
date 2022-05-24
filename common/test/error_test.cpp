@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include <algorithm>
+#include <gtest/gtest.h>
 
 #include "common/error.h"
 
@@ -7,15 +7,16 @@ using namespace ag;
 
 enum ExchangeErrorCode {
     TIMED_OUT,
-    SOCKET_ERROR
+    SOCKET_ERROR,
 };
 
-template<>
-struct ErrorCodeToString<ExchangeErrorCode> {
+template <> struct ErrorCodeToString<ExchangeErrorCode> {
     std::string operator()(ExchangeErrorCode code) {
         switch (code) {
-            case TIMED_OUT: return "Timed out";
-            case SOCKET_ERROR: return "Socket error";
+        case TIMED_OUT:
+            return "Timed out";
+        case SOCKET_ERROR:
+            return "Socket error";
         }
     }
 };
@@ -25,7 +26,8 @@ Result<std::string, ExchangeErrorCode> do_something_good() {
 }
 
 Result<std::string, ExchangeErrorCode> do_something_bad() {
-    return Result<std::string, ExchangeErrorCode>(make_error(SOCKET_ERROR, "Socket error occurred while doing nothing"));
+    return Result<std::string, ExchangeErrorCode>(
+            make_error(SOCKET_ERROR, "Socket error occurred while doing nothing"));
 }
 
 TEST(ErrorTest, TestError) {

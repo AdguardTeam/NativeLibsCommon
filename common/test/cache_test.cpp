@@ -6,7 +6,9 @@ static constexpr size_t CACHE_SIZE = 1000u;
 
 class LruCacheTest : public ::testing::Test {
 public:
-    LruCacheTest() : m_cache(CACHE_SIZE) {}
+    LruCacheTest()
+            : m_cache(CACHE_SIZE) {
+    }
 
 protected:
     ag::LruCache<int, std::string> m_cache;

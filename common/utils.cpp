@@ -1,21 +1,20 @@
 #include <algorithm>
-#include <cstdio>
-#include <cstdarg>
-#include <cstring>
 #include <array>
-#include <locale>
 #include <codecvt>
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
+#include <locale>
 #include <numeric>
 
-#include "common/utils.h"
 #include "common/socket_address.h"
+#include "common/utils.h"
 
 namespace ag {
 
-std::vector<std::string_view> utils::split_by(std::string_view str,
-        std::string_view delim, bool include_empty) {
+std::vector<std::string_view> utils::split_by(std::string_view str, std::string_view delim, bool include_empty) {
     if (str.empty()) {
-        return include_empty ? std::vector{ str } : std::vector<std::string_view>{};
+        return include_empty ? std::vector{str} : std::vector<std::string_view>{};
     }
 
     size_t num = 1;
@@ -53,19 +52,18 @@ std::vector<std::string_view> utils::split_by(std::string_view str,
     return out;
 }
 
-std::vector<std::string_view> utils::split_by(std::string_view str,
-        int delim, bool include_empty) {
-    return split_by_any_of(str, { (char*)&delim, 1 }, include_empty);
+std::vector<std::string_view> utils::split_by(std::string_view str, int delim, bool include_empty) {
+    return split_by_any_of(str, {(char *) &delim, 1}, include_empty);
 }
 
-std::vector<std::string_view> utils::split_by_any_of(std::string_view str,
-        std::string_view delim, bool include_empty) {
+std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::string_view delim, bool include_empty) {
     if (str.empty()) {
-        return include_empty ? std::vector{ str } : std::vector<std::string_view>{};
+        return include_empty ? std::vector{str} : std::vector<std::string_view>{};
     }
 
-    size_t num = 1 + std::count_if(str.begin(), str.end(),
-        [&delim] (int c) { return delim.find(c) != delim.npos; });
+    size_t num = 1 + std::count_if(str.begin(), str.end(), [&delim](int c) {
+                     return delim.find(c) != delim.npos;
+                 });
     size_t seek = 0;
     std::vector<std::string_view> out;
     out.reserve(num);
@@ -95,14 +93,14 @@ static std::array<std::string_view, 2> split2(std::string_view str, int delim, b
 
     size_t seek = !reverse ? str.find(delim) : str.rfind(delim);
     if (seek != std::string_view::npos) {
-        first = { str.data(), seek };
-        second = { str.data() + seek + 1, str.length() - seek - 1 };
+        first = {str.data(), seek};
+        second = {str.data() + seek + 1, str.length() - seek - 1};
     } else {
         first = str;
         second = {};
     }
 
-    return { first, second };
+    return {first, second};
 }
 
 std::array<std::string_view, 2> utils::split2_by(std::string_view str, int delim) {
@@ -174,9 +172,9 @@ std::optional<std::string_view> utils::read_line(std::string_view str, size_t po
 }
 
 #ifdef __linux__
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
 uint32_t utils::gettid(void) {
     return syscall(SYS_gettid);
 }
@@ -188,17 +186,17 @@ uint32_t utils::gettid(void) {
     uint64_t tid;
     if (0 != pthread_threadid_np(NULL, &tid))
         return 0;
-    return (uint32_t)tid;
+    return (uint32_t) tid;
 }
 #endif //__MACH__
 
 #ifdef _WIN32
-#include <winbase.h>
 #include <process.h>
+#include <winbase.h>
 #include <windows.h>
 uint32_t utils::gettid(void) {
     return GetCurrentThreadId();
 }
 #endif // _WIN32
 
-}// namespace ag
+} // namespace ag

@@ -33,3 +33,126 @@ After successful build, you may want to upload built binaries to remote repo:
 ```
 conan upload -t $REMOTE_NAME -c '*' --all
 ```
+
+## Code style
+
+### Common
+
+1. Indentation is 4 spaces (imported files may have another indent).
+2. Code must be commented enough in terms of control flow. All public and big static methods should have a description in Doxygen format (`/** */`)
+3. Formatting rules. We use CLion basic rules. They are based on LLVM and Apple rules, and applies 4 spaces indentation by default. 
+   But there are also rules not related to indentation:
+    - Binary operator are always separated by spaces from their operands (x + y)
+    - Screen width: 120 symbols (not 80)
+    - In function definition, operator block is started on function line `int main(int argc, char **argv) {`.
+      However, `int func() try {` is prohibited.
+      If it makes harder to read the code, next line may be empty:
+      ```
+          int very_long_function_definition(
+                  int foo1234567890, int bar9876543210, int baz9999999999, 
+                  int x4242424242, int y1010101010, int z0101010101) noexcept {
+
+              do_smth();
+          }
+      ```     
+    - In loops and ifs, operator block is started on function line too. Single-line branches should be in operator braces too.
+4. Identifier prefixes other than `p_`, `m_`, `g_` and `_` is prohibited
+5. Don't use `p` prefix unless it is really needed. In most cases type of identifier says what is it.
+6. All new headers should contain `#pragma once` guard instead of `#define` one.
+
+### C
+
+No new C code please.
+
+### C++
+1. Language standard - C++17 (-std=c++17)
+2. Class prefixes - use namespaces instead.
+3. Namespaces - root namespace is ag::, max depth is 2 (plus may be ::test).
+   Namespace names are snake_cases.
+4. Class naming - Capital CamelCase (Rust-like)
+5. Using naming - Capital CamelCase.
+   If it is wrapped pointer to type with `snake_case`, then it may be named `snake_case_ptr`.
+6. Instance naming - snake_case
+7. Member function, non-member variable and parameter naming - `snake_case`
+8. Member variable naming - `m_snake_case`, public members of struct are `snake_case`.
+9. Member access - `m_something`, or `this->something` if `m_` is missing in name.
+10. Constants and enum values (static const, constexpr and defines) naming - `CAPITAL_UNDER_SCORE`
+11. Global variables - `g_snake_case`
+12. Includes order - Chromium-style:
+    a. List of external headers in `<>`
+    b. List of our public headers, alphabetically sorted, in `""`.
+       If current unit is implementation of the public header, that include should anyway be included here.
+    c. List of current directory headers, alphabetically sorted, in `""`.
+       This section should not exist in public headers.
+
+Code example:
+
+```
+#pragma once
+
+#include <string>
+
+namespace ag::utils {
+    class Strings {
+    public:
+        /**
+         * Make greeting to the world
+         * @param x Some random value
+         * @return The greeting
+         */
+        static std::string hello_world(int x);
+    }
+}
+
+```
+
+```
+#include <string>
+
+#include "common/utils.h"
+
+#include "another_utils.h"
+
+namespace ag::utils {
+    std::string Strings::hello_world(int x) {
+        if (x % 2) {
+            return "Hello, world!!";
+        } else {
+            return "Hello, world!1";
+        }
+    }
+}
+```
+
+### Doxygen comments
+- All public methods and functions should be documented.
+- Use Javadoc style with an `autobrief` feature.
+- `autobrief` means that the first statement of a long description automatically becomes a brief description.
+  So `@brief` is redundant.
+- Use `@return`, not `@returns`
+- Use `[out]` in `@param` only if code is not self-explanatory.
+- Don't use `[in]` in `@param`.
+- Don't use extra line endings.
+- Use infinitive instead of the third person in brief descriptions.
+- Descriptions should start with a capital letter.
+
+Examples:
+```
+/**
+ * Sum of x and y.
+ * This function is usually used to get sum of x and y.
+ * @param x The x
+ * @param yy The y
+ * @return Sum of x and y.
+int plus(int x, int yy) {
+    return x + yy;
+}
+enum class t {
+    A, /**< One-line post-identifier comment */
+    /** Another one-line comment */
+    B,
+    /** Third one-line comment */
+    C,
+    D, /**< One-line post-identifier comment */
+}
+```

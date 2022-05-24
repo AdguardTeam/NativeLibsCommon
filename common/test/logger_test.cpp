@@ -4,16 +4,18 @@
 
 class FileHandler {
 public:
-    FileHandler(std::string_view filename) : m_filename(filename) {
+    FileHandler(std::string_view filename)
+            : m_filename(filename) {
         m_file = std::fopen(filename.data(), "w");
     }
     ~FileHandler() {
         std::fclose(m_file);
         std::remove(m_filename.data());
     }
-    FILE* get_file() {
+    FILE *get_file() {
         return m_file;
     }
+
 private:
     std::string m_filename;
     FILE *m_file;
@@ -26,7 +28,7 @@ TEST(Logger, Works) {
     logger.log(LOG_LEVEL_INFO, FMT_STRING("{}"), "Hello, world!");
     ASSERT_EQ(ag::Logger::get_log_level(), ag::LOG_LEVEL_INFO);
     int counter;
-    Logger::set_callback([&counter](LogLevel level, std::string_view message){
+    Logger::set_callback([&counter](LogLevel level, std::string_view message) {
         Logger::LOG_TO_STDERR(level, message);
         counter++;
     });
