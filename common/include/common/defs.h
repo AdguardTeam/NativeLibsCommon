@@ -33,6 +33,7 @@ using SystemTime = SystemClock::time_point;
 using Secs = std::chrono::seconds;
 using Millis = std::chrono::milliseconds;
 using Micros = std::chrono::microseconds;
+using Nanos = std::chrono::nanoseconds;
 
 using OptString = std::optional<std::string>;
 using ErrString = OptString;
