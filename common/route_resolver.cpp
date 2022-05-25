@@ -119,7 +119,7 @@ public:
 
         if (log.is_enabled(LogLevel::LOG_LEVEL_DEBUG)) {
             tracelog(log, "Using {} table ({} entries, {}):", ipv4 ? "IPv4" : "IPv6", table_ptr->size(),
-                     cached ? "cached" : "just read");
+                    cached ? "cached" : "just read");
             for (auto &route : *table_ptr) {
                 auto addr = utils::addr_to_str({route.address.data(), (size_t) (ipv4 ? 4 : 16)});
                 uint32_t prefix_len = 0;
@@ -206,8 +206,8 @@ private:
             // (e.g. what the user would get if they ran `route get n.n.n.n`)
             // and Apple OSes will NOT use these routes by default:
             // https://superuser.com/questions/441075/what-traffic-uses-an-interface-bound-route-rtf-ifscope-flag
-            if (!(rtm->rtm_flags & RTF_UP) || !(rtm->rtm_flags & RTF_STATIC) || (rtm->rtm_flags & RTF_WASCLONED) ||
-                (rtm->rtm_flags & RTF_IFSCOPE)) {
+            if (!(rtm->rtm_flags & RTF_UP) || !(rtm->rtm_flags & RTF_STATIC) || (rtm->rtm_flags & RTF_WASCLONED)
+                    || (rtm->rtm_flags & RTF_IFSCOPE)) {
                 continue;
             }
 

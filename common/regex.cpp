@@ -26,13 +26,11 @@ std::string Regex::replace(std::string_view subject, std::string_view replacemen
     result.resize(result_length - 1);
 
     int retval = pcre2_substitute(m_re, (PCRE2_SPTR8) subject.data(), subject.length(), 0, options, nullptr, nullptr,
-                                  (PCRE2_SPTR8) replacement.data(), replacement.length(),
-                                  (PCRE2_UCHAR8 *) result.data(), &result_length);
+            (PCRE2_SPTR8) replacement.data(), replacement.length(), (PCRE2_UCHAR8 *) result.data(), &result_length);
     if (retval == PCRE2_ERROR_NOMEMORY) {
         result.resize(result_length - 1);
         retval = pcre2_substitute(m_re, (PCRE2_SPTR8) subject.data(), subject.length(), 0, options, nullptr, nullptr,
-                                  (PCRE2_SPTR8) replacement.data(), replacement.length(),
-                                  (PCRE2_UCHAR8 *) result.data(), &result_length);
+                (PCRE2_SPTR8) replacement.data(), replacement.length(), (PCRE2_UCHAR8 *) result.data(), &result_length);
     }
     if (retval >= 0) {
         result.resize(result_length);

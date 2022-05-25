@@ -10,7 +10,8 @@ enum ExchangeErrorCode {
     SOCKET_ERROR,
 };
 
-template <> struct ErrorCodeToString<ExchangeErrorCode> {
+template <>
+struct ErrorCodeToString<ExchangeErrorCode> {
     std::string operator()(ExchangeErrorCode code) {
         switch (code) {
         case TIMED_OUT:

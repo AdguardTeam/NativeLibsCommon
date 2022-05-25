@@ -172,8 +172,8 @@ bool SocketAddress::is_ipv4() const {
 }
 
 bool SocketAddress::is_ipv4_mapped() const {
-    return m_ss.ss_family == AF_INET6 &&
-           !memcmp(&((sockaddr_in6 *) &m_ss)->sin6_addr, IPV4_MAPPED_PREFIX, sizeof(IPV4_MAPPED_PREFIX));
+    return m_ss.ss_family == AF_INET6
+            && !memcmp(&((sockaddr_in6 *) &m_ss)->sin6_addr, IPV4_MAPPED_PREFIX, sizeof(IPV4_MAPPED_PREFIX));
 }
 
 SocketAddress SocketAddress::to_ipv4_unmapped() const {

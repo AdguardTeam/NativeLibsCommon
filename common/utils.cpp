@@ -62,8 +62,8 @@ std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::
     }
 
     size_t num = 1 + std::count_if(str.begin(), str.end(), [&delim](int c) {
-                     return delim.find(c) != delim.npos;
-                 });
+        return delim.find(c) != delim.npos;
+    });
     size_t seek = 0;
     std::vector<std::string_view> out;
     out.reserve(num);

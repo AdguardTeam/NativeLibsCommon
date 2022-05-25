@@ -104,9 +104,9 @@ size_t validate_gmt_tz(std::string_view s) {
     auto start_offset = size_t(str.data() - s.data());
     bool may_be_alpha_code = ag::utils::starts_with(str, "GMT") || ag::utils::starts_with(str, "UTC");
     // github.com sends Set-Cookie header with timezone "-0000"
-    bool may_be_digital_code = !may_be_alpha_code &&
-                               (ag::utils::starts_with(str, "-") || ag::utils::starts_with(str, "+")) &&
-                               ag::utils::starts_with(str.substr(1), "0000");
+    bool may_be_digital_code = !may_be_alpha_code
+            && (ag::utils::starts_with(str, "-") || ag::utils::starts_with(str, "+"))
+            && ag::utils::starts_with(str.substr(1), "0000");
     if (!may_be_alpha_code && !may_be_digital_code) {
         return std::string_view::npos;
     }

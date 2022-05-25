@@ -5,7 +5,11 @@
 namespace ag {
 
 static constexpr std::string_view ENUM_NAMES[] = {
-        "ERROR", "WARN", "INFO", "DEBUG", "TRACE",
+        "ERROR",
+        "WARN",
+        "INFO",
+        "DEBUG",
+        "TRACE",
 };
 static constexpr size_t ENUM_NAMES_NUMBER = std::size(ENUM_NAMES);
 

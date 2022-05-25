@@ -21,9 +21,8 @@
 
 namespace ag {
 
-std::tuple<std::string_view, std::string_view, ErrStringView>
-utils::split_host_port_with_err(std::string_view address_string, bool require_ipv6_addr_in_square_brackets,
-                                bool require_non_empty_port) {
+std::tuple<std::string_view, std::string_view, ErrStringView> utils::split_host_port_with_err(
+        std::string_view address_string, bool require_ipv6_addr_in_square_brackets, bool require_non_empty_port) {
     if (!address_string.empty() && address_string.front() == '[') {
         auto pos = address_string.find("]:");
         if (pos != std::string_view::npos) {
@@ -42,8 +41,7 @@ utils::split_host_port_with_err(std::string_view address_string, bool require_ip
         if (pos != std::string_view::npos) {
             auto rpos = address_string.rfind(':');
             if (pos != rpos) { // This is an IPv6 address without a port
-                return {address_string,
-                        {},
+                return {address_string, {},
                         require_ipv6_addr_in_square_brackets ? ErrStringView("IPv6 address not in square brackets")
                                                              : std::nullopt};
             }
