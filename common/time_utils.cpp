@@ -83,12 +83,12 @@ std::pair<size_t, tm> parse_time(const std::string &s, const char *format) {
     input.imbue(std::locale::classic());
     input >> std::get_time(&tm_info, format);
     if (input.fail()) {
-        return std::make_pair(std::string::npos, (tm){});
+        return std::make_pair(std::string::npos, tm{});
     }
 #ifdef _MSC_VER
     // MS STL has buggy std::get_time - it successfully parses 4-digit year as %y, but places 0 into tm_year
     if (tm_info.tm_year == 0) {
-        return std::make_pair(std::string::npos, (tm){});
+        return std::make_pair(std::string::npos, tm{});
     }
 #endif // _MSC_VER
     bool whole_string_parsed = (input.tellg() == -1);
