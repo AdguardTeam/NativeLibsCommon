@@ -28,8 +28,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_compile_definitions(${PROJECT_NAME} PUBLIC PCRE2_STATIC=1 PCRE2_CODE_UNIT_WIDTH=8)
 target_link_libraries(${PROJECT_NAME} CONAN_PKG::fmt CONAN_PKG::libevent
         CONAN_PKG::pcre2)
-target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
 if (NOT MSVC)
+    target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
     target_compile_options(${PROJECT_NAME}  PRIVATE -fno-exceptions)
 else ()
     target_compile_definitions(${PROJECT_NAME} PRIVATE
