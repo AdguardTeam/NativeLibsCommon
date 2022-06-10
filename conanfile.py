@@ -29,6 +29,7 @@ class NativeLibsCommon(ConanFile):
 
     def configure(self):
         self.options["gtest"].build_gmock = False
+        self.options["pcre2"].build_pcre2grep = False
 
     def config_options(self):
         if self.settings.os == "Windows":

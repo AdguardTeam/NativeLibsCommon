@@ -24,32 +24,20 @@ Win build:
           - |-
             call vcvars32
 
-            set CMAKE=cmake
-            set CTEST=ctest
-            set CMAKE_MAKE_PROGRAM=ninja
-            set CMAKE_MAKE_FLAGS=""
-            set CMAKE_GENERATOR="Ninja"
-            set CL_GIT_ROOT=%cd%
             cd common
-            set CL_ROOT=%cd%
 
             if exist build\ rmdir /s /q build || exit /b 1
             mkdir build || exit /b 1
             cd build || exit /b 1
 
-            %CMAKE% -DCMAKE_BUILD_TYPE=Debug ^
-                -DCMAKE_C_COMPILER="C:/Program Files (x86)/LLVM/bin/clang-cl.exe" ^
-                -DCMAKE_CXX_COMPILER="C:/Program Files (x86)/LLVM/bin/clang-cl.exe" ^
-                -DCMAKE_C_FLAGS="--target=i686-pc-windows-msvc" ^
-                -DCMAKE_CXX_FLAGS="--target=i686-pc-windows-msvc" ^
-                -DCMAKE_C_FLAGS_DEBUG="/MT" ^
-                -DCMAKE_CXX_FLAGS_DEBUG="/MT" ^
-                -DCMAKE_MAKE_PROGRAM=%CMAKE_MAKE_PROGRAM% ^
-                -G "%CMAKE_GENERATOR%" ^
+            cmake -DCMAKE_BUILD_TYPE=Debug ^
+                -DCMAKE_C_FLAGS_DEBUG=/MT ^
+                -DCMAKE_CXX_FLAGS_DEBUG=/MT ^
+                -G "Visual Studio 16 2019" -A Win32 ^
                 ..
 
-            %CMAKE_MAKE_PROGRAM% tests || exit /b 1
-            %CTEST% -D ExperimentalTest --no-compress-output || exit /b 1
+            cmake --build . --target tests || exit /b 1
+            ctest -D ExperimentalTest --no-compress-output || exit /b 1
         description: build 32
   final-tasks:
     - any-task:
