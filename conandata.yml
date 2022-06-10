@@ -27,7 +27,5 @@ commit_hash:
     hash: "be7a9daa7fd9956725994a1f879134c0bbbd02e5"
   "1.0.14":
     hash: "ffb96cd5877142a70ec91a7af4396cdf95f8574d"
-  "1.0.19":
-    hash: "7c6793342020272f1e6443827739b629e387ec82"
   "1.0.20":
     hash: "0b5f53edcf788935114fbcd6e9112db3306a08e9"

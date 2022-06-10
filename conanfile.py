@@ -1,5 +1,5 @@
 from conans import ConanFile, CMake
-
+from conans.model.version import Version
 
 class NativeLibsCommon(ConanFile):
     name = "native_libs_common"
@@ -29,7 +29,8 @@ class NativeLibsCommon(ConanFile):
 
     def configure(self):
         self.options["gtest"].build_gmock = False
-        self.options["pcre2"].build_pcre2grep = False
+        if (self.version is None) or (Version(self.version) >= "1.0.20"):
+            self.options["pcre2"].build_pcre2grep = False
 
     def config_options(self):
         if self.settings.os == "Windows":
