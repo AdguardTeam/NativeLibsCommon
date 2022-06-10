@@ -15,7 +15,7 @@ function(conan_bootstrap)
         elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
             set(CONAN_PROFILE "${CMAKE_CURRENT_SOURCE_DIR}/${BS_SRCROOT}/conan/profiles/linux-clang")
         elseif(WIN32)
-            set(CONAN_PROFILE "${CMAKE_CURRENT_SOURCE_DIR}/${BS_SRCROOT}/conan/profiles/windows-msvc.jinja")
+            set(CONAN_PROFILE "${CMAKE_CURRENT_SOURCE_DIR}/${BS_SRCROOT}/conan/profiles/windows-clang-cl.jinja")
         elseif(APPLE)
             if(NOT TARGET_OS)
                 set(TARGET_OS macos)
@@ -48,7 +48,7 @@ function(conan_bootstrap)
             conan_cmake_run(CONANFILE "${BS_CONANFILE}"
                             PROFILE "${CONAN_PROFILE}"
                             BUILD missing
-                            # PROFILE_AUTO compiler.version
+                            PROFILE_AUTO compiler.version
                             SETTINGS ${settings})
         else()
             conan_cmake_run(CONANFILE "${BS_CONANFILE}"
