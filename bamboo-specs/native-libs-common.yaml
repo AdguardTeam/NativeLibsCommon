@@ -55,7 +55,7 @@ Win build:
             conan remove -f '*'
             conan remove --locks
   requirements:
-    - system.builder.msbuild.MSBuild v4.0 (32bit)
+    - system.builder.msbuild.MSBuild v15.0 (32bit)
   artifact-subscriptions: []
 Linux build:
   key: LB
