@@ -86,7 +86,7 @@ using Error = std::shared_ptr<ErrorImpl<T>>;
 template<typename R, typename Enum>
 class Result {
 public:
-    template <typename T, typename = std::enable_if<std::is_constructible_v<std::variant<R, Error<Enum>>, T>>>
+    template <typename T, typename = std::enable_if_t<std::is_constructible_v<std::variant<R, Error<Enum>>, T>>>
     explicit Result(T &&value)
             : m_value(std::forward<T>(value))
     {
