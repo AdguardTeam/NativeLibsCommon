@@ -7,6 +7,7 @@ import yaml
 work_dir = os.path.dirname(os.path.realpath(__file__))
 project_dir = os.path.dirname(work_dir)
 recipes_dir = os.path.join(project_dir, 'conan', 'recipes')
+global yaml_data
 
 versions = ["777"]
 conandata_path = os.path.join(project_dir, "conandata.yml")
@@ -21,4 +22,8 @@ for folder in os.listdir(recipes_dir):
         subprocess.run(["conan", "export", path, "AdguardTeam/NativeLibsCommon"])
 
 for version in versions:
+    if (version == "777"):
+        subprocess.run(["git", "checkout", "master"])
+    else:
+        subprocess.run(["git", "checkout", yaml_data["commit_hash"][version]["hash"]])
     subprocess.run(["conan", "export", project_dir, "/" + version + "@AdguardTeam/NativeLibsCommon"])
