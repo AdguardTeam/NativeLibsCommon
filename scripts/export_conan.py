@@ -25,5 +25,9 @@ for version in versions:
     if (version == "777"):
         subprocess.run(["git", "checkout", "master"])
     else:
-        subprocess.run(["git", "checkout", yaml_data["commit_hash"][version]["hash"]])
+        hash1 = yaml_data["commit_hash"][version]["hash"]
+        result = subprocess.run(["git", "log", "--reverse", "--ancestry-path", hash1 + "..master", "--pretty=%h"], capture_output=True)
+        the_hash = result.stdout.decode().splitlines()[0]
+        print("HASH is ", the_hash)
+        subprocess.run(["git", "checkout", the_hash])
     subprocess.run(["conan", "export", project_dir, "/" + version + "@AdguardTeam/NativeLibsCommon"])
