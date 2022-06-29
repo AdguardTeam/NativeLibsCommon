@@ -12,7 +12,14 @@ stages:
         - Default Job
 Default Job:
   key: JOB1
+  docker:
+    image: adguard/core-libs:latest
+    volumes:
+      ${bamboo.git.cache.directory}: ${bamboo.git.cache.directory}
+      ${system.HOME}/.ssh: /root/.ssh
+    docker-run-arguments: [ ]
   tasks:
+    - !include docker-clean.yaml
     - checkout:
         force-clean-build: 'true'
         description: Checkout
@@ -23,13 +30,17 @@ Default Job:
             # Clean up local cache
             conan remove -f '*'
 
+            conan remote add -i 0 art ${bamboo.conanRepoUrl} || true
+
             # Export packages
             cd scripts
             python3 -m pip install -r requirements.txt
             ./export_conan.py
 
+            conan user -p "${bamboo_artifactoryPassword}" -r art "${bamboo_artifactoryUser}" > upload.txt 2>&1
+
             # Upload packages
-            conan upload -r art --all -c '*' > upload.txt 2>&1
+            conan upload -r art --all -c '*' >> upload.txt 2>&1
             echo conan upload finished with status $?
   final-tasks:
     - script:
@@ -41,7 +52,7 @@ Default Job:
             conan remove --locks
         description: Clean up
   requirements:
-    - android-sdk-linux
+    - adg-privileged-docker
   artifact-subscriptions: []
 repositories:
   - core-libs/native-libs-common:

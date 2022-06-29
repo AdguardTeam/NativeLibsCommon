@@ -19,6 +19,7 @@ Default Job:
       ${system.HOME}/.ssh: /root/.ssh
     docker-run-arguments: [ ]
   tasks:
+  - !include docker-clean.yaml
   - checkout:
       path: native-libs-common
       force-clean-build: 'false'
@@ -53,11 +54,6 @@ Default Job:
         esac
       working-dir: native-libs-common
       description: Increment version
-  final-tasks:
-    - script:
-        - |-
-          # Grant write right for Bamboo to git cache directories created during Docker run
-          find ${bamboo.git.cache.directory} -type d -user root -exec chmod 777 {} + || true
   requirements:
   - adg-privileged-docker
   artifact-subscriptions: []
