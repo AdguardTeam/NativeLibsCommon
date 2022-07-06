@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class CurlConan(ConanFile):
     name = "libcurl"
-    version = "7.78.0-adguard1"
+    version = "7.78.0-adguard2"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
@@ -71,4 +71,3 @@ class CurlConan(ConanFile):
             self.cpp_info.libs = ["curl"]
 
         self.cpp_info.defines.append("CURL_STATICLIB=1")
-        self.cpp_info.requires.append("zlib::zlib")
