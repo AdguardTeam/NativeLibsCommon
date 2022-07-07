@@ -87,7 +87,7 @@ template<typename R, typename Enum>
 class Result {
 public:
     template <typename T, typename = std::enable_if_t<std::is_constructible_v<std::variant<R, Error<Enum>>, T>>>
-    explicit Result(T &&value)
+    Result(T &&value)
             : m_value(std::forward<T>(value))
     {
         if (auto err = std::get_if<Error<Enum>>(&m_value); err && *err == nullptr) {
@@ -114,6 +114,9 @@ public:
         return std::get<R>(m_value);
     }
     [[nodiscard]] R &operator *() noexcept {
+        return std::get<R>(m_value);
+    }
+    [[nodiscard]] R &operator ->() noexcept {
         return std::get<R>(m_value);
     }
     [[nodiscard]] const Error<Enum> &error() const noexcept {
