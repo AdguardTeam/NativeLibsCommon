@@ -612,6 +612,9 @@ std::optional<std::string_view> read_line(std::string_view str, size_t pos);
 /**
  * @return Thread id
  */
-uint32_t gettid(void);
+uint32_t gettid();
+
+/** Compare strings ignoring case. */
+bool case_equals(std::string_view a, std::string_view b);
 
 } // namespace ag::utils

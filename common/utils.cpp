@@ -199,4 +199,26 @@ uint32_t utils::gettid(void) {
 }
 #endif // _WIN32
 
+// Compare two strings ignoring case
+static inline int ag_strncasecmp(const char *s1, const char *s2, size_t n) {
+    if (n != 0) {
+        const auto *us1 = (unsigned char *) s1;
+        const auto *us2 = (unsigned char *) s2;
+        do {
+            if (tolower(*us1) != tolower(*us2)) {
+                return (tolower(*us1) - tolower(*us2));
+            }
+            if (*us1++ == '\0') {
+                break;
+            }
+            us2++;
+        } while (--n != 0);
+    }
+    return 0;
+}
+
+bool case_equals(std::string_view a, std::string_view b) {
+    return a.size() == b.size() && 0 == ag_strncasecmp(a.data(), b.data(), b.size());
+}
+
 } // namespace ag
