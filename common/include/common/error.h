@@ -116,8 +116,11 @@ public:
     [[nodiscard]] R &operator *() noexcept {
         return std::get<R>(m_value);
     }
-    [[nodiscard]] R &operator ->() noexcept {
-        return std::get<R>(m_value);
+    [[nodiscard]] const R *operator ->() const noexcept {
+        return &std::get<R>(m_value);
+    }
+    [[nodiscard]] R *operator ->() noexcept {
+        return &std::get<R>(m_value);
     }
     [[nodiscard]] const Error<Enum> &error() const noexcept {
         return std::get<Error<Enum>>(m_value);
