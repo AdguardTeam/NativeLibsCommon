@@ -92,11 +92,11 @@ private:
     std::string m_name;
 };
 
-#define errlog(l, fmt, ...) (l).log(ag::LOG_LEVEL_ERROR, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__)
-#define warnlog(l, fmt, ...) (l).log(ag::LOG_LEVEL_WARN, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__)
-#define infolog(l, fmt, ...) (l).log(ag::LOG_LEVEL_INFO, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__)
-#define dbglog(l, fmt, ...) do { if ((l).is_enabled(ag::LOG_LEVEL_DEBUG)) (l).log(ag::LOG_LEVEL_DEBUG, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__); } while(0)
-#define tracelog(l, fmt, ...) do { if ((l).is_enabled(ag::LOG_LEVEL_TRACE)) (l).log(ag::LOG_LEVEL_TRACE, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__); } while(0)
+#define errlog(l, fmt, ...) (l).log(::ag::LOG_LEVEL_ERROR, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__)
+#define warnlog(l, fmt, ...) (l).log(::ag::LOG_LEVEL_WARN, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__)
+#define infolog(l, fmt, ...) (l).log(::ag::LOG_LEVEL_INFO, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__)
+#define dbglog(l, fmt, ...) do { if ((l).is_enabled(::ag::LOG_LEVEL_DEBUG)) (l).log(::ag::LOG_LEVEL_DEBUG, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__); } while(0)
+#define tracelog(l, fmt, ...) do { if ((l).is_enabled(::ag::LOG_LEVEL_TRACE)) (l).log(::ag::LOG_LEVEL_TRACE, FMT_STRING("{}: " fmt), __func__, ##__VA_ARGS__); } while(0)
 
 } // namespace ag
 
