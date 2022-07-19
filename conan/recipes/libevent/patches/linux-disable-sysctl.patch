@@ -14,7 +14,7 @@ diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 8d31b1f6..55896919 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -435,7 +435,9 @@ CHECK_INCLUDE_FILE(mach/mach_time.h EVENT__HAVE_MACH_MACH_TIME_H)
+@@ -430,7 +430,9 @@ CHECK_INCLUDE_FILE(mach/mach_time.h EVENT__HAVE_MACH_MACH_TIME_H)
  CHECK_INCLUDE_FILE(netinet/tcp.h EVENT__HAVE_NETINET_TCP_H)
  CHECK_INCLUDE_FILE(sys/wait.h EVENT__HAVE_SYS_WAIT_H)
  CHECK_INCLUDE_FILE(sys/resource.h EVENT__HAVE_SYS_RESOURCE_H)
@@ -29,7 +29,7 @@ diff --git a/configure.ac b/configure.ac
 index 9330653f..7fa285dc 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -252,11 +252,15 @@ AC_CHECK_HEADERS([ \
+@@ -255,10 +255,14 @@ AC_CHECK_HEADERS([ \
    errno.h \
  ])
  
@@ -47,7 +47,6 @@ index 9330653f..7fa285dc 100644
 +        #endif
 +        ])
 +esac
- 
  if test "x$ac_cv_header_sys_queue_h" = "xyes"; then
  	AC_MSG_CHECKING(for TAILQ_FOREACH in sys/queue.h)
 -- 
