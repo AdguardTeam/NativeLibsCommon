@@ -1,0 +1,55 @@
+From b9b9f19058dc04b7ad4d079a38f6b86c0e7b1072 Mon Sep 17 00:00:00 2001
+From: Azat Khuzhin <azat@libevent.org>
+Date: Wed, 16 Oct 2019 01:11:51 +0300
+Subject: [PATCH 1/2] Do not use sysctl.h on linux (it had been deprecated)
+
+It had been deprecated for a long time (AFAIK), but since
+glibc-2.29.9000-309-g744e829637 it produces a #warning
+---
+ CMakeLists.txt |  4 +++-
+ configure.ac   | 14 +++++++++-----
+ 2 files changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8d31b1f6..55896919 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -435,7 +435,9 @@ CHECK_INCLUDE_FILE(mach/mach_time.h EVENT__HAVE_MACH_MACH_TIME_H)
+ CHECK_INCLUDE_FILE(netinet/tcp.h EVENT__HAVE_NETINET_TCP_H)
+ CHECK_INCLUDE_FILE(sys/wait.h EVENT__HAVE_SYS_WAIT_H)
+ CHECK_INCLUDE_FILE(sys/resource.h EVENT__HAVE_SYS_RESOURCE_H)
+-CHECK_INCLUDE_FILE(sys/sysctl.h EVENT__HAVE_SYS_SYSCTL_H)
++if (NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Linux")
++    CHECK_INCLUDE_FILE(sys/sysctl.h EVENT__HAVE_SYS_SYSCTL_H)
++endif()
+ CHECK_INCLUDE_FILE(sys/timerfd.h EVENT__HAVE_SYS_TIMERFD_H)
+ CHECK_INCLUDE_FILE(errno.h EVENT__HAVE_ERRNO_H)
+ 
+diff --git a/configure.ac b/configure.ac
+index 9330653f..7fa285dc 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -252,11 +252,15 @@ AC_CHECK_HEADERS([ \
+   errno.h \
+ ])
+ 
+-AC_CHECK_HEADERS(sys/sysctl.h, [], [], [
+-#ifdef HAVE_SYS_PARAM_H
+-#include <sys/param.h>
+-#endif
+-])
++case "${host_os}" in
++    linux*) ;;
++    *)
++        AC_CHECK_HEADERS(sys/sysctl.h, [], [], [
++        #ifdef HAVE_SYS_PARAM_H
++        #include <sys/param.h>
++        #endif
++        ])
++esac
+ 
+ if test "x$ac_cv_header_sys_queue_h" = "xyes"; then
+ 	AC_MSG_CHECKING(for TAILQ_FOREACH in sys/queue.h)
+-- 
+2.34.1
+
