@@ -95,6 +95,12 @@ public:
         }
     }
 
+    template <typename = std::enable_if_t<std::is_default_constructible_v<R>>>
+    Result()
+            : m_value(R{})
+    {
+    }
+
     [[nodiscard]] bool has_value() const {
         return std::holds_alternative<R>(m_value);
     }
