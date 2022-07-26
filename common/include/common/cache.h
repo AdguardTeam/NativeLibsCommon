@@ -1,11 +1,15 @@
 #pragma once
 
 #include <cassert>
+#include <chrono>
 #include <list>
+#include <map>
 #include <mutex>
 #include <unordered_map>
 
-#include "common/defs.h"
+#include "common/clock.h"
+
+class LruTimeoutCache_DoesNotLeak_Test;
 
 namespace ag {
 
@@ -19,7 +23,7 @@ public:
 
 private:
     /** Cache capacity */
-    size_t m_max_size;
+    size_t m_capacity = 0;
 
     /** MRU gravitate to the front, LRU gravitate to the back */
     // This is guarded with its own mutex to allow clients to share access to the
@@ -28,41 +32,62 @@ private:
     mutable std::list<Node> m_key_values;
 
     /** The main map */
-    using MapType = std::unordered_map<Key, typename std::list<Node>::iterator>;
-    mutable MapType m_mapped_values;
+    using Map = std::unordered_map<Key, typename std::list<Node>::iterator>;
+    mutable Map m_mapped_values;
 
 public:
-    static constexpr size_t DEFAULT_CAPACITY = 128;
+    /** A pointer-like object for accessing the cached value */
+    class Accessor {
+    private:
+        using Iter = typename Map::iterator;
+        Iter m_iter{};
 
-    /** A pointer-like object for accessing the cached m_value */
-    struct Accessor {
-        using ItType = typename MapType::iterator;
-        ItType m_it{};
+    public:
+        friend class LruCache;
 
         Accessor() = default;
 
-        explicit Accessor(ItType it) : m_it{it} {}
+        explicit Accessor(Iter it)
+                : m_iter{it} {
+        }
 
         explicit operator bool() const {
-            return m_it != ItType{};
+            return m_iter != Iter{};
         }
 
         const Val &operator*() const {
-            return m_it->second->second;
+            return m_iter->second->second;
         }
 
         const Val *operator->() const {
-            return &m_it->second->second;
+            return &m_iter->second->second;
+        }
+
+        bool operator==(std::nullptr_t) const {
+            return !(*this);
+        }
+
+        bool operator!=(std::nullptr_t) const {
+            return bool(*this);
         }
     };
 
+    static constexpr size_t DEFAULT_CAPACITY = 128;
+
     /**
      * Initialize a new cache
-     * @param max_size cache capacity, 0 means default
+     * @param max_size cache capacity
      */
-    explicit LruCache(size_t max_size = DEFAULT_CAPACITY) : m_max_size{max_size} {
+    explicit LruCache(size_t max_size = DEFAULT_CAPACITY) {
         set_capacity(max_size);
     }
+
+    virtual ~LruCache() = default;
+
+    LruCache(const LruCache &) = delete;
+    LruCache &operator=(const LruCache &) = delete;
+    LruCache(LruCache &&) = delete;
+    LruCache &operator=(LruCache &&) = delete;
 
     /**
      * Insert a new key-value pair or update an existing one.
@@ -72,7 +97,7 @@ public:
      * @return false if an entry with this key already exists and was updated, or
      *         true if an entry with this key didn't exist.
      */
-    bool insert(Key k, Val v) {
+    virtual bool insert(Key k, Val v) {
         auto i = m_mapped_values.find(k);
         if (i != m_mapped_values.end()) {
             m_guard.lock();
@@ -81,36 +106,37 @@ public:
             m_guard.unlock();
             i->second->second = std::move(v);
             return false;
-        } else {
-            assert(m_max_size);
-            std::unique_lock l(m_guard);
-            if (m_key_values.size() == m_max_size) {
-                m_mapped_values.erase(m_key_values.back().first);
-                m_key_values.pop_back();
-            }
-            m_key_values.push_front(std::make_pair(k, std::move(v)));
-            m_mapped_values.emplace(std::make_pair(std::move(k), m_key_values.begin()));
-            return true;
         }
+
+        assert(m_capacity > 0);
+        std::scoped_lock l(m_guard);
+        if (m_key_values.size() == m_capacity) {
+            this->on_key_evicted(m_key_values.back().first);
+            m_mapped_values.erase(m_key_values.back().first);
+            m_key_values.pop_back();
+        }
+        m_key_values.push_front(std::make_pair(k, std::move(v)));
+        m_mapped_values.emplace(std::make_pair(std::move(k), m_key_values.begin()));
+        return true;
     }
 
     /**
-     * Get the m_value associated with the given key.
+     * Get the value associated with the given key.
      * The corresponding entry will become most-recently-used.
      * The returned pointer will only be valid until the next modification of the cache!
      * @param k the key
-     * @return pointer to the found m_value, or
+     * @return pointer to the found value, or
      *         nullptr if nothing was found
      */
-    Accessor get(const Key &k) const {
+    virtual Accessor get(const Key &k) const {
         auto i = m_mapped_values.find(k);
-        if (i != m_mapped_values.end()) {
-            std::unique_lock l(m_guard);
-            m_key_values.splice(m_key_values.begin(), m_key_values, i->second);
-            return Accessor(i);
-        } else {
+        if (i == m_mapped_values.end()) {
             return {};
         }
+
+        std::scoped_lock l(m_guard);
+        m_key_values.splice(m_key_values.begin(), m_key_values, i->second);
+        return Accessor(i);
     }
 
     /**
@@ -118,18 +144,18 @@ public:
      * @param acc the Accessor for the cache entry to become LRU
      */
     void make_lru(Accessor acc) {
-        std::unique_lock l(m_guard);
-        m_key_values.splice(m_key_values.end(), m_key_values, acc.m_it->second);
+        std::scoped_lock l(m_guard);
+        m_key_values.splice(m_key_values.end(), m_key_values, acc.m_iter->second);
     }
 
     /**
-     * Delete the m_value with the given key from the cache
+     * Delete the value with the given key from the cache
      * @param k the key
      */
-    void erase(const Key &k) {
+    virtual void erase(const Key &k) {
         auto i = m_mapped_values.find(k);
         if (i != m_mapped_values.end()) {
-            std::unique_lock l(m_guard);
+            std::scoped_lock l(m_guard);
             m_key_values.erase(i->second);
             m_mapped_values.erase(i);
         }
@@ -138,8 +164,8 @@ public:
     /**
      * Clear the cache
      */
-    void clear() {
-        std::unique_lock l(m_guard);
+    virtual void clear() {
+        std::scoped_lock l(m_guard);
         m_key_values.clear();
         m_mapped_values.clear();
     }
@@ -155,7 +181,7 @@ public:
      * @return maximum cache size
      */
     size_t max_size() const {
-        return m_max_size;
+        return m_capacity;
     }
 
     /**
@@ -164,18 +190,131 @@ public:
      * @param max_size new capacity, 0 means default capacity
      */
     void set_capacity(size_t max_size) {
-        if (!max_size) {
-            max_size = DEFAULT_CAPACITY;
-        }
         if (max_size < size()) {
             size_t diff = size() - max_size;
-            std::unique_lock l(m_guard);
+            std::scoped_lock l(m_guard);
             for (size_t i = 0; i < diff; i++) {
                 m_mapped_values.erase(m_key_values.back().first);
                 m_key_values.pop_back();
             }
         }
-        m_max_size = max_size;
+        m_capacity = max_size;
+    }
+
+protected:
+    virtual void on_key_evicted(const Key &) {
+        // noop
+    }
+};
+
+// Least recently used cache with expiring entries
+template <typename Key, typename Val>
+class LruTimeoutCache : public LruCache<Key, Val> {
+public:
+    using Duration = ag::SteadyClock::duration;
+
+private:
+    using Clock = ag::SteadyClock;
+    using TimePoint = ag::SteadyClock::time_point;
+    struct TimeoutKey {
+        Duration to;
+        Key k;
+    };
+
+    /** Entries time out */
+    const Duration TIMEOUT;
+    /** If set, update will be performed on every cache access */
+    const bool AUTO_UPDATE;
+
+public:
+    LruTimeoutCache(size_t s, Duration to, bool up = true)
+            : LruCache<Key, Val>(s)
+            , TIMEOUT(to)
+            , AUTO_UPDATE(up) {
+    }
+
+    ~LruTimeoutCache() override = default;
+
+    LruTimeoutCache(const LruTimeoutCache &) = delete;
+    LruTimeoutCache &operator=(const LruTimeoutCache &) = delete;
+    LruTimeoutCache(LruTimeoutCache &&) = delete;
+    LruTimeoutCache &operator=(LruTimeoutCache &&) = delete;
+
+    bool insert(Key k, Val v) override {
+        return this->insert(k, std::move(v), TIMEOUT);
+    }
+
+    bool insert(Key k, Val v, Duration to) {
+        if (this->AUTO_UPDATE) {
+            this->update();
+        }
+
+        auto key_timeout = std::chrono::time_point_cast<Duration>(Clock::now() + to);
+        auto i = m_timeout_keys.emplace(std::make_pair(key_timeout, TimeoutKey{to, k}));
+        m_keys_timeout_iters.emplace(std::make_pair(k, std::move(i)));
+        return LruCache<Key, Val>::insert(std::move(k), std::move(v));
+    }
+
+    typename LruCache<Key, Val>::Accessor get(const Key &k) const override {
+        if (this->AUTO_UPDATE) {
+            // Valid const cast: update() uses only mutable variables
+            ((LruTimeoutCache *) this)->update();
+        }
+
+        typename LruCache<Key, Val>::Accessor v = LruCache<Key, Val>::get(k);
+        if (v) {
+            auto keyi = m_keys_timeout_iters.find(k);
+            assert(keyi != m_keys_timeout_iters.end());
+            auto key_timeout = std::chrono::time_point_cast<Duration>(Clock::now() + keyi->second->second.to);
+            auto toi = m_timeout_keys.emplace(std::make_pair(key_timeout, std::move(keyi->second->second)));
+            m_timeout_keys.erase(keyi->second);
+            keyi->second = std::move(toi);
+        }
+        return v;
+    }
+
+    void clear() override {
+        m_timeout_keys.clear();
+        m_keys_timeout_iters.clear();
+        LruCache<Key, Val>::clear();
+    }
+
+    void erase(const Key &k) override {
+        if (this->AUTO_UPDATE) {
+            this->update();
+        }
+
+        auto i = m_keys_timeout_iters.find(k);
+        if (i != m_keys_timeout_iters.end()) {
+            m_timeout_keys.erase(i->second);
+            m_keys_timeout_iters.erase(i);
+        }
+        LruCache<Key, Val>::erase(k);
+    }
+
+    /**
+     * @brief      Cleans timed out entries from the cache
+     */
+    void update() {
+        auto current_time = std::chrono::time_point_cast<Duration>(Clock::now());
+        auto first_up_to_date = m_timeout_keys.lower_bound(current_time);
+        for (auto i = m_timeout_keys.begin(); i != first_up_to_date; i = m_timeout_keys.erase(i)) {
+            LruCache<Key, Val>::erase(i->second.k);
+            m_keys_timeout_iters.erase(i->second.k);
+        }
+    }
+
+private:
+    mutable std::multimap<TimePoint, TimeoutKey> m_timeout_keys;
+    mutable std::unordered_map<Key, typename decltype(m_timeout_keys)::iterator> m_keys_timeout_iters;
+
+    friend class ::LruTimeoutCache_DoesNotLeak_Test;
+
+    void on_key_evicted(const Key &key) override {
+        if (auto it = m_keys_timeout_iters.find(key); it != m_keys_timeout_iters.end()) {
+            m_timeout_keys.erase(it->second);
+            m_keys_timeout_iters.erase(it);
+        }
     }
 };
 

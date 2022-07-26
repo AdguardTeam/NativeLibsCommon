@@ -65,7 +65,7 @@ conan upload -t $REMOTE_NAME -c '*' --all
 No new C code please.
 
 ### C++
-1. Language standard - C++17 (-std=c++17)
+1. Language standard - C++20 (-std=c++20)
 2. Class prefixes - use namespaces instead.
 3. Namespaces - root namespace is ag::, max depth is 2 (plus may be ::test).
    Namespace names are snake_cases.
