@@ -37,32 +37,34 @@ class NativeLibsCommon(ConanFile):
             del self.options.fPIC
 
     def source(self):
-        self.run("git clone https://github.com/AdguardTeam/NativeLibsCommon.git source_subfolder")
+        self.run("git init . && git remote add origin https://github.com/AdguardTeam/NativeLibsCommon.git && git fetch")
 
         if self.version == "777":
             if self.options.commit_hash:
-                self.run("cd source_subfolder && git checkout %s" % self.options.commit_hash)
+                self.run("git checkout -f %s" % self.options.commit_hash)
         else:
             version_hash = self.conan_data["commit_hash"][self.version]["hash"]
-            self.run("cd source_subfolder && git checkout %s" % version_hash)
+            self.run("git checkout -f %s" % version_hash)
 
     def build(self):
         cmake = CMake(self)
         # A better way to pass these was not found :(
         if self.settings.os == "Linux":
             if self.settings.compiler.libcxx:
-                cmake.definitions["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % self.settings.compiler.libcxx
+                cxx = "%s" % self.settings.compiler.libcxx
+                cxx = cxx.rstrip('1')
+                cmake.definitions["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % cxx
             if self.settings.compiler.version:
                 cmake.definitions["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
         if self.settings.os == "Macos":
             cmake.definitions["TARGET_OS"] = "macos"
-        cmake.configure(source_folder="source_subfolder", build_folder="build")
+        cmake.configure(source_folder=".", build_folder="build")
         cmake.build()
 
     def package(self):
         MODULES = ["common"]
         for m in MODULES:
-            self.copy("*.h", dst="include", src="source_subfolder/%s/include" % m, keep_path=True)
+            self.copy("*.h", dst="include", src="%s/include" % m, keep_path=True)
             self.copy("*.lib", dst="lib", src="build/%s" % m, keep_path=False)
             self.copy("*.a", dst="lib", src="build/%s" % m, keep_path=False)
 
