@@ -46,20 +46,26 @@ function(conan_bootstrap)
                             OUTPUT_QUIET
                             PROFILE_AUTO compiler.version compiler.libcxx
                             SETTINGS ${settings}
-                            ENV CMAKE_ORIGINAL_TOOLCHAIN=${CMAKE_TOOLCHAIN_FILE})
+                            INSTALL_FOLDER "${BS_SRCROOT}"
+                            ENV CMAKE_ORIGINAL_TOOLCHAIN=${CMAKE_TOOLCHAIN_FILE}
+            )
         elseif(WIN32)
             # don't set libcxx on windows to not to mix c++ libraries
             conan_cmake_run(CONANFILE "${BS_CONANFILE}"
                             PROFILE "${CONAN_PROFILE}"
                             BUILD missing
                             PROFILE_AUTO compiler.version
-                            SETTINGS ${settings})
+                            SETTINGS ${settings}
+                            INSTALL_FOLDER "${BS_SRCROOT}"
+            )
         else()
             conan_cmake_run(CONANFILE "${BS_CONANFILE}"
                             PROFILE "${CONAN_PROFILE}"
                             BUILD missing
                             PROFILE_AUTO compiler.version compiler.libcxx
-                            SETTINGS ${settings})
+                            SETTINGS ${settings}
+                            INSTALL_FOLDER "${BS_SRCROOT}"
+            )
         endif()
 
         conan_define_targets()
