@@ -78,3 +78,4 @@ class NativeLibsCommon(ConanFile):
             "libevent::libevent",
             "fmt::fmt",
         ]
+        self.cpp_info.defines.append("FMT_EXCEPTIONS=0")
