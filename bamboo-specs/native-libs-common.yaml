@@ -157,7 +157,7 @@ Mac build:
             # Conan remove locks
             conan remove --locks
   requirements:
-    - system.builder.xcode.macOS 10.14
+    - macOS 11.0 or later
   artifact-subscriptions: []
 repositories:
   - core-libs/native-libs-common:
