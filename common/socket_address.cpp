@@ -211,4 +211,18 @@ SocketAddress SocketAddress::socket_family_cast(int family) const {
         return {};
     }
 }
+
+void SocketAddress::set_port(uint16_t port) {
+    switch (m_ss.ss_family) {
+    case AF_INET:
+        ((sockaddr_in *) &m_ss)->sin_port = htons(port);
+        break;
+    case AF_INET6:
+        ((sockaddr_in6 *) &m_ss)->sin6_port = htons(port);
+        break;
+    default:
+        break;
+    }
+}
+
 } // namespace ag

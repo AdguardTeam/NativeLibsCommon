@@ -106,6 +106,11 @@ public:
      */
     SocketAddress socket_family_cast(int family) const;
 
+    /**
+     * Set the `port` (in the host byte order).
+     */
+    void set_port(uint16_t port);
+
 private:
     /** sockaddr_storage structure. Internally this is just sockaddr_storage wrapper */
     sockaddr_storage m_ss;
