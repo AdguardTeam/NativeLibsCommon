@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class Ngtcp2Conan(ConanFile):
     name = "ngtcp2"
-    version = "0.8.0"
+    version = "2021-05-13"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
@@ -17,7 +17,7 @@ class Ngtcp2Conan(ConanFile):
 
     def source(self):
         self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
-        self.run("cd source_subfolder && git checkout v0.8.0")
+        self.run("cd source_subfolder && git checkout d9524643af810c2b51f05fb36c500abf13fd9116")
 
     def build(self):
         cmake = CMake(self)
@@ -44,5 +44,5 @@ class Ngtcp2Conan(ConanFile):
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["ngtcp2_static", "ngtcp2_crypto_boringssl_static"]
+        self.cpp_info.libs = ["ngtcp2", "ngtcp2_crypto_boringssl"]
         self.cpp_info.defines.append("NGTCP2_STATICLIB=1")
