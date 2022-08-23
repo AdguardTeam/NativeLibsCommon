@@ -5,6 +5,9 @@
 
 #ifdef _WIN32
 #include <ws2tcpip.h>
+#include <ws2ipdef.h>
+#include <windns.h>
+#include <iphlpapi.h>
 #endif
 
 namespace ag {
@@ -82,6 +85,32 @@ static sockaddr_storage make_sockaddr_storage(std::string_view numeric_host, uin
         return make_sockaddr_storage({ip.data(), IPV4_ADDRESS_SIZE}, port);
     } else if (1 == evutil_inet_pton(AF_INET6, p, ip.data())) {
         return make_sockaddr_storage({ip.data(), IPV6_ADDRESS_SIZE}, port);
+    } else if (std::none_of(numeric_host.begin(), numeric_host.end(), [](char c) {
+                   return std::strchr("[]", c);
+               })) {
+        // Might be IPv6 with scope id. Prohibit brackets that may be accepted by functions below.
+#ifndef _WIN32
+        addrinfo *ai;
+        addrinfo ai_hints{};
+        ai_hints.ai_family = AF_INET6;
+        ai_hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
+        if (0 == getaddrinfo(p, nullptr, &ai_hints, &ai)) {
+            sockaddr_storage ss{};
+            std::memcpy(&ss, ai->ai_addr, ai->ai_addrlen);
+            freeaddrinfo(ai);
+            ((sockaddr_in6 *) &ss)->sin6_port = htons(port);
+            return ss;
+        }
+#else  // _WIN32
+        NET_ADDRESS_INFO info{};
+        std::wstring s = ag::utils::to_wstring(numeric_host);
+        if (ERROR_SUCCESS == ParseNetworkString(s.data(), NET_STRING_IPV6_ADDRESS, &info, nullptr, nullptr)
+                && info.Format == NET_ADDRESS_IPV6) {
+            sockaddr_storage ss{};
+            std::memcpy(&ss, &info.Ipv6Address, sizeof(info.Ipv6Address));
+            return ss;
+        }
+#endif // not _WIN32
     }
 
     return {};

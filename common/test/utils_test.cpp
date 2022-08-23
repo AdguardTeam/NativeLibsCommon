@@ -65,4 +65,12 @@ TEST(utils, GenerallyWork) {
     const char *str_array[] = {"aaa", "bbb", "ccc", "ddd"};
     ASSERT_EQ(ag::utils::join(std::begin(str_array), std::end(str_array), "::"), "aaa::bbb::ccc::ddd");
     ASSERT_EQ(ag::utils::join(std::begin(str_array) + 1, std::end(str_array), "::"), "bbb::ccc::ddd");
+
+    ASSERT_TRUE(ag::SocketAddress("fe80::1", 53).valid());
+    ASSERT_TRUE(ag::SocketAddress("fe80::1%23", 53).valid());
+#if defined(__APPLE__) && defined(__MACH__)
+    ASSERT_TRUE(ag::SocketAddress("fe80::1%abc", 53).valid());
+    ASSERT_TRUE(ag::SocketAddress("fe80::1%eth0", 53).valid());
+    ASSERT_TRUE(ag::SocketAddress("fe80::1%utun1", 53).valid());
+#endif // defined(__APPLE__) && defined(__MACH__)
 }
