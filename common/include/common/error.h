@@ -161,20 +161,16 @@ Error<Enum> make_error_func(SourceLocation source_location, Enum value, std::str
 }
 
 constexpr std::string_view pretty_func(std::string_view pretty_function, std::string_view func) {
-    size_t pos = pretty_function.find('(');
-    pos = pretty_function.rfind(func, pos);
-    if (pos == std::string_view::npos || pos == 0) {
+    size_t end = pretty_function.find('(');
+    size_t start = pretty_function.rfind(func, end);
+    if (start == std::string_view::npos || start == 0) {
         return func;
     }
-    size_t size = func.size();
-    for (size_t i = pos - 1; i >= 0; --i) {
-        if (pretty_function[i] == ' ') {
-            return {pretty_function.data() + i + 1, size};
-        } else {
-            size++;
-        }
+    start = pretty_function.rfind(' ', start);
+    if (start == std::string_view::npos) {
+        return pretty_function.substr(0, end);
     }
-    return func;
+    return pretty_function.substr(start + 1, end - start - 1);
 }
 
 #ifndef _WIN32

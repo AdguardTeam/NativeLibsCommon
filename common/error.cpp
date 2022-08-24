@@ -4,7 +4,7 @@
 #include <ws2tcpip.h>
 #endif
 
-std::errc errc_from_socket_error(int err) {
+std::errc ag::errc_from_socket_error(int err) {
 #ifndef _WIN32
     return std::errc(err);
 #else
