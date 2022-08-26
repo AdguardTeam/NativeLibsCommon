@@ -16,11 +16,14 @@
 
 namespace ag::file {
 
-static int clarify_flags(int flags) {
+static int to_platform_flags(int flags) {
     int ret_val = 0x0000;
 #if !defined(_WIN32)
     if ((flags & CREAT)) {
         ret_val |= O_CREAT;
+    }
+    if (flags & APPEND) {
+        ret_val |= O_APPEND;
     }
     switch (flags & 0x0003) {
     case RDONLY:
@@ -36,6 +39,9 @@ static int clarify_flags(int flags) {
 #elif defined(_WIN32)
     if ((flags & CREAT)) {
         ret_val |= _O_CREAT;
+    }
+    if (flags & APPEND) {
+        ret_val |= _O_APPEND;
     }
     switch (flags & 0x0003) {
     case RDONLY:
@@ -59,7 +65,7 @@ bool is_valid(const Handle f) {
 }
 
 Handle open(const std::string &path, int flags) {
-    return ::open(path.data(), clarify_flags(flags), 0666);
+    return ::open(path.data(), to_platform_flags(flags), 0666);
 }
 
 void close(Handle f) {
@@ -110,7 +116,7 @@ bool is_valid(const Handle f) {
 }
 
 Handle open(const std::string &path, int flags) {
-    return ::_wopen(ag::utils::to_wstring(path).c_str(), clarify_flags(flags) | _O_BINARY, _S_IWRITE);
+    return ::_wopen(ag::utils::to_wstring(path).c_str(), to_platform_flags(flags) | _O_BINARY, _S_IWRITE);
 }
 
 void close(Handle f) {

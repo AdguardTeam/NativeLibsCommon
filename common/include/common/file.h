@@ -17,6 +17,7 @@ enum flags {
     WRONLY = 0x0001,
     RDWR = 0x0002,
     CREAT = 0x0100,
+    APPEND = 0x0200,
 };
 
 /**
