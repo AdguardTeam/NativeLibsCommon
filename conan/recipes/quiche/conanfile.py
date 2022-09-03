@@ -49,7 +49,7 @@ class QuicheConan(ConanFile):
             else:
                 raise ConanInvalidConfiguration("Unsupported Android architecture: %s" % arch)
 
-            cargo_args = "ndk --target %s --android-platform %s -- build %s" \
+            cargo_args = "ndk --target %s --platform %s -- build %s" \
                          % (target, platform, cargo_build_type)
         elif os == "iOS":
             if os.sdk == "iphonesimulator":
