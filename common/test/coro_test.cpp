@@ -108,6 +108,27 @@ TEST_F(CoroTest, ParallelTest) {
     co_return;
 }
 
+coro::Task<bool> increment(Scheduler &sched, int &x) {
+    using namespace std::chrono_literals;
+    static auto timeout = 21ms;
+    if (timeout % 2ms == 1ms) {
+        co_await sched.sleep(timeout++ % 42ms);
+    }
+    x++;
+    co_return true;
+}
+
+TEST_F(CoroTest, ParallelTestMany) {
+    int x = 0;
+    auto aw = parallel::all_of<bool>();
+    for (int i = 0; i < 42; i++) {
+        aw.add(increment(m_scheduler, x));
+    }
+    auto vec = co_await aw;
+    ASSERT_EQ(42, vec.size());
+    ASSERT_EQ(42, x);
+}
+
 TEST_F(CoroTest, Sleep) {
     utils::Timer timer;
     static constexpr auto SLEEP_TIME = Millis(500);
