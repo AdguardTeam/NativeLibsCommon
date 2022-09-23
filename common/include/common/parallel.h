@@ -31,7 +31,7 @@ struct AnyOfCondSharedState : public std::enable_shared_from_this<AnyOfCondShare
         --this->remaining;
         bool has_return_value = false;
         if (!this->return_value.has_value() && (!this->check_cond || this->check_cond(r))) {
-            this->return_value = r;
+            this->return_value = std::move(r);
             has_return_value = true;
         }
         if ((!this->return_value.has_value() && this->remaining == 0) || has_return_value) {
