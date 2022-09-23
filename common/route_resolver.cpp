@@ -66,14 +66,14 @@ struct rt_msghdr2 {
 
 namespace ag {
 
-static ErrString dump_routing_table(Uint8Vector &rt, int family) {
+static Error<RouteResolverError> dump_routing_table(Uint8Vector &rt, int family) {
     static constexpr int MAX_TRIES = 10;
     int n_try;
     for (n_try = 0; n_try < MAX_TRIES; ++n_try) {
         int name[] = {CTL_NET, PF_ROUTE, 0, family, NET_RT_DUMP2, 0};
         size_t out_size;
         if (sysctl(name, 6, nullptr, &out_size, nullptr, 0) < 0) {
-            return AG_FMT("sysctl (estimate): {}, {}", errno, strerror(errno));
+            return make_error(RouteResolverError::AE_SYSCTL_ERROR, AG_FMT("estimate: {}, {}", errno, strerror(errno)));
         }
         assert(out_size < SIZE_MAX / 2);
         out_size *= 2;
@@ -82,12 +82,12 @@ static ErrString dump_routing_table(Uint8Vector &rt, int family) {
             if (errno == ENOMEM) {
                 continue;
             }
-            return AG_FMT("sysctl (dump): {}, {}", errno, strerror(errno));
+            return make_error(RouteResolverError::AE_SYSCTL_ERROR, AG_FMT("dump: {}, {}", errno, strerror(errno)));
         }
         rt.resize(out_size);
-        return std::nullopt;
+        return {};
     }
-    return AG_FMT("failed to allocate enough memory after {} tries", n_try);
+    return make_error(RouteResolverError::AE_NOMEM, AG_FMT("{} tries", n_try));
 }
 
 static std::string if_name(unsigned int if_index) {
@@ -183,9 +183,9 @@ private:
 
     std::vector<IpRoute> read_routing_table(int family) {
         std::vector<uint8_t> rt;
-        ErrString error = dump_routing_table(rt, family);
+        auto error = dump_routing_table(rt, family);
         if (error) {
-            warnlog(log, "Failed to dump routing table: {}", *error);
+            warnlog(log, "Failed to dump routing table: {}", error->str());
             return {};
         }
 

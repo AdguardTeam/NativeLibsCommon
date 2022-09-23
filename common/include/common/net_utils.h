@@ -2,17 +2,29 @@
 
 #include <chrono>
 #include <ctime>
+#include <event2/event.h>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <utility>
-#include <event2/event.h>
 
 #include "common/defs.h"
+#include "common/error.h"
 #include "common/socket_address.h"
 
-namespace ag::utils {
+namespace ag {
+namespace utils {
 
+enum class NetUtilsError {
+    AE_INVALID_IF_INDEX,
+    AE_UNSUPPORTED_FAMILY,
+    AE_BIND_ERROR,
+    AE_INVALID_IF_NAME,
+    AE_IPV6_PORT_EMPTY,
+    AE_IPV6_MISSING_RIGHT_BRACKET,
+    AE_IPV6_MISSING_BRACKETS,
+    AE_IPV4_PORT_EMPTY,
+};
 
 #ifndef _WIN32
 static constexpr auto AG_ETIMEDOUT = ETIMEDOUT;
@@ -27,24 +39,16 @@ enum TransportProtocol {
     TP_TCP,
 };
 
-
 /**
  * Split address string to host and port with error
  * @param address_string Address string
  * @param require_ipv6_addr_in_square_brackets Require IPv6 address in square brackets
  * @param require_non_empty_port Require non-empty port after colon
- * @return Host, port, error
+ * @return Host, port or error
  */
-std::tuple<std::string_view, std::string_view, ErrStringView> split_host_port_with_err(
+Result<std::pair<std::string_view, std::string_view>, NetUtilsError> split_host_port(
         std::string_view address_string, bool require_ipv6_addr_in_square_brackets = false,
         bool require_non_empty_port = false);
-
-/**
- * Split address string to host and port
- * @param address_string Address string
- * @return Host and port
- */
-std::pair<std::string_view, std::string_view> split_host_port(std::string_view address_string);
 
 /**
  * Join host and port into address string
@@ -77,18 +81,18 @@ bool socket_error_is_eagain(int err);
  * @param fd       socket descriptor
  * @param family   socket family
  * @param if_index interface index
- * @return error string or std::nullopt if successful
+ * @return some error if failed
  */
-ErrString bind_socket_to_if(evutil_socket_t fd, int family, uint32_t if_index);
+Error<NetUtilsError> bind_socket_to_if(evutil_socket_t fd, int family, uint32_t if_index);
 
 /**
  * Make a socket bound to the specified interface
  * @param fd      socket descriptor
  * @param family  socket family
  * @param if_name interface name
- * @return error string or std::nullopt if successful
+ * @return some error if failed
  */
-ErrString bind_socket_to_if(evutil_socket_t fd, int family, const char *if_name);
+Error<NetUtilsError> bind_socket_to_if(evutil_socket_t fd, int family, const char *if_name);
 
 /**
  * Get the address of the peer connected to the socket
@@ -102,4 +106,24 @@ std::optional<SocketAddress> get_peer_address(evutil_socket_t fd);
  */
 std::optional<SocketAddress> get_local_address(evutil_socket_t fd);
 
-} // namespace ag::utils
+} // namespace utils
+
+// clang-format off
+template<>
+struct ErrorCodeToString<utils::NetUtilsError> {
+    std::string operator()(utils::NetUtilsError e) {
+        switch (e) {
+        case decltype(e)::AE_INVALID_IF_INDEX: return "if_indextoname() error";
+        case decltype(e)::AE_UNSUPPORTED_FAMILY: return "Unsupported socket family";
+        case decltype(e)::AE_BIND_ERROR: return "Failed to bind";
+        case decltype(e)::AE_INVALID_IF_NAME: return "Invalid interface name";
+        case decltype(e)::AE_IPV6_PORT_EMPTY: return "Port after colon is empty in IPv6 address";
+        case decltype(e)::AE_IPV6_MISSING_RIGHT_BRACKET: return "IPv6 address contains `[` but not contains `]`";
+        case decltype(e)::AE_IPV6_MISSING_BRACKETS: return "IPv6 address not in square brackets";
+        case decltype(e)::AE_IPV4_PORT_EMPTY: return "Port after colon is empty in IPv4 address";
+        }
+    }
+};
+// clang-format on
+
+} // namespace ag

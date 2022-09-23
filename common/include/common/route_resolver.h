@@ -3,13 +3,18 @@
 #include <memory>
 #include <optional>
 
+#include "common/error.h"
 #include "common/socket_address.h"
 
 namespace ag {
 
+enum class RouteResolverError {
+    AE_SYSCTL_ERROR,
+    AE_NOMEM,
+};
+
 class RouteResolver;
 using RouteResolverPtr = std::unique_ptr<RouteResolver>;
-
 /**
  * When we are working as a network extension on an Apple platform,
  * and we want to communicate with a destination host for which a route
@@ -42,5 +47,17 @@ public:
     /** Create a new route resolver */
     static RouteResolverPtr create();
 };
+
+// clang-format off
+template<>
+struct ErrorCodeToString<RouteResolverError> {
+    std::string operator()(RouteResolverError e) {
+        switch (e) {
+            case decltype(e)::AE_SYSCTL_ERROR: return "sysctl() error";
+            case decltype(e)::AE_NOMEM: return "Failed to allocate enough memory";
+        }
+    }
+};
+// clang-format on
 
 } // namespace ag

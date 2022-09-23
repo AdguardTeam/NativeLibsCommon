@@ -10,17 +10,17 @@ enum ExchangeErrorCode {
     SOCKET_ERROR,
 };
 
+// clang-format off
 template <>
 struct ErrorCodeToString<ExchangeErrorCode> {
     std::string operator()(ExchangeErrorCode code) {
         switch (code) {
-        case TIMED_OUT:
-            return "Timed out";
-        case SOCKET_ERROR:
-            return "Socket error";
+        case TIMED_OUT: return "Timed out";
+        case SOCKET_ERROR: return "Socket error";
         }
     }
 };
+// clang-format on
 
 Result<std::string, ExchangeErrorCode> do_something_good() {
     return Result<std::string, ExchangeErrorCode>("good");

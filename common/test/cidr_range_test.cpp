@@ -31,36 +31,6 @@ static __int128_t number_of_ips(const std::vector<CidrRange> &ranges) {
 #endif // _WIN32
 
 TEST_F(CidrRangeTest, testUtilMethods) {
-    /* Shortened at end */
-    auto expanded1 = CidrRange::expand_ipv6_string("2000::");
-    ASSERT_EQ("2000:0:0:0:0:0:0:0", expanded1.value());
-    /* Shortened at begin */
-    auto expanded2 = CidrRange::expand_ipv6_string("::ffff:aaaa:bbbb");
-    ASSERT_EQ("0:0:0:0:0:ffff:aaaa:bbbb", expanded2.value());
-    /* Shortened in the middle */
-    auto expanded3 = CidrRange::expand_ipv6_string("2001:db8:a::1");
-    ASSERT_EQ("2001:db8:a:0:0:0:0:1", expanded3.value());
-    /* Error! */
-    auto expanded4 = CidrRange::expand_ipv6_string("2001:db8::a::1");
-    ASSERT_TRUE(expanded4.has_error());
-    /* Zero replaced by "::", has 8 ":"s but still valid */
-    auto expanded5 = CidrRange::expand_ipv6_string("1:2:3:4:5:6:7::");
-    ASSERT_EQ("1:2:3:4:5:6:7:0", expanded5.value());
-    /* Zero replaced by "::", has 8 ":"s but still valid */
-    auto expanded6 = CidrRange::expand_ipv6_string("::1:2:3:4:5:6:7");
-    ASSERT_EQ("0:1:2:3:4:5:6:7", expanded6.value());
-
-    auto shortened1 = CidrRange::shorten_ipv6_string("0:0:0:0:0:0:0:0");
-    ASSERT_EQ("::", shortened1.value());
-    auto shortened2 = CidrRange::shorten_ipv6_string("0000:0000:0000:0000:0000:0000:0000:1");
-    ASSERT_EQ("::1", shortened2.value());
-    auto shortened3 = CidrRange::shorten_ipv6_string("2000:0:0:0:0:0:0:0");
-    ASSERT_EQ("2000::", shortened3.value());
-    auto shortened4 = CidrRange::shorten_ipv6_string("0202:0000::0:0:0:0");
-    ASSERT_EQ("202::", shortened4.value());
-    auto shortened5 = CidrRange::shorten_ipv6_string("1:0:0:0:0:1:0:0");
-    ASSERT_EQ("1::1:0:0", shortened5.value());
-
     auto addr1 = CidrRange::get_address_from_string("127.0.0.1");
     ASSERT_EQ(std::vector<uint8_t>({127, 0, 0, 1}), addr1.value());
     auto addr2 = CidrRange::get_address_from_string("::ffff:127.0.0.1");
@@ -68,6 +38,12 @@ TEST_F(CidrRangeTest, testUtilMethods) {
     auto addr3 = CidrRange::get_address_from_string("2001:db8:a::1");
     ASSERT_EQ(std::vector<uint8_t>({0x20, 0x01, 0xd, (uint8_t) 0xb8, 0, 0xa, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
             addr3.value());
+
+    ASSERT_EQ("111.112.113.114", CidrRange("111.112.113.114/32").get_address_as_string());
+    ASSERT_EQ("111.112.0.0", CidrRange("111.112.113.114/16").get_address_as_string());
+    ASSERT_EQ("2a02:908:1572:6bc0:ca52:61ff:febc:2485", CidrRange("2a02:908:1572:6bc0:ca52:61ff:febc:2485/128").get_address_as_string());
+    ASSERT_EQ("2001:b011:3820:11b9:d65d:64ff:fe0b:a260", CidrRange("2001:b011:3820:11b9:d65d:64ff:fe0b:a260/128").get_address_as_string());
+    ASSERT_EQ("::ffff:83.90.47.30", CidrRange("::ffff:83.90.47.30").get_address_as_string());
 }
 
 TEST_F(CidrRangeTest, testCreate) {
@@ -192,10 +168,8 @@ TEST_F(CidrRangeTest, testExcludeIpv4) {
 TEST_F(CidrRangeTest, testErrors) {
     auto address = CidrRange::get_address_from_string("2.3.");
     ASSERT_EQ(address.has_error(), true);
-    ASSERT_EQ(address.error()->value(), ag::CidrErrorCode::IPV4_INVALID);
+    ASSERT_EQ(address.error()->value(), ag::CidrError::AE_PARSE_NET_STRING_ERROR);
     auto ipv6_address = CidrRange::get_address_from_string("12:2:");
     ASSERT_EQ(ipv6_address.has_error(), true);
-    ASSERT_EQ(ipv6_address.error()->value(), ag::CidrErrorCode::IPV6_BAD_COLON);
-    auto shorten_address = CidrRange::shorten_ipv6_string("::::");
-    ASSERT_EQ(shorten_address.has_error(), true);
+    ASSERT_EQ(ipv6_address.error()->value(), ag::CidrError::AE_PARSE_NET_STRING_ERROR);
 }

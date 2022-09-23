@@ -21,43 +21,43 @@
 
 namespace ag {
 
-std::tuple<std::string_view, std::string_view, ErrStringView> utils::split_host_port_with_err(
+Result<std::pair<std::string_view, std::string_view>, utils::NetUtilsError> utils::split_host_port(
         std::string_view address_string, bool require_ipv6_addr_in_square_brackets, bool require_non_empty_port) {
     if (!address_string.empty() && address_string.front() == '[') {
         auto pos = address_string.find("]:");
         if (pos != std::string_view::npos) {
             auto port = address_string.substr(pos + 2);
-            return {address_string.substr(1, pos - 1), port,
-                    (require_non_empty_port && port.empty())
-                            ? ErrStringView("Port after colon is empty in IPv6 address")
-                            : std::nullopt};
+            if (require_non_empty_port && port.empty()) {
+                return make_error(NetUtilsError::AE_IPV6_PORT_EMPTY);
+            } else {
+                return std::make_pair(address_string.substr(1, pos - 1), port);
+            }
+
         } else if (address_string.back() == ']') {
-            return {address_string.substr(1, address_string.size() - 2), {}, std::nullopt};
+            return std::make_pair(address_string.substr(1, address_string.size() - 2), std::string_view{});
         } else {
-            return {address_string, {}, "IPv6 address contains `[` but not contains `]`"};
+            return make_error(NetUtilsError::AE_IPV6_MISSING_RIGHT_BRACKET);
         }
     } else {
         auto pos = address_string.find(':');
         if (pos != std::string_view::npos) {
             auto rpos = address_string.rfind(':');
             if (pos != rpos) { // This is an IPv6 address without a port
-                return {address_string, {},
-                        require_ipv6_addr_in_square_brackets ? ErrStringView("IPv6 address not in square brackets")
-                                                             : std::nullopt};
+                if (require_ipv6_addr_in_square_brackets) {
+                    return make_error(NetUtilsError::AE_IPV6_MISSING_BRACKETS);
+                } else {
+                    return std::make_pair(address_string, std::string_view {});
+                }
             }
             auto port = address_string.substr(pos + 1);
-            return {address_string.substr(0, pos), port,
-                    (require_non_empty_port && port.empty())
-                            ? ErrStringView("Port after colon is empty in IPv4 address")
-                            : std::nullopt};
+            if (require_non_empty_port && port.empty()) {
+                return make_error(NetUtilsError::AE_IPV4_PORT_EMPTY);
+            } else {
+                return std::make_pair(address_string.substr(0, pos), port);
+            }
         }
     }
-    return {address_string, {}, std::nullopt};
-}
-
-std::pair<std::string_view, std::string_view> utils::split_host_port(std::string_view address_string) {
-    auto [host, port, err] = split_host_port_with_err(address_string);
-    return {host, port};
+    return std::make_pair(address_string, std::string_view {});
 }
 
 std::string utils::join_host_port(std::string_view host, std::string_view port) {
@@ -82,8 +82,11 @@ std::string utils::addr_to_str(Uint8View v) {
 }
 
 SocketAddress utils::str_to_socket_address(std::string_view address) {
-    auto [host_view, port_view] = utils::split_host_port(address);
-
+    auto split_result = utils::split_host_port(address);
+    if (split_result.has_error()) {
+        return {};
+    }
+    auto [host_view, port_view] = split_result.value();
     if (port_view.empty()) {
         return SocketAddress{host_view, 0};
     }
@@ -107,12 +110,12 @@ bool utils::socket_error_is_eagain(int err) {
 #endif
 }
 
-ErrString utils::bind_socket_to_if(evutil_socket_t fd, int family, uint32_t if_index) {
+Error<utils::NetUtilsError> utils::bind_socket_to_if(evutil_socket_t fd, int family, uint32_t if_index) {
 #if defined(__linux__)
     char buf[IF_NAMESIZE];
     const char *name = if_indextoname(if_index, buf);
     if (!name) {
-        return AG_FMT("if_indextoname: ({}) {}", errno, strerror(errno));
+        return make_error(NetUtilsError::AE_INVALID_IF_INDEX, AG_FMT("({}) {}", errno, strerror(errno)));
     }
     return bind_socket_to_if(fd, family, name);
 #else
@@ -139,34 +142,37 @@ ErrString utils::bind_socket_to_if(evutil_socket_t fd, int family, uint32_t if_i
         option = ipv6_opt;
         break;
     default:
-        return AG_FMT("Unsuppported socket family: {}", family);
+        return make_error(NetUtilsError::AE_UNSUPPORTED_FAMILY, AG_FMT("family: {}", family));
     }
     int ret = setsockopt(fd, level, option, (char *) &value, sizeof(value)); // Cast to (char *) for Windows
     if (ret != 0) {
         int error = evutil_socket_geterror(fd);
         const char *error_str = evutil_socket_error_to_string(error);
         if (char buf[IF_NAMESIZE]; if_indextoname(if_index, buf)) {
-            return AG_FMT("Failed to bind fd {} to interface {}: ({}) {}", fd, buf, error, error_str);
+            return make_error(
+                    NetUtilsError::AE_BIND_ERROR, AG_FMT("fd {} to interface {}: ({}) {}", fd, buf, error, error_str));
         } else {
-            return AG_FMT("Failed to bind fd {} to interface {}: {}: {}", fd, if_index, error, error_str);
+            return make_error(NetUtilsError::AE_BIND_ERROR,
+                    AG_FMT("fd {} to interface {}: {}: {}", fd, if_index, error, error_str));
         }
     }
     return {};
 #endif
 }
 
-ErrString utils::bind_socket_to_if(evutil_socket_t fd, int family, const char *if_name) {
+Error<utils::NetUtilsError> utils::bind_socket_to_if(evutil_socket_t fd, int family, const char *if_name) {
 #if defined(__linux__)
     (void) family;
     int ret = setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, if_name, strlen(if_name));
     if (ret != 0) {
-        return AG_FMT("Failed to bind fd {} to interface {}: ({}) {}", fd, if_name, errno, strerror(errno));
+        return make_error(NetUtilsError::AE_BIND_ERROR,
+                AG_FMT("fd {} to interface {}: ({}) {}", fd, if_name, errno, strerror(errno)));
     }
     return {};
 #else
     uint32_t if_index = if_nametoindex(if_name);
     if (if_index == 0) {
-        return AG_FMT("Invalid interface name: {}", if_name);
+        return make_error(NetUtilsError::AE_INVALID_IF_NAME, AG_FMT("{}", if_name));
     }
     return bind_socket_to_if(fd, family, if_index);
 #endif

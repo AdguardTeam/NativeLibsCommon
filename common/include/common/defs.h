@@ -35,10 +35,6 @@ using Millis = std::chrono::milliseconds;
 using Micros = std::chrono::microseconds;
 using Nanos = std::chrono::nanoseconds;
 
-using OptString = std::optional<std::string>;
-using ErrString = OptString;
-using OptStringView = std::optional<std::string_view>;
-using ErrStringView = OptStringView;
 using Uint8View = std::basic_string_view<uint8_t>;
 using Uint8Vector = std::vector<uint8_t>;
 template <typename K, typename V>
