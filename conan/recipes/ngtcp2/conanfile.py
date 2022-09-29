@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class Ngtcp2Conan(ConanFile):
     name = "ngtcp2"
-    version = "0.8.0"
+    version = "0.9.0"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
@@ -17,15 +17,15 @@ class Ngtcp2Conan(ConanFile):
 
     def source(self):
         self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
-        self.run("cd source_subfolder && git checkout v0.8.0")
+        self.run("cd source_subfolder && git checkout v0.9.0")
 
     def build(self):
         cmake = CMake(self)
-        cmake.definitions["BUILD_SHARED_LIBS"]="OFF"
-        cmake.definitions["ENABLE_OPENSSL"]="OFF"
-        cmake.definitions["ENABLE_BORINGSSL"]="ON"
-        cmake.definitions["HAVE_SSL_IS_QUIC"]="ON"
-        cmake.definitions["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"]="ON"
+        cmake.definitions["ENABLE_SHARED_LIB"] = "OFF"
+        cmake.definitions["ENABLE_OPENSSL"] = "OFF"
+        cmake.definitions["ENABLE_BORINGSSL"] = "ON"
+        cmake.definitions["HAVE_SSL_IS_QUIC"] = "ON"
+        cmake.definitions["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"] = "ON"
         cmake.configure()
         cmake.build()
 
