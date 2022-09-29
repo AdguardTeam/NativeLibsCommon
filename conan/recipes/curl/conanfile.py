@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class CurlConan(ConanFile):
     name = "libcurl"
-    version = "7.85.0-adguard2"
+    version = "7.85.0-adguard3"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
@@ -22,7 +22,8 @@ class CurlConan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/curl/curl source_subfolder")
         self.run("cd source_subfolder && git checkout curl-7_85_0")
-        tools.patch(base_path="source_subfolder", patch_file="patches/cmake.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/00-cmake.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/01-fix-quic-conn-reuse.patch")
 
     def build(self):
         cmake = CMake(self)
