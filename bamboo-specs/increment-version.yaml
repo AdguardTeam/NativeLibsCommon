@@ -33,10 +33,14 @@ Default Job:
         git config user.name "Bamboo"
         git config user.email "Bamboo"
 
+        if [ ${bamboo_custom_version} = "none" ]; then
+            bamboo_custom_version=
+        fi
+
         case "${bamboo_repository_branch_name}" in
         master|stable-*)
             cd scripts
-            ./increment_version.sh
+            ./increment_version.sh bamboo_custom_version || exit 1
 
             cd ..
             git remote set-url origin ${bamboo.planRepository.repositoryUrl}
