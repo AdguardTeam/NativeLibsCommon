@@ -33,7 +33,7 @@ Default Job:
         git config user.name "Bamboo"
         git config user.email "Bamboo"
 
-        if [ ${bamboo_custom_version} = "none" ]; then
+        if [ "${bamboo_custom_version}" = "none" ]; then
             bamboo_custom_version=
         fi
 
@@ -61,6 +61,8 @@ Default Job:
   requirements:
   - adg-privileged-docker
   artifact-subscriptions: []
+variables:
+  custom.version: 'none'
 repositories:
 - core-libs/native-libs-common:
     scope: global
