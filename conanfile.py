@@ -21,8 +21,9 @@ class NativeLibsCommon(ConanFile):
     }
 
     def requirements(self):
-        for req in self.conan_data["requirements"]:
-            self.requires(req)
+        self.requires("fmt/8.0.1")
+        self.requires("libevent/2.1.11@AdguardTeam/NativeLibsCommon")
+        self.requires("pcre2/10.37@AdguardTeam/NativeLibsCommon")
 
     def build_requirements(self):
         self.build_requires("gtest/1.11.0")
