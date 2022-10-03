@@ -40,7 +40,7 @@ Default Job:
         case "${bamboo_repository_branch_name}" in
         master|stable-*)
             cd scripts
-            ./increment_version.sh bamboo_custom_version || exit 1
+            ./increment_version.sh ${bamboo_custom_version} || exit 1
 
             cd ..
             git remote set-url origin ${bamboo.planRepository.repositoryUrl}
