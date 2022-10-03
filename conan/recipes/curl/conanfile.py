@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class CurlConan(ConanFile):
     name = "libcurl"
-    version = "7.85.0-adguard3"
+    version = "7.85.0-adguard4"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}

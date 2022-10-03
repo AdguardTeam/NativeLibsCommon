@@ -45,3 +45,20 @@ index 61e54c2d6..5b78af8ae 100644
        HINTS
          ${PC_${_crypto_library}_LIBDIR}
          ${PC_${_crypto_library}_LIBRARY_DIRS}
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f8cdf1aab..7bd392017 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -493,7 +493,11 @@ function(CheckQuicSupportInOpenSSL)
+   # Be sure that the OpenSSL library actually supports QUIC.
+   cmake_push_check_state()
+   set(CMAKE_REQUIRED_INCLUDES   "${OPENSSL_INCLUDE_DIR}")
+-  set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}")
++  if (NOT ANDROID AND NOT APPLE AND NOT WIN32)
++    set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}" "pthread")
++  else()
++    set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}")
++  endif()
+   check_symbol_exists(SSL_CTX_set_quic_method "openssl/ssl.h" HAVE_SSL_CTX_SET_QUIC_METHOD)
+   if(NOT HAVE_SSL_CTX_SET_QUIC_METHOD)
+     message(FATAL_ERROR "QUIC support is missing in OpenSSL/BoringSSL. Try setting -DOPENSSL_ROOT_DIR")
