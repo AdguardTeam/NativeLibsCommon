@@ -17,7 +17,7 @@ AllowShortFunctionsOnASingleLine: None
 AllowShortLambdasOnASingleLine: Empty
 BreakConstructorInitializers: BeforeComma
 SpaceAfterCStyleCast: true
-BreakBeforeBinaryOperators: true
+BreakBeforeBinaryOperators: NonAssignment
 AlignAfterOpenBracket: DontAlign
 AlignOperands: DontAlign
 AlwaysBreakTemplateDeclarations: Yes

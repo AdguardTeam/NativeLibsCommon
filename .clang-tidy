@@ -29,8 +29,22 @@ Checks: '
   -bugprone-lambda-function-name,
   -readability-identifier-length,
 
-  -cert-err58-cpp
-  -hicpp-avoid-c-arrays
+  -cert-err58-cpp,
+  -hicpp-avoid-c-arrays,
+
+  -misc-non-private-member-variables-in-classes,
+  -google-runtime-int,
+  -google-default-arguments,
+  -google-readability-casting,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-owning-memory,
+  -modernize-avoid-c-arrays,
+  -hicpp-named-parameter,
+  -readability-named-parameter,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -readability-implicit-bool-conversion,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-avoid-magic-numbers, # duplicates readability-magic-numbers
   '
 
 WarningsAsErrors: '*'
@@ -58,4 +72,8 @@ CheckOptions: [
 
   { key: readability-identifier-naming.ConstantCase, value: UPPER_CASE },
   { key: readability-identifier-naming.ValueTemplateParameterCase, value: UPPER_CASE },
+
+  { key: readability-magic-numbers.IgnoredIntegerValues, value: '1;2;3;4;8;42' },
+
+  { key: readability-function-cognitive-complexity.Threshold, value: 75 },
 ]
