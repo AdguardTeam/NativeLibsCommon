@@ -67,10 +67,19 @@ TEST(utils, GenerallyWork) {
     ASSERT_EQ(ag::utils::join(std::begin(str_array) + 1, std::end(str_array), "::"), "bbb::ccc::ddd");
 
     ASSERT_TRUE(ag::SocketAddress("fe80::1", 53).valid());
+    ASSERT_EQ(53, ag::SocketAddress("fe80::1", 53).port());
+
     ASSERT_TRUE(ag::SocketAddress("fe80::1%23", 53).valid());
+    ASSERT_EQ(53, ag::SocketAddress("fe80::1%23", 53).port());
+
 #if defined(__APPLE__) && defined(__MACH__)
     ASSERT_TRUE(ag::SocketAddress("fe80::1%abc", 53).valid());
+    ASSERT_EQ(53, ag::SocketAddress("fe80::1%abc", 53).port());
+
     ASSERT_TRUE(ag::SocketAddress("fe80::1%eth0", 53).valid());
+    ASSERT_EQ(42, ag::SocketAddress("fe80::1%eth0", 42).port());
+
     ASSERT_TRUE(ag::SocketAddress("fe80::1%utun1", 53).valid());
+    ASSERT_EQ(53, ag::SocketAddress("fe80::1%utun1", 53).port());
 #endif // defined(__APPLE__) && defined(__MACH__)
 }

@@ -108,6 +108,7 @@ static sockaddr_storage make_sockaddr_storage(std::string_view numeric_host, uin
                 && info.Format == NET_ADDRESS_IPV6) {
             sockaddr_storage ss{};
             std::memcpy(&ss, &info.Ipv6Address, sizeof(info.Ipv6Address));
+            ((sockaddr_in6 *) &ss)->sin6_port = htons(port);
             return ss;
         }
 #endif // not _WIN32
