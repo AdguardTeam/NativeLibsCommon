@@ -25,6 +25,9 @@ static int to_platform_flags(int flags) {
     if (flags & APPEND) {
         ret_val |= O_APPEND;
     }
+    if (flags & TRUNC && (flags & 0x0003) != RDONLY) {
+        ret_val |= O_TRUNC;
+    }
     switch (flags & 0x0003) {
     case RDONLY:
         ret_val |= O_RDONLY;
@@ -42,6 +45,9 @@ static int to_platform_flags(int flags) {
     }
     if (flags & APPEND) {
         ret_val |= _O_APPEND;
+    }
+    if (flags & TRUNC && (flags & 0x0003) != RDONLY) {
+        ret_val |= _O_TRUNC;
     }
     switch (flags & 0x0003) {
     case RDONLY:
