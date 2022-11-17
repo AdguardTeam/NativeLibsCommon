@@ -180,7 +180,7 @@ constexpr std::string_view pretty_func(std::string_view pretty_function, std::st
 #endif
 
 // TODO: Move to std::source_location when c++20 will be enabled
-#define make_error(...) make_error_func(::ag::SourceLocation{ERROR_PRETTY_FUNC, __LINE__}, __VA_ARGS__)
+#define make_error(...) ::ag::make_error_func(::ag::SourceLocation{ERROR_PRETTY_FUNC, __LINE__}, __VA_ARGS__)
 
 /**
  * Makes std::errc from errno
