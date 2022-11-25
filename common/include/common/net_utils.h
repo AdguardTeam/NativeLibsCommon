@@ -29,9 +29,11 @@ enum class NetUtilsError {
 #ifndef _WIN32
 static constexpr auto AG_ETIMEDOUT = ETIMEDOUT;
 static constexpr auto AG_ECONNREFUSED = ECONNREFUSED;
+static constexpr auto AG_ECONNRESET = ECONNRESET;
 #else
 static constexpr auto AG_ETIMEDOUT = WSAETIMEDOUT;
 static constexpr auto AG_ECONNREFUSED = WSAECONNREFUSED;
+static constexpr auto AG_ECONNRESET = WSAECONNRESET;
 #endif
 
 enum TransportProtocol {
