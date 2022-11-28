@@ -1,0 +1,26 @@
+diff --git a/lib/ngtcp2_ringbuf.c b/lib/ngtcp2_ringbuf.c
+index a6b3f73e..81093264 100644
+--- a/lib/ngtcp2_ringbuf.c
++++ b/lib/ngtcp2_ringbuf.c
+@@ -31,8 +31,8 @@
+
+ #include "ngtcp2_macro.h"
+
+-#if defined(_MSC_VER) && defined(_M_ARM64)
+-unsigned int __popcnt(unsigned int x) {
++#ifdef WIN32
++static unsigned int ngtcp2_popcount(unsigned int x) {
+   unsigned int c = 0;
+   for (; x; ++c) {
+     x &= x - 1;
+@@ -56,7 +56,7 @@ int ngtcp2_ringbuf_init(ngtcp2_ringbuf *rb, size_t nmemb, size_t size,
+ void ngtcp2_ringbuf_buf_init(ngtcp2_ringbuf *rb, size_t nmemb, size_t size,
+                              uint8_t *buf, const ngtcp2_mem *mem) {
+ #ifdef WIN32
+-  assert(1 == __popcnt((unsigned int)nmemb));
++  assert(1 == ngtcp2_popcount((unsigned int)nmemb));
+ #else
+   assert(1 == __builtin_popcount((unsigned int)nmemb));
+ #endif
+
+

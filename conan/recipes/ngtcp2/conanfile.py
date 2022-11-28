@@ -18,6 +18,7 @@ class Ngtcp2Conan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
         self.run("cd source_subfolder && git checkout v0.9.0")
+        tools.patch(base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
 
     def build(self):
         cmake = CMake(self)
