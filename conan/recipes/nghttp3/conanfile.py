@@ -13,6 +13,7 @@ class NGHttp3Conan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/ngtcp2/nghttp3.git source_subfolder")
         self.run("cd source_subfolder && git checkout v0.7.1")
+        tools.patch(base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
 
     def build(self):
         cmake = CMake(self)
