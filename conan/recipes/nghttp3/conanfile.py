@@ -8,7 +8,7 @@ class NGHttp3Conan(ConanFile):
     options = {}
     default_options = {}
     generators = "cmake"
-    exports_sources = ["CMakeLists.txt"]
+    exports_sources = ["CMakeLists.txt", "patches/popcnt_old_cpu_fix.patch"]
 
     def source(self):
         self.run("git clone https://github.com/ngtcp2/nghttp3.git source_subfolder")

@@ -9,7 +9,7 @@ class Ngtcp2Conan(ConanFile):
     default_options = {"shared": False, "fPIC": True}
     generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
-    exports_sources = ["CMakeLists.txt"]
+    exports_sources = ["CMakeLists.txt", "patches/popcnt_old_cpu_fix.patch"]
 
     def config_options(self):
         if self.settings.os == "Windows":

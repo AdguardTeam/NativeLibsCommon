@@ -3,13 +3,13 @@ from conans import ConanFile, CMake, tools
 
 class Ngtcp2Conan(ConanFile):
     name = "ngtcp2"
-    version = "2021-05-13"
+    version = "0.8.0"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
     generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
-    exports_sources = ["CMakeLists.txt"]
+    exports_sources = ["CMakeLists.txt", "patches/popcnt_old_cpu_fix.patch"]
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -17,15 +17,16 @@ class Ngtcp2Conan(ConanFile):
 
     def source(self):
         self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
-        self.run("cd source_subfolder && git checkout d9524643af810c2b51f05fb36c500abf13fd9116")
+        self.run("cd source_subfolder && git checkout v0.8.0")
+        tools.patch(base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
 
     def build(self):
         cmake = CMake(self)
-        cmake.definitions["BUILD_SHARED_LIBS"]="OFF"
-        cmake.definitions["ENABLE_OPENSSL"]="OFF"
-        cmake.definitions["ENABLE_BORINGSSL"]="ON"
-        cmake.definitions["HAVE_SSL_IS_QUIC"]="ON"
-        cmake.definitions["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"]="ON"
+        cmake.definitions["ENABLE_SHARED_LIB"] = "OFF"
+        cmake.definitions["ENABLE_OPENSSL"] = "OFF"
+        cmake.definitions["ENABLE_BORINGSSL"] = "ON"
+        cmake.definitions["HAVE_SSL_IS_QUIC"] = "ON"
+        cmake.definitions["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"] = "ON"
         cmake.configure()
         cmake.build()
 
@@ -44,5 +45,5 @@ class Ngtcp2Conan(ConanFile):
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["ngtcp2", "ngtcp2_crypto_boringssl"]
+        self.cpp_info.libs = ["ngtcp2_static", "ngtcp2_crypto_boringssl_static"]
         self.cpp_info.defines.append("NGTCP2_STATICLIB=1")
