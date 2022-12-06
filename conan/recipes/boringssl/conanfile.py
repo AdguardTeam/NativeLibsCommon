@@ -8,7 +8,7 @@ class BoringsslConan(ConanFile):
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
     generators = "cmake"
-    exports_sources = ["CMakeLists.txt"]
+    exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -17,6 +17,7 @@ class BoringsslConan(ConanFile):
     def source(self):
         self.run("git clone https://boringssl.googlesource.com/boringssl source_subfolder")
         self.run("cd source_subfolder && git checkout 8349dfc87e46d5914b0fefbb33241a95a9eef07d")
+        tools.patch(base_path="source_subfolder", patch_file="patches/00_msvc_warnings.patch")
 
     def build(self):
         cmake = CMake(self)
