@@ -4,10 +4,10 @@
 #include <string>
 
 #ifdef _WIN32
+// clang-format off
 #include <ws2tcpip.h>
-#include <ws2ipdef.h>
-#include <windns.h>
-#include <iphlpapi.h>
+#include <Mstcpip.h>
+// clang-format on
 #endif
 
 namespace ag {
@@ -102,12 +102,12 @@ static sockaddr_storage make_sockaddr_storage(std::string_view numeric_host, uin
             return ss;
         }
 #else  // _WIN32
-        NET_ADDRESS_INFO info{};
-        std::wstring s = ag::utils::to_wstring(numeric_host);
-        if (ERROR_SUCCESS == ParseNetworkString(s.data(), NET_STRING_IPV6_ADDRESS, &info, nullptr, nullptr)
-                && info.Format == NET_ADDRESS_IPV6) {
-            sockaddr_storage ss{};
-            std::memcpy(&ss, &info.Ipv6Address, sizeof(info.Ipv6Address));
+        sockaddr_storage ss{};
+        USHORT unused;
+        if (0
+                == RtlIpv6StringToAddressEx(
+                        p, &((sockaddr_in6 *) &ss)->sin6_addr, &((sockaddr_in6 *) &ss)->sin6_scope_id, &unused)) {
+            ((sockaddr_in6 *) &ss)->sin6_family = AF_INET6;
             ((sockaddr_in6 *) &ss)->sin6_port = htons(port);
             return ss;
         }

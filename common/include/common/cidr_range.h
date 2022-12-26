@@ -1,12 +1,7 @@
 #pragma once
 
 #ifdef _WIN32
-// clang format off
 #include <ws2tcpip.h>
-#include <ws2ipdef.h>
-#include <windns.h>
-#include <iphlpapi.h>
-// clang format on
 #else
 #include <arpa/inet.h>
 #endif
@@ -76,8 +71,8 @@ public:
             m_error = address.error()->str();
             return;
         }
-        size_t prefix_len
-                = has_prefix_len ? utils::to_integer<size_t>(cidr_parts[1]).value() : address.value().size() * 8;
+        size_t prefix_len =
+                has_prefix_len ? utils::to_integer<size_t>(cidr_parts[1]).value() : address.value().size() * 8;
         init(address.value(), prefix_len);
     }
 
@@ -328,21 +323,9 @@ private:
         }
         std::vector<uint8_t> address;
         address.resize(IPV6_ADDRESS_SIZE);
-#ifdef _WIN32
-        NET_ADDRESS_INFO info{};
-        if (ParseNetworkString(
-                    ag::utils::to_wstring(address_string).data(), NET_STRING_IPV6_ADDRESS, &info, nullptr, nullptr)
-                        == ERROR_SUCCESS
-                && info.Format == NET_ADDRESS_IPV6) {
-            std::memcpy(address.data(), &info.Ipv6Address.sin6_addr, IPV6_ADDRESS_SIZE);
-        } else {
-            return make_error(CidrError::AE_PARSE_NET_STRING_ERROR);
-        }
-#else
         if (inet_pton(AF_INET6, std::string{address_string}.c_str(), address.data()) != 1) {
             return make_error(CidrError::AE_PARSE_NET_STRING_ERROR, AG_FMT("{}", strerror(errno)));
         }
-#endif
         return std::move(address);
     }
 
@@ -358,21 +341,9 @@ private:
         }
         std::vector<uint8_t> address;
         address.resize(IPV4_ADDRESS_SIZE);
-#ifdef _WIN32
-        NET_ADDRESS_INFO info{};
-        if (ParseNetworkString(
-                    ag::utils::to_wstring(address_string).data(), NET_STRING_IPV4_ADDRESS, &info, nullptr, nullptr)
-                        == ERROR_SUCCESS
-                && info.Format == NET_ADDRESS_IPV4) {
-            std::memcpy(address.data(), &info.Ipv4Address.sin_addr, IPV4_ADDRESS_SIZE);
-        } else {
-            return make_error(CidrError::AE_PARSE_NET_STRING_ERROR);
-        }
-#else
         if (inet_pton(AF_INET, std::string{address_string}.c_str(), address.data()) != 1) {
             return make_error(CidrError::AE_PARSE_NET_STRING_ERROR, AG_FMT("{}", strerror(errno)));
         }
-#endif
         return std::move(address);
     }
 
