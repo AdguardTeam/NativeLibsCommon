@@ -80,3 +80,5 @@ class NativeLibsCommon(ConanFile):
             "fmt::fmt",
         ]
         self.cpp_info.defines.append("FMT_EXCEPTIONS=0")
+        if self.settings.os == "Windows":
+            self.cpp_info.system_libs = ["ws2_32", "iphlpapi", "ntdll"]
