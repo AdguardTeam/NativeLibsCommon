@@ -12,25 +12,24 @@ Conan looks up binaries in the repo from which recipes were downloaded.
 So if a recipe is from conan-center, you won't be able to store binaries because it has
 the highest priority by default.
 
-```
+```shell
 conan remote add -i 0 $REMOTE_NAME https://$ARTIFACTORY_HOST/artifactory/api/conan/$REPO_NAME
 ```
 
 We customized some packages, so they need to be exported to local conan repository.
 
-```
-cd conan/recipes
-./export.sh
+```shell
+./scripts/export_conan.py
 ```
 
 If you want to upload exported recipes to conan remote repository, use following command:
 
-```
+```shell
 conan upload -r $REMOTE_NAME -c '*'
 ```
 
 After successful build, you may want to upload built binaries to remote repo:
-```
+```shell
 conan upload -t $REMOTE_NAME -c '*' --all
 ```
 
