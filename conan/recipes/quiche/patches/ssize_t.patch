@@ -1,11 +1,11 @@
-diff --git a/include/quiche.h b/include/quiche.h
-index 54726ad..0d3ae3a 100644
---- a/include/quiche.h
-+++ b/include/quiche.h
-@@ -34,12 +34,11 @@ extern "C" {
- #include <stdint.h>
- #include <stdbool.h>
- #include <stddef.h>
+diff --git a/quiche/include/quiche.h b/quiche/include/quiche.h
+index c5187058..122390a1 100644
+--- a/quiche/include/quiche.h
++++ b/quiche/include/quiche.h
+@@ -44,12 +44,11 @@ extern "C" {
+ #include <sys/time.h>
+ #endif
+ 
 -#ifdef __unix__
 -#include <sys/types.h>
 -#endif

@@ -4,7 +4,7 @@ from os import environ
 
 class QuicheConan(ConanFile):
     name = "quiche"
-    version = "0.10.0"
+    version = "0.16.0"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
@@ -16,7 +16,7 @@ class QuicheConan(ConanFile):
 
     def source(self):
         self.run("git clone https://github.com/cloudflare/quiche.git source_subfolder")
-        self.run("cd source_subfolder && git checkout 0.10.0")
+        self.run(f"cd source_subfolder && git checkout {self.version}")
         tools.patch(base_path="source_subfolder", patch_file="patches/crate_type.patch")
         tools.patch(base_path="source_subfolder", patch_file="patches/ssize_t.patch")
 
@@ -79,10 +79,10 @@ class QuicheConan(ConanFile):
 
         cargo_quiche_features = "--no-default-features --features ffi"
         cargo_args = "%s %s" % (cargo_args, cargo_quiche_features)
-        self.run("cd source_subfolder && cargo %s" % cargo_args)
+        self.run("cd source_subfolder/quiche && cargo %s" % cargo_args)
 
     def package(self):
-        self.copy("*.h", dst="include", src="source_subfolder/include")
+        self.copy("*.h", dst="include", src="source_subfolder/quiche/include")
         self.copy("*.lib", dst="lib", keep_path=False)
         self.copy("*.a", dst="lib", keep_path=False)
 
@@ -93,3 +93,7 @@ class QuicheConan(ConanFile):
             self.cpp_info.exelinkflags = ["-ldl"]
 
         self.cpp_info.libs = ["quiche"]
+        self.cpp_info.requires = [
+            "openssl::ssl",
+            "openssl::crypto",
+        ]
