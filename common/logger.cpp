@@ -33,18 +33,9 @@ void Logger::set_callback(LoggerCallback callback) {
     }
 }
 
-void Logger::vlog(LogLevel level, fmt::string_view format, fmt::format_args args) const {
-    if (is_enabled(level)) {
-        fmt::basic_memory_buffer<char> buffer;
-        constexpr std::string_view SPACE = " ";
-
-        buffer.append(m_name);
-        buffer.append(SPACE);
-        fmt::detail::vformat_to(buffer, format, args);
-
-        auto callback = std::atomic_load(&g_log_callback);
-        (*callback)(level, std::string_view{buffer.data(), buffer.size()});
-    }
+void Logger::log_impl(LogLevel level, std::string_view message) const {
+    auto callback = std::atomic_load(&g_log_callback);
+    (*callback)(level, message);
 }
 
 bool Logger::is_enabled(LogLevel level) const {

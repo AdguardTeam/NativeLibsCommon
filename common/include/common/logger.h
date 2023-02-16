@@ -89,7 +89,20 @@ public:
     };
 
 private:
-    void vlog(LogLevel level, fmt::string_view format, fmt::format_args args) const;
+    inline void vlog(LogLevel level, fmt::string_view format, fmt::format_args args) const {
+        if (is_enabled(level)) {
+            fmt::basic_memory_buffer<char> buffer;
+            constexpr std::string_view SPACE = " ";
+
+            buffer.append(m_name);
+            buffer.append(SPACE);
+            fmt::detail::vformat_to(buffer, format, args);
+
+            log_impl(level, std::string_view{buffer.data(), buffer.size()});
+        }
+    }
+
+    void log_impl(LogLevel level, std::string_view message) const;
 
     std::string m_name;
 };
