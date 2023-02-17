@@ -30,7 +30,6 @@ class NativeLibsCommon(ConanFile):
 
     def configure(self):
         self.options["gtest"].build_gmock = False
-        self.options["fmt"].header_only = True
         if (self.version is None) or (Version(self.version) >= "1.0.20"):
             self.options["pcre2"].build_pcre2grep = False
 
