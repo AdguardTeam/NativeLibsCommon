@@ -35,8 +35,15 @@ public:
      * @param level Log level
      * @param fmt Format string. Use FMT_STRING to enable type checks
      * @param args Format arguments
+     *
+     * Note that optnone here is because of clang optimizer bug which leads to making bad format args.
+     * https://github.com/AdguardTeam/DnsLibs/issues/182
+     * TODO: Recheck when either fmt library or clang will be updated.
      */
     template <typename... Ts>
+#ifdef __ANDROID__
+    [[clang::optnone]]
+#endif
     inline void log(LogLevel level, fmt::format_string<Ts...> fmt, Ts&&... args) const {
         vlog(level, fmt::string_view(fmt), fmt::make_format_args(args...));
     }
@@ -89,18 +96,7 @@ public:
     };
 
 private:
-    inline void vlog(LogLevel level, fmt::string_view format, fmt::format_args args) const {
-        if (is_enabled(level)) {
-            fmt::basic_memory_buffer<char> buffer;
-            constexpr std::string_view SPACE = " ";
-
-            buffer.append(m_name);
-            buffer.append(SPACE);
-            fmt::detail::vformat_to(buffer, format, args);
-
-            log_impl(level, std::string_view{buffer.data(), buffer.size()});
-        }
-    }
+    void vlog(LogLevel level, fmt::string_view format, fmt::format_args args) const;
 
     void log_impl(LogLevel level, std::string_view message) const;
 

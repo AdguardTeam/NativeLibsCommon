@@ -46,6 +46,19 @@ LogLevel Logger::get_log_level() {
     return g_log_level;
 }
 
+void Logger::vlog(LogLevel level, fmt::string_view format, fmt::format_args args) const {
+    if (is_enabled(level)) {
+        fmt::basic_memory_buffer<char> buffer;
+        constexpr std::string_view SPACE = " ";
+
+        buffer.append(m_name);
+        buffer.append(SPACE);
+        fmt::detail::vformat_to(buffer, format, args);
+
+        log_impl(level, std::string_view{buffer.data(), buffer.size()});
+    }
+}
+
 static void log_to_file(FILE *file, LogLevel level, std::string_view message) {
     std::string_view level_str = (level >= 0 && level < ENUM_NAMES_NUMBER) ? ENUM_NAMES[level] : "UNKNOWN";
     SystemTime now = std::chrono::system_clock::now();
