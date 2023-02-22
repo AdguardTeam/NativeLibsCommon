@@ -3,13 +3,13 @@ from conans import ConanFile, CMake, tools
 
 class Ngtcp2Conan(ConanFile):
     name = "ngtcp2"
-    version = "0.9.0"
+    version = "0.13.1"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
     generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
-    exports_sources = ["CMakeLists.txt", "patches/popcnt_old_cpu_fix.patch"]
+    exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -17,12 +17,14 @@ class Ngtcp2Conan(ConanFile):
 
     def source(self):
         self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
-        self.run("cd source_subfolder && git checkout v0.9.0")
-        tools.patch(base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+        self.run("cd source_subfolder && git checkout v0.13.1")
+        tools.patch(base_path="source_subfolder", patch_file="patches/00_popcnt_old_cpu_fix.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/01_cmake.patch")
 
     def build(self):
         cmake = CMake(self)
         cmake.definitions["ENABLE_SHARED_LIB"] = "OFF"
+        cmake.definitions["ENABLE_STATIC_LIB"] = "ON"
         cmake.definitions["ENABLE_OPENSSL"] = "OFF"
         cmake.definitions["ENABLE_BORINGSSL"] = "ON"
         cmake.definitions["HAVE_SSL_IS_QUIC"] = "ON"

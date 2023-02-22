@@ -1,5 +1,5 @@
 diff --git a/CMake/FindNGHTTP2.cmake b/CMake/FindNGHTTP2.cmake
-index 6d70c4a04..81d0aa576 100644
+index 3957646c4..d3528cb27 100644
 --- a/CMake/FindNGHTTP2.cmake
 +++ b/CMake/FindNGHTTP2.cmake
 @@ -25,7 +25,7 @@ include(FindPackageHandleStandardArgs)
@@ -12,7 +12,7 @@ index 6d70c4a04..81d0aa576 100644
  find_package_handle_standard_args(NGHTTP2
      FOUND_VAR
 diff --git a/CMake/FindNGHTTP3.cmake b/CMake/FindNGHTTP3.cmake
-index 8d8ebc1b1..fe81748b3 100644
+index 9b13e6c6f..f8aaaa85c 100644
 --- a/CMake/FindNGHTTP3.cmake
 +++ b/CMake/FindNGHTTP3.cmake
 @@ -52,7 +52,7 @@ find_path(NGHTTP3_INCLUDE_DIR nghttp3/nghttp3.h
@@ -25,7 +25,7 @@ index 8d8ebc1b1..fe81748b3 100644
      ${PC_NGHTTP3_LIBDIR}
      ${PC_NGHTTP3_LIBRARY_DIRS}
 diff --git a/CMake/FindNGTCP2.cmake b/CMake/FindNGTCP2.cmake
-index 61e54c2d6..5b78af8ae 100644
+index 9f4e9f233..e34072c61 100644
 --- a/CMake/FindNGTCP2.cmake
 +++ b/CMake/FindNGTCP2.cmake
 @@ -58,7 +58,7 @@ find_path(NGTCP2_INCLUDE_DIR ngtcp2/ngtcp2.h
@@ -46,19 +46,19 @@ index 61e54c2d6..5b78af8ae 100644
          ${PC_${_crypto_library}_LIBDIR}
          ${PC_${_crypto_library}_LIBRARY_DIRS}
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f8cdf1aab..7bd392017 100644
+index b97704bfe..23c5ab401 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -493,7 +493,11 @@ function(CheckQuicSupportInOpenSSL)
-   # Be sure that the OpenSSL library actually supports QUIC.
-   cmake_push_check_state()
-   set(CMAKE_REQUIRED_INCLUDES   "${OPENSSL_INCLUDE_DIR}")
--  set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}")
-+  if (NOT ANDROID AND NOT APPLE AND NOT WIN32)
-+    set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}" "pthread")
-+  else()
-+    set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}")
-+  endif()
-   check_symbol_exists(SSL_CTX_set_quic_method "openssl/ssl.h" HAVE_SSL_CTX_SET_QUIC_METHOD)
-   if(NOT HAVE_SSL_CTX_SET_QUIC_METHOD)
-     message(FATAL_ERROR "QUIC support is missing in OpenSSL/BoringSSL. Try setting -DOPENSSL_ROOT_DIR")
+@@ -501,7 +501,11 @@ function(CheckQuicSupportInOpenSSL)
+   if(NOT DEFINED HAVE_SSL_CTX_SET_QUIC_METHOD)
+     cmake_push_check_state()
+     set(CMAKE_REQUIRED_INCLUDES   "${OPENSSL_INCLUDE_DIR}")
+-    set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}")
++    if (NOT ANDROID AND NOT APPLE AND NOT WIN32)
++      set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}" "pthread")
++    else()
++      set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}")
++    endif()
+     check_symbol_exists(SSL_CTX_set_quic_method "openssl/ssl.h" HAVE_SSL_CTX_SET_QUIC_METHOD)
+     cmake_pop_check_state()
+   endif()

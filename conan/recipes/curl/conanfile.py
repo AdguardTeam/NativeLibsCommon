@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class CurlConan(ConanFile):
     name = "libcurl"
-    version = "7.85.0-adguard4"
+    version = "7.88.1-adguard"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
@@ -11,7 +11,7 @@ class CurlConan(ConanFile):
     requires = "openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon", \
                "nghttp2/1.44.0@AdguardTeam/NativeLibsCommon", \
                "nghttp3/0.7.1@AdguardTeam/NativeLibsCommon", \
-               "ngtcp2/0.9.0@AdguardTeam/NativeLibsCommon", \
+               "ngtcp2/v0.13.1@AdguardTeam/NativeLibsCommon", \
                "zlib/1.2.11"
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
@@ -21,9 +21,11 @@ class CurlConan(ConanFile):
 
     def source(self):
         self.run("git clone https://github.com/curl/curl source_subfolder")
-        self.run("cd source_subfolder && git checkout curl-7_85_0")
+        self.run("cd source_subfolder && git checkout curl-7_88_1")
+        # Fix build
         tools.patch(base_path="source_subfolder", patch_file="patches/00-cmake.patch")
-        tools.patch(base_path="source_subfolder", patch_file="patches/01-fix-quic-conn-reuse.patch")
+        # Fix Curl_socket_check thinking that socket is in error state when it's just readable when using poll emulation on Windows
+        tools.patch(base_path="source_subfolder", patch_file="patches/01-curl-poll.patch")
 
     def build(self):
         cmake = CMake(self)

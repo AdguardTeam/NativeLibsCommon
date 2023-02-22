@@ -1,0 +1,26 @@
+diff --git a/crypto/boringssl/CMakeLists.txt b/crypto/boringssl/CMakeLists.txt
+index bbea4c40..261d64aa 100644
+--- a/crypto/boringssl/CMakeLists.txt
++++ b/crypto/boringssl/CMakeLists.txt
+@@ -48,7 +48,7 @@ if(ENABLE_STATIC_LIB)
+   add_library(ngtcp2_crypto_boringssl_static ${ngtcp2_crypto_boringssl_SOURCES})
+   set_target_properties(ngtcp2_crypto_boringssl_static PROPERTIES
+     COMPILE_FLAGS "${WARNCFLAGS}"
+-    ARCHIVE_OUTPUT_NAME ngtcp2_crypto_boringssl${STATIC_LIB_SUFFIX}
++#    ARCHIVE_OUTPUT_NAME ngtcp2_crypto_boringssl${STATIC_LIB_SUFFIX}
+     C_VISIBILITY_PRESET hidden
+   )
+   target_compile_definitions(ngtcp2_crypto_boringssl_static PUBLIC
+diff --git a/lib/CMakeLists.txt b/lib/CMakeLists.txt
+index 886d12a5..f92b73c4 100644
+--- a/lib/CMakeLists.txt
++++ b/lib/CMakeLists.txt
+@@ -95,7 +95,7 @@ if(HAVE_CUNIT OR ENABLE_STATIC_LIB)
+   set_target_properties(ngtcp2_static PROPERTIES
+     COMPILE_FLAGS "${WARNCFLAGS}"
+     VERSION ${LT_VERSION} SOVERSION ${LT_SOVERSION}
+-    ARCHIVE_OUTPUT_NAME ngtcp2${STATIC_LIB_SUFFIX}
++#    ARCHIVE_OUTPUT_NAME ngtcp2${STATIC_LIB_SUFFIX}
+     C_VISIBILITY_PRESET hidden
+   )
+   target_compile_definitions(ngtcp2_static PUBLIC "-DNGTCP2_STATICLIB")
