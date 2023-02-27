@@ -3,10 +3,10 @@ from conans import ConanFile, CMake, tools
 
 class CurlConan(ConanFile):
     name = "libcurl"
-    version = "7.88.1-adguard"
+    version = "22eec78-adguard"
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
+    options = {}
+    default_options = {"libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
     generators = "cmake"
     requires = "openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon", \
                "nghttp2/1.44.0@AdguardTeam/NativeLibsCommon", \
@@ -15,13 +15,9 @@ class CurlConan(ConanFile):
                "zlib/1.2.11"
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
-    def config_options(self):
-        if self.settings.os == "Windows":
-            del self.options.fPIC
-
     def source(self):
         self.run("git clone https://github.com/curl/curl source_subfolder")
-        self.run("cd source_subfolder && git checkout curl-7_88_1")
+        self.run("cd source_subfolder && git checkout 22eec78")
         # Fix build
         tools.patch(base_path="source_subfolder", patch_file="patches/00-cmake.patch")
         # Fix Curl_socket_check thinking that socket is in error state when it's just readable when using poll emulation on Windows
