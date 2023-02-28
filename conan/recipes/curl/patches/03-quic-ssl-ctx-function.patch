@@ -1,0 +1,25 @@
+diff --git a/lib/vquic/ngtcp2.c b/lib/vquic/ngtcp2.c
+index 4b7e2eb8d..14c3381ae 100644
+--- a/lib/vquic/ngtcp2.c
++++ b/lib/vquic/ngtcp2.c
+@@ -294,6 +294,20 @@ static SSL_CTX *quic_ssl_ctx(struct Curl_easy *data)
+     }
+ #endif
+   }
++
++  // Added by AdGuard
++  /* give application a chance to interfere with SSL set up. */
++  if(data->set.ssl.fsslctx) {
++    Curl_set_in_callback(data, true);
++    CURLcode result = (*data->set.ssl.fsslctx)(data, ssl_ctx, data->set.ssl.fsslctxp);
++    Curl_set_in_callback(data, false);
++    if(result) {
++      failf(data, "error signaled by ssl ctx callback");
++      // In a manner consistent with the surrounding code, leak the SSL_CTX on failure.
++      return NULL;
++    }
++  }
++
+   return ssl_ctx;
+ }
+ 
