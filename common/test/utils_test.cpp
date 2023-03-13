@@ -62,6 +62,16 @@ TEST(utils, GenerallyWork) {
     ASSERT_EQ(ag::utils::join(string_view_vec.begin(), string_view_vec.end(), ":"), "111:222:333:444");
     ASSERT_EQ(ag::utils::join(string_view_vec.begin() + 2, string_view_vec.end(), ":"), "333:444");
 
+    ASSERT_FALSE(ag::SocketAddress().valid());
+    ag::IpAddress addr;
+    ASSERT_FALSE(ag::SocketAddress(addr, 53).valid());
+    addr = ag::Ipv4Address{127, 0, 0, 1};
+    ASSERT_TRUE(ag::SocketAddress(addr, 53).valid());
+    ASSERT_TRUE(ag::SocketAddress(addr, 53).is_ipv4());
+    addr = ag::Ipv6Address{127, 0, 0, 1};
+    ASSERT_TRUE(ag::SocketAddress(addr, 53).valid());
+    ASSERT_TRUE(ag::SocketAddress(addr, 53).is_ipv6());
+
     const char *str_array[] = {"aaa", "bbb", "ccc", "ddd"};
     ASSERT_EQ(ag::utils::join(std::begin(str_array), std::end(str_array), "::"), "aaa::bbb::ccc::ddd");
     ASSERT_EQ(ag::utils::join(std::begin(str_array) + 1, std::end(str_array), "::"), "bbb::ccc::ddd");

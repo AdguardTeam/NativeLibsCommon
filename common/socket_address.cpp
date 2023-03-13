@@ -125,6 +125,16 @@ SocketAddress::SocketAddress(Uint8View addr, uint16_t port)
         : m_ss{make_sockaddr_storage(addr, port)} {
 }
 
+SocketAddress::SocketAddress(const IpAddress &addr, uint16_t port) {
+    if (const Ipv4Address *ipv4 = std::get_if<Ipv4Address>(&addr); ipv4 != nullptr) {
+        m_ss = make_sockaddr_storage({ipv4->data(), ipv4->size()}, port);
+    } else if (const Ipv6Address *ipv6 = std::get_if<Ipv6Address>(&addr); ipv6 != nullptr) {
+        m_ss = make_sockaddr_storage({ipv6->data(), ipv6->size()}, port);
+    } else {
+        m_ss = {};
+    }
+}
+
 Uint8View SocketAddress::addr() const {
     switch (m_ss.ss_family) {
     case AF_INET: {

@@ -28,6 +28,12 @@ public:
      * @param port Port number
      */
     SocketAddress(ag::Uint8View addr, uint16_t port);
+
+    /**
+     * @param addr IP address variant (4 bytes length array, 16 bytes length array or std::monostate)
+     * @param port Port number
+     */
+    SocketAddress(const ag::IpAddress &addr, uint16_t port);
     /**
      * @param addr C sockaddr struct
      */
