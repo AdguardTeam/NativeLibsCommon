@@ -29,6 +29,11 @@ class QuicheConan(ConanFile):
         os = self.settings.os
         arch = str(self.settings.arch)
         if os == "Linux":
+            if arch == "armv8":
+                arch = "aarch64"
+            elif arch == "x86":
+                arch = "i686"
+
             cargo_args = "build %s --target %s-unknown-linux-gnu" % (cargo_build_type, arch)
         elif os == "Android":
             if "ANDROID_HOME" in environ and "ANDROID_NDK_HOME" not in environ:
