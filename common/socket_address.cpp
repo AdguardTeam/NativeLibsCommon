@@ -1,3 +1,4 @@
+#include "common/net_utils.h"
 #include "common/socket_address.h"
 #include "common/utils.h"
 #include <cstring>
@@ -38,13 +39,9 @@ ev_socklen_t SocketAddress::c_socklen() const {
     return ::ag::c_socklen((const sockaddr *) &m_ss);
 }
 
-SocketAddress::SocketAddress()
-        : m_ss{} {
-}
+SocketAddress::SocketAddress() = default;
 
-SocketAddress::SocketAddress(const sockaddr *addr)
-        : m_ss{} {
-
+SocketAddress::SocketAddress(const sockaddr *addr) {
     if (addr) {
         std::memcpy(&m_ss, addr, ::ag::c_socklen(addr));
     }
@@ -115,6 +112,20 @@ static sockaddr_storage make_sockaddr_storage(std::string_view numeric_host, uin
     }
 
     return {};
+}
+
+SocketAddress::SocketAddress(std::string_view numeric_host_port) {
+    Result split = utils::split_host_port(numeric_host_port);
+    if (split.has_error()) {
+        return;
+    }
+
+    std::optional port = utils::to_integer<uint16_t>(split->second);
+    if (!port.has_value() && !split->second.empty()) {
+        return;
+    }
+
+    new (this) SocketAddress(split->first, port.value_or(0));
 }
 
 SocketAddress::SocketAddress(std::string_view numeric_host, uint16_t port)

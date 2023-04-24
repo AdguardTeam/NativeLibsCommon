@@ -82,6 +82,14 @@ TEST(utils, GenerallyWork) {
     ASSERT_TRUE(ag::SocketAddress("fe80::1%23", 53).valid());
     ASSERT_EQ(53, ag::SocketAddress("fe80::1%23", 53).port());
 
+    ASSERT_TRUE(ag::SocketAddress("[fe80::1]:53").valid());
+    ASSERT_EQ(53, ag::SocketAddress("[fe80::1]:53").port());
+    ASSERT_TRUE(ag::SocketAddress("fe80::1:53").valid());
+    ASSERT_EQ(0, ag::SocketAddress("fe80::1:53").port());
+
+    ASSERT_TRUE(ag::SocketAddress("[fe80::1%23]:53").valid());
+    ASSERT_EQ(53, ag::SocketAddress("[fe80::1%23]:53").port());
+
 #if defined(__APPLE__) && defined(__MACH__)
     ASSERT_TRUE(ag::SocketAddress("fe80::1%abc", 53).valid());
     ASSERT_EQ(53, ag::SocketAddress("fe80::1%abc", 53).port());

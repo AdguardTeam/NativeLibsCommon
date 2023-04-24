@@ -19,6 +19,11 @@ public:
     SocketAddress();
 
     /**
+     * @param numeric_host_port String containing the IP address and, optionally, port
+     */
+    explicit SocketAddress(std::string_view numeric_host_port);
+
+    /**
      * @param numeric_host String containing the IP address
      * @param port         Port number
      */
@@ -119,7 +124,7 @@ public:
 
 private:
     /** sockaddr_storage structure. Internally this is just sockaddr_storage wrapper */
-    sockaddr_storage m_ss;
+    sockaddr_storage m_ss{};
 
     ag::SocketAddress to_ipv4_unmapped() const;
     ag::SocketAddress to_ipv4_mapped() const;
