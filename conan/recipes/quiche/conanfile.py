@@ -4,7 +4,7 @@ from os import environ
 
 class QuicheConan(ConanFile):
     name = "quiche"
-    version = "0.16.0"
+    version = "0.17.1"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]

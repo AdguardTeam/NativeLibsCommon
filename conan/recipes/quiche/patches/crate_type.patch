@@ -1,8 +1,8 @@
 diff --git a/quiche/Cargo.toml b/quiche/Cargo.toml
-index f323b9f1..6ce1d10e 100644
+index 0eb24173..606be2c3 100644
 --- a/quiche/Cargo.toml
 +++ b/quiche/Cargo.toml
-@@ -74,4 +74,5 @@ mio = { version = "0.8", features = ["net", "os-poll"] }
+@@ -75,4 +75,5 @@ mio = { version = "0.8", features = ["net", "os-poll"] }
  url = "1"
  
  [lib]
@@ -10,10 +10,10 @@ index f323b9f1..6ce1d10e 100644
 +#crate-type = ["lib", "staticlib", "cdylib"]
 +crate-type = ["staticlib"]
 diff --git a/quiche/src/build.rs b/quiche/src/build.rs
-index d94bed5b..f8c69b0f 100644
+index 739422f2..0c2e37df 100644
 --- a/quiche/src/build.rs
 +++ b/quiche/src/build.rs
-@@ -245,11 +245,11 @@ fn main() {
+@@ -252,11 +252,11 @@ fn main() {
          println!("cargo:rustc-link-lib=static=crypto");
      }
  
