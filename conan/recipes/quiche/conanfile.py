@@ -60,7 +60,7 @@ class QuicheConan(ConanFile):
             if os.sdk == "iphonesimulator":
                 if arch.startswith("arm"):
                     target = "aarch64-apple-ios-sim"
-                    cargo_args = "+nightly build %s -Zbuild-std"
+                    cargo_args = "build %s"
                 else:
                     target = "x86_64-apple-ios"
                     cargo_args = "build %s"
