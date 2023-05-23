@@ -1,8 +1,8 @@
 # Native libs common stuff
 
-Currently it contains Conan recipes for AdGuard libs
+Currently, it contains Conan recipes for AdGuard libs
 
-#### How to use conan
+## How to use conan
 
 Conan is a C++ package manager. It is similar to maven, but stores recipes and binaries separately.
 Binaries can be uploaded to a repo and reused.
@@ -32,6 +32,22 @@ After successful build, you may want to upload built binaries to remote repo:
 ```shell
 conan upload -t $REMOTE_NAME -c '*' --all
 ```
+
+## Testing changes as a dependency
+
+To test local changes in the library in case it is used as a conan package dependency,
+do the following:
+
+1) Create patch files: e.g., execute `git diff > 1.patch` in the project root.
+2) Add paths to the patch files in `<root>/conanfile.py`, see the `patch_files` field.
+3) Change the `vcs_url` field in `<root>/conanfile.py` if the default one is not suitable.
+4) Export the conan package with the special version number: `conan export . /777@AdguardTeam/NativeLibsCommon`.
+5) In the project that uses `native_libs_common` as a dependency, change the version to `777`
+   (e.g. `native_libs_common/1.0.0@AdguardTeam/NativeLibsCommon` -> `native_libs_common/777@AdguardTeam/NativeLibsCommon`).
+6) Re-run cmake command.  
+   Notes:
+    * if one has already exported the library in such way, the cached version must be purged: `conan remove -f native_libs_common/777`,
+    * by default the patches are applied to the `master` branch, specify the `commit_hash` option to test changes against the specific commit.
 
 ## Code style
 

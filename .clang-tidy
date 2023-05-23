@@ -33,6 +33,7 @@ Checks: '
   -hicpp-avoid-c-arrays,
 
   -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
   -google-runtime-int,
   -google-default-arguments,
   -google-readability-casting,
@@ -40,6 +41,7 @@ Checks: '
   -cppcoreguidelines-owning-memory,
   -modernize-avoid-c-arrays,
   -hicpp-named-parameter,
+  -hicpp-no-array-decay,
   -readability-named-parameter,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -readability-implicit-bool-conversion,
@@ -76,4 +78,6 @@ CheckOptions: [
   { key: readability-magic-numbers.IgnoredIntegerValues, value: '1;2;3;4;8;42' },
 
   { key: readability-function-cognitive-complexity.Threshold, value: 75 },
+
+  { key: misc-const-correctness.AnalyzeValues, value: false },
 ]

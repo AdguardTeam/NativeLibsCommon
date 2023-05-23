@@ -1,4 +1,4 @@
-from conans import ConanFile, CMake
+from conans import ConanFile, CMake, tools
 from conans.model.version import Version
 
 class NativeLibsCommon(ConanFile):
@@ -6,6 +6,7 @@ class NativeLibsCommon(ConanFile):
     license = "Apache-2.0"
     author = "AdguardTeam"
     url = "https://github.com/AdguardTeam/NativeLibsCommon"
+    vcs_url = "https://github.com/AdguardTeam/NativeLibsCommon.git"
     description = "Common library for C++ opensource projects"
     generators = "cmake"
     settings = "os", "compiler", "build_type", "arch"
@@ -19,6 +20,11 @@ class NativeLibsCommon(ConanFile):
         "fPIC": True,
         "commit_hash": None,  # None means `master`
     }
+    # A list of paths to patches. The paths must be relative to the conanfile directory.
+    # They are applied in case of the version equals 777 and mostly intended to be used
+    # for testing.
+    patch_files = []
+    exports_sources = patch_files
 
     def requirements(self):
         self.requires("fmt/8.0.1")
@@ -38,11 +44,16 @@ class NativeLibsCommon(ConanFile):
             del self.options.fPIC
 
     def source(self):
-        self.run("git init . && git remote add origin https://github.com/AdguardTeam/NativeLibsCommon.git && git fetch")
+        self.run(f"git init . && git remote add origin {self.vcs_url} && git fetch")
 
         if self.version == "777":
             if self.options.commit_hash:
                 self.run("git checkout -f %s" % self.options.commit_hash)
+            else:
+                self.run("git checkout -f master")
+
+            for p in self.patch_files:
+                tools.patch(patch_file=p)
         else:
             version_hash = self.conan_data["commit_hash"][self.version]["hash"]
             self.run("git checkout -f %s" % version_hash)
