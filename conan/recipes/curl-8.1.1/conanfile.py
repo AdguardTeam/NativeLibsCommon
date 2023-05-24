@@ -3,7 +3,7 @@ from conans import ConanFile, CMake, tools
 
 class CurlConan(ConanFile):
     name = "libcurl"
-    version = "8.1.1-adguard0"
+    version = "8.1.1-adguard1"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
@@ -33,6 +33,7 @@ class CurlConan(ConanFile):
         cmake.definitions["CURL_USE_SCHANNEL"] = "OFF"
         cmake.definitions["CURL_USE_SECTRANSP"] = "OFF"
         cmake.definitions["CURL_USE_OPENSSL"] = "ON"
+        cmake.definitions["HAVE_SSL_CTX_SET_QUIC_METHOD"] = "ON"
         cmake.definitions["CURL_USE_MBEDTLS"] = "OFF"
         cmake.definitions["CURL_USE_BEARSSL"] = "OFF"
         cmake.definitions["CURL_USE_NSS"] = "OFF"
