@@ -3,14 +3,14 @@ from conans import ConanFile, CMake, tools
 
 class CurlConan(ConanFile):
     name = "libcurl"
-    version = "8.1.1-adguard1"
+    version = "8.1.1-adguard2"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
     generators = "cmake"
     requires = "openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon", \
                "nghttp2/1.44.0@AdguardTeam/NativeLibsCommon", \
-               "nghttp3/0.7.1@AdguardTeam/NativeLibsCommon", \
+               "nghttp3/0.11.0@AdguardTeam/NativeLibsCommon", \
                "ngtcp2/0.15.0@AdguardTeam/NativeLibsCommon", \
                "zlib/1.2.11"
     exports_sources = ["CMakeLists.txt", "patches/*"]
