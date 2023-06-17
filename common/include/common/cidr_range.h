@@ -158,6 +158,38 @@ public:
     }
 
     /**
+     * Checks if this range contains given IP address
+     * @param addr IP address
+     * @return True if this range contains given address, false otherwise
+     */
+    [[nodiscard]] bool contains(const Uint8Vector address) const {
+        if (address.size() != m_address.size()) {
+            return false;
+        }
+
+        for (size_t i = 0; i < m_address.size(); i++) {
+            if ((m_address[i] & m_mask[i]) != (address[i] & m_mask[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Checks if this range contains given IP address
+     * @param addr IP address as string
+     * @return True if this range contains given address, false otherwise
+     */
+    [[nodiscard]] bool contains(std::string_view addr) const {
+        auto address = get_address_from_string(addr);
+        if (address.has_error()) {
+            return false;
+        }
+
+        return contains(address.value());
+    }
+
+    /**
      * Splits this range into two with prefixLen increased by one
      * @return Pair of CIDR ranges or null if this range is single IP
      */

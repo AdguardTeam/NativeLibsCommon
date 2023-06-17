@@ -89,12 +89,21 @@ TEST_F(CidrRangeTest, testSplit) {
 TEST_F(CidrRangeTest, testContains) {
     CidrRange range1("2000::/3");
     CidrRange range2("4000::/3");
+    CidrRange range3("192.168.0.0/16");
     CidrRange small_range1("2600:1000::/28");
     CidrRange small_range2("2600:1010::/29");
     ASSERT_TRUE(range1.contains(small_range1));
     ASSERT_TRUE(range1.contains(small_range2));
     ASSERT_FALSE(range2.contains(small_range1));
     ASSERT_FALSE(range2.contains(small_range2));
+    ASSERT_TRUE(range1.contains("2000::1"));
+    ASSERT_FALSE(range1.contains("5000::1"));
+    ASSERT_TRUE(range3.contains("192.168.0.1"));
+    ASSERT_FALSE(range3.contains("193.168.0.1"));
+    ASSERT_TRUE(range1.contains(CidrRange::get_address_from_string("2000::1").value()));
+    ASSERT_FALSE(range1.contains(CidrRange::get_address_from_string("5000::1").value()));
+    ASSERT_TRUE(range3.contains(CidrRange::get_address_from_string("192.168.0.1").value()));
+    ASSERT_FALSE(range3.contains(CidrRange::get_address_from_string("193.168.0.1").value()));
 }
 
 static void test_excluding_ranges(
