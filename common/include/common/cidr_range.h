@@ -162,7 +162,7 @@ public:
      * @param addr IP address
      * @return True if this range contains given address, false otherwise
      */
-    [[nodiscard]] bool contains(const Uint8Vector address) const {
+    [[nodiscard]] bool contains(Uint8View address) const {
         if (address.size() != m_address.size()) {
             return false;
         }
@@ -186,7 +186,7 @@ public:
             return false;
         }
 
-        return contains(address.value());
+        return contains(Uint8View(address.value().data(), address.value().size()));
     }
 
     /**
