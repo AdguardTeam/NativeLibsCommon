@@ -107,3 +107,38 @@ TEST(utils, GenerallyWork) {
     ASSERT_EQ(53, ag::SocketAddress("fe80::1%utun1", 53).port());
 #endif // defined(__APPLE__) && defined(__MACH__)
 }
+
+TEST(utils, TestSplit2) {
+    struct TestData {
+        std::string original_str;
+        int single_delim;
+        std::string_view multiple_delim;
+        std::array<std::string_view, 2> result;
+        std::array<std::string_view, 2> r_result;
+        std::array<std::string_view, 2> any_result;
+    };
+
+    const TestData TEST_DATA[] = {
+            {"test-string", '-', "-", {"test", "string"}, {"test", "string"}, {"test", "string"}},
+            {"another/string/with/multiple/delims", '/', "/", {"another", "string/with/multiple/delims"}, {"another/string/with/multiple", "delims"}, {"another", "string/with/multiple/delims"}},
+            {"string_with spaces", ' ', "_ ", {"string_with", "spaces"}, {"string_with", "spaces"}, {"string", "with spaces"}},
+            {"string_no_delims", 'x', "xy", {"string_no_delims", ""}, {"string_no_delims", ""}, {"string_no_delims", ""}},
+            {"", ' ', "_ ", {"", ""}, {"", ""}, {"", ""}},
+            {"two__delims", '_', " _", {"two", "_delims"}, {"two_", "delims"}, {"two", "_delims"}},
+            {"two delims", ' ', " _", {"two", "delims"}, {"two", "delims"}, {"two", "delims"}},
+            {"_nospaces", '_', "_ ", {"", "nospaces"}, {"", "nospaces"}, {"", "nospaces"}},
+            {"trailing/delim/", '/', "/ ", {"trailing", "delim/"}, {"trailing/delim", ""}, {"trailing", "delim/"}},
+            {"//doubleAtStart", '/', "/ ", {"", "/doubleAtStart"}, {"/", "doubleAtStart"}, {"", "/doubleAtStart"}},
+    };
+
+    for (const auto& data : TEST_DATA) {
+        auto split_res = ag::utils::split2_by(data.original_str, data.single_delim);
+        EXPECT_EQ(split_res, data.result);
+
+        auto rsplit_res = ag::utils::rsplit2_by(data.original_str, data.single_delim);
+        EXPECT_EQ(rsplit_res, data.r_result);
+
+        auto split_by_any_res = ag::utils::split2_by_any_of(data.original_str, data.multiple_delim);
+        EXPECT_EQ(split_by_any_res, data.any_result);
+    }
+}

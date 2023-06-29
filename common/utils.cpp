@@ -87,11 +87,11 @@ std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::
     return out;
 }
 
-static std::array<std::string_view, 2> split2(std::string_view str, int delim, bool reverse) {
+static std::array<std::string_view, 2> split2(std::string_view str, std::string_view delim, bool reverse) {
     std::string_view first;
     std::string_view second;
 
-    size_t seek = !reverse ? str.find(delim) : str.rfind(delim);
+    size_t seek = !reverse ? str.find_first_of(delim) : str.find_last_of(delim);
     if (seek != std::string_view::npos) {
         first = {str.data(), seek};
         second = {str.data() + seek + 1, str.length() - seek - 1};
@@ -104,11 +104,15 @@ static std::array<std::string_view, 2> split2(std::string_view str, int delim, b
 }
 
 std::array<std::string_view, 2> utils::split2_by(std::string_view str, int delim) {
-    return split2(str, delim, false);
+    return split2(str, {(char *) &delim, 1}, false);
 }
 
 std::array<std::string_view, 2> utils::rsplit2_by(std::string_view str, int delim) {
-    return split2(str, delim, true);
+    return split2(str, {(char *) &delim, 1}, true);
+}
+
+std::array<std::string_view, 2> utils::split2_by_any_of(std::string_view str, std::string_view delim) {
+    return split2(str, delim, false);
 }
 
 bool utils::is_valid_ip4(std::string_view str) {

@@ -142,13 +142,13 @@ static inline constexpr bool ends_with(std::string_view str, std::string_view su
 }
 
 /**
- * Splits string by delimiter
+ * Split string by delimiter
  */
 std::vector<std::string_view> split_by(std::string_view str, int delim, bool include_empty = false);
 std::vector<std::string_view> split_by(std::string_view str, std::string_view delim, bool include_empty = false);
 
 /**
- * Splits string by any character in delimiters
+ * Split string by any character in delimiters
  */
 std::vector<std::string_view> split_by_any_of(std::string_view str, std::string_view delim, bool include_empty = false);
 
@@ -161,6 +161,11 @@ std::array<std::string_view, 2> split2_by(std::string_view str, int delim);
  * Split string by last found delimiter for 2 parts
  */
 std::array<std::string_view, 2> rsplit2_by(std::string_view str, int delim);
+
+/**
+ * Split string into two parts at the first occurrence of any character in the provided delimiters.
+ */
+std::array<std::string_view, 2> split2_by_any_of(std::string_view str, std::string_view delim);
 
 /**
  * Check is T has `reserve(size_t{...})` member function or not
