@@ -1,9 +1,12 @@
 #pragma once
 
-#include <type_traits>
-#include <system_error>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <type_traits>
 #include <variant>
+
 #include <fmt/format.h>
 
 #include "common/logger.h"
@@ -26,7 +29,7 @@ struct ErrorCodeToString {
     std::string operator()(Enum code) = 0;
 };
 
-class ErrorBase {
+class ErrorBase { // NOLINT(*-special-member-functions)
 public:
     virtual std::string str() = 0;
     virtual ~ErrorBase() = default;
@@ -42,29 +45,52 @@ template <typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
 class ErrorImpl : public ErrorBase {
 public:
     ErrorImpl(SourceLocation source_location, Enum value, ErrorBasePtr next_error)
-            : m_source_location(source_location), m_value(value), m_next_error(std::move(next_error))
-    {
+            : m_source_location(source_location)
+            , m_value(value)
+            , m_next_error(std::move(next_error)) {
     }
 
     ErrorImpl(SourceLocation source_location, Enum value, std::string_view message, ErrorBasePtr next_error)
-            : m_source_location(source_location), m_value(value), m_message(message), m_next_error(std::move(next_error))
-    {
+            : m_source_location(source_location)
+            , m_value(value)
+            , m_message(message)
+            , m_next_error(std::move(next_error)) {
     }
 
-    Enum value() { return m_value; }
+    [[nodiscard]] const Enum &value() const {
+        return m_value;
+    }
 
     /**
      * @return String representation of error and its parents
      */
-    std::string str() override {
-        std::string msg = fmt::format("Error at {}:{}: {}: {}", m_source_location.func_name, m_source_location.line,
-                    ErrorCodeToString<Enum>()(m_value), m_message);
-        if (m_next_error) {
-            msg += "\nCaused by: ";
-            msg += m_next_error->str();
+    [[nodiscard]] std::string str() override {
+        fmt::basic_memory_buffer<char> buffer;
+
+        fmt::format_to(
+                std::back_inserter(buffer), "Error at {}:{}", m_source_location.func_name, m_source_location.line);
+
+        if (std::string error_str = ErrorCodeToString<Enum>()(m_value); !error_str.empty()) {
+            fmt::format_to(std::back_inserter(buffer), ": {}", error_str);
         }
-        return msg;
+
+        if (!m_message.empty()) {
+            fmt::format_to(std::back_inserter(buffer), ": {}", m_message);
+        }
+
+        if (m_next_error) {
+            fmt::format_to(std::back_inserter(buffer), "\nCaused by: {}", m_next_error->str());
+        }
+        return fmt::to_string(buffer);
     }
+
+    /**
+     * @return The next error in the stack if some
+     */
+    [[nodiscard]] const ErrorBasePtr &next() const {
+        return m_next_error;
+    }
+
 protected:
     SourceLocation m_source_location;
     std::string m_message;
@@ -75,7 +101,7 @@ protected:
 /*
  * Basic error container
  */
-template<typename T>
+template <typename T>
 using Error = std::shared_ptr<ErrorImpl<T>>;
 
 /**
@@ -83,13 +109,12 @@ using Error = std::shared_ptr<ErrorImpl<T>>;
  * @tparam R        Result value type
  * @tparam Enum     Error type enum
  */
-template<typename R, typename Enum>
+template <typename R, typename Enum>
 class Result {
 public:
     template <typename T, typename = std::enable_if_t<std::is_constructible_v<std::variant<R, Error<Enum>>, T>>>
-    Result(T &&value)
-            : m_value(std::forward<T>(value))
-    {
+    Result(T &&value) // NOLINT(*-explicit-constructor, *-explicit-conversions)
+            : m_value(std::forward<T>(value)) {
         if (auto err = std::get_if<Error<Enum>>(&m_value); err && *err == nullptr) {
             Result::invalid_error(__func__);
         }
@@ -97,8 +122,7 @@ public:
 
     template <typename = std::enable_if_t<std::is_default_constructible_v<R>>>
     Result()
-            : m_value(R{})
-    {
+            : m_value(R{}) {
     }
 
     [[nodiscard]] bool has_value() const {
@@ -116,35 +140,36 @@ public:
     [[nodiscard]] R &value() noexcept {
         return std::get<R>(m_value);
     }
-    [[nodiscard]] const R &operator *() const noexcept {
+    [[nodiscard]] const R &operator*() const noexcept {
         return std::get<R>(m_value);
     }
-    [[nodiscard]] R &operator *() noexcept {
+    [[nodiscard]] R &operator*() noexcept {
         return std::get<R>(m_value);
     }
-    [[nodiscard]] const R *operator ->() const noexcept {
+    [[nodiscard]] const R *operator->() const noexcept {
         return &std::get<R>(m_value);
     }
-    [[nodiscard]] R *operator ->() noexcept {
+    [[nodiscard]] R *operator->() noexcept {
         return &std::get<R>(m_value);
     }
     [[nodiscard]] const Error<Enum> &error() const noexcept {
         return std::get<Error<Enum>>(m_value);
     }
+
 private:
     std::variant<R, Error<Enum>> m_value;
 
     void invalid_error(std::string_view sv) {
-        static ag::Logger log_{sv};
+        static ag::Logger log_{sv}; // NOLINT(*-identifier-naming)
         errlog(log_, "Result should have either value or error");
         abort();
     }
 };
 
-template<>
+template <>
 struct ErrorCodeToString<std::errc> {
     std::string operator()(std::errc code) {
-        return std::system_category().message((int)code);
+        return std::system_category().message((int) code);
     }
 };
 
@@ -156,7 +181,8 @@ Error<Enum> make_error_func(SourceLocation source_location, Enum value, ErrorBas
 }
 
 template <typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
-Error<Enum> make_error_func(SourceLocation source_location, Enum value, std::string_view message, ErrorBasePtr next_error = nullptr) {
+Error<Enum> make_error_func(
+        SourceLocation source_location, Enum value, std::string_view message, ErrorBasePtr next_error = nullptr) {
     return std::make_shared<ErrorImpl<Enum>>(source_location, value, message, next_error);
 }
 

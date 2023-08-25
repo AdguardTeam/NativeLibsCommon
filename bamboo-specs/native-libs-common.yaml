@@ -33,7 +33,7 @@ Win build:
             cmake -DCMAKE_BUILD_TYPE=Debug ^
                 -DCMAKE_C_FLAGS_DEBUG=/MT ^
                 -DCMAKE_CXX_FLAGS_DEBUG=/MT ^
-                -G "Visual Studio 16 2019" -A Win32 ^
+                -G "Visual Studio 17 2022" -A Win32 ^
                 ..
 
             cmake --build . --target tests || exit /b 1
