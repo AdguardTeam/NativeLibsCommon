@@ -12,6 +12,11 @@ endif()
 include(../cmake/conan_bootstrap.cmake)
 conan_bootstrap(SRCROOT ".." CONANFILE "../conanfile.py" SCOPE_NAME native_libs_common)
 
+if(SANITIZE)
+    add_compile_options("-fsanitize=address")
+    link_libraries("-fsanitize=address")
+endif(SANITIZE)
+
 set(SOURCE_FILES
         utils.cpp
         socket_address.cpp
