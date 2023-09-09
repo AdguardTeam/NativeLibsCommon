@@ -47,6 +47,12 @@ struct AnyOfCondSharedState : public std::enable_shared_from_this<AnyOfCondShare
 
 template<typename R>
 struct AnyOfCondAwaitable {
+    // For some inexplicable reason, we are forced to declare a constructor because
+    // otherwise MSCV does not correctly manage the lifetime of this structure
+    explicit AnyOfCondAwaitable(std::function<bool(const R &)> &&check_cond) {
+        state = std::make_shared<AnyOfCondSharedState<R>>(std::move(check_cond));
+    }
+
     std::shared_ptr<AnyOfCondSharedState<R>> state;
 
     void add(auto aw) {
@@ -82,7 +88,7 @@ struct AnyOfCondAwaitable {
  */
 template<typename R, typename ...Aws>
 auto any_of_cond(std::function<bool(const R &)> check_cond, Aws ...aws) {
-    AnyOfCondAwaitable<R> ret{.state = std::make_shared<AnyOfCondSharedState<R>>(std::move(check_cond))};
+    AnyOfCondAwaitable<R> ret{std::move(check_cond)};
     (ret.add(aws), ...);
     return ret;
 }

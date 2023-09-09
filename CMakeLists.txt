@@ -8,6 +8,11 @@ else ()
     add_compile_options(-fno-omit-frame-pointer)
 endif ()
 
+if(SANITIZE)
+    add_compile_options("-fsanitize=address")
+    link_libraries("-fsanitize=address")
+endif(SANITIZE)
+
 add_subdirectory(common)
 
 enable_testing()
