@@ -17,7 +17,7 @@ class BoringsslConan(ConanFile):
     def source(self):
         self.run("git clone https://boringssl.googlesource.com/boringssl source_subfolder")
         self.run("cd source_subfolder && git checkout 8349dfc87e46d5914b0fefbb33241a95a9eef07d")
-        tools.patch(base_path="source_subfolder", patch_file="patches/00_msvc_warnings.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/00_warnings.patch")
 
     def build(self):
         cmake = CMake(self)

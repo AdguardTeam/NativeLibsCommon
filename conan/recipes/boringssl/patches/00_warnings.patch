@@ -1,0 +1,24 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 893bca753..2ac24f424 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -149,6 +149,10 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CLANG)
+     set(C_CXX_FLAGS "${C_CXX_FLAGS} -Wimplicit-fallthrough")
+   endif()
+ 
++  if(CLANG AND "15.0.0" VERSION_LESS_EQUAL CMAKE_C_COMPILER_VERSION)
++    set(C_CXX_FLAGS "${C_CXX_FLAGS} -Wno-unused-but-set-variable")
++  endif()
++
+   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_CXX_FLAGS} -Wmissing-prototypes -Wold-style-definition -Wstrict-prototypes")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${C_CXX_FLAGS} -Wmissing-declarations")
+ 
+@@ -229,6 +233,8 @@ elseif(MSVC)
+       "C5027" # move assignment operator was implicitly defined as deleted
+       "C5045" # Compiler will insert Spectre mitigation for memory load if
+               # /Qspectre switch specified
++      "C5264"
++      "C5262"
+       )
+   set(MSVC_LEVEL4_WARNINGS_LIST
+       # See https://connect.microsoft.com/VisualStudio/feedback/details/1217660/warning-c4265-when-using-functional-header

@@ -5,6 +5,7 @@
 #include <TargetConditionals.h>
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <mutex>
 #include <net/if.h>
 #include <netinet/in.h>
