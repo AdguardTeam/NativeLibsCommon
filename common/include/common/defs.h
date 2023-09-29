@@ -9,6 +9,7 @@ typedef SSIZE_T ssize_t;
 #endif
 
 #include <array>
+#include <bitset>
 #include <cstdlib>
 #include <memory>
 #include <mutex>
@@ -65,5 +66,13 @@ struct WithMtx {
     T val;
     Mutex mtx;
 };
+
+template <typename T>
+constexpr size_t width_of() {
+    return sizeof(T) * CHAR_BIT;
+}
+
+template <typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
+using EnumSet = std::bitset<width_of<Enum>()>;
 
 } // namespace ag

@@ -176,14 +176,14 @@ struct ErrorCodeToString<std::errc> {
 using SystemError = Error<std::errc>;
 
 template <typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
-Error<Enum> make_error_func(SourceLocation source_location, Enum value, ErrorBasePtr next_error = nullptr) {
-    return std::make_shared<ErrorImpl<Enum>>(source_location, value, next_error);
+[[nodiscard]] Error<Enum> make_error_func(SourceLocation source_location, Enum value, ErrorBasePtr next_error = nullptr) {
+    return std::make_shared<ErrorImpl<Enum>>(source_location, value, std::move(next_error));
 }
 
 template <typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
-Error<Enum> make_error_func(
+[[nodiscard]] Error<Enum> make_error_func(
         SourceLocation source_location, Enum value, std::string_view message, ErrorBasePtr next_error = nullptr) {
-    return std::make_shared<ErrorImpl<Enum>>(source_location, value, message, next_error);
+    return std::make_shared<ErrorImpl<Enum>>(source_location, value, message, std::move(next_error));
 }
 
 constexpr std::string_view pretty_func(std::string_view pretty_function, std::string_view func) {

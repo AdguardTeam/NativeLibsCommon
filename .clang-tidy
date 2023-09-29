@@ -79,5 +79,6 @@ CheckOptions: [
 
   { key: readability-function-cognitive-complexity.Threshold, value: 75 },
 
+  { key: cppcoreguidelines-avoid-do-while.IgnoreMacros, value: true },
   { key: misc-const-correctness.AnalyzeValues, value: false },
 ]

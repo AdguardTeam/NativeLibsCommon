@@ -14,5 +14,6 @@ if(SANITIZE)
 endif(SANITIZE)
 
 add_subdirectory(common)
+add_subdirectory(http)
 
 enable_testing()

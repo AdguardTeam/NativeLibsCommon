@@ -130,7 +130,7 @@ namespace ag::coro {
  * @tparam Ret return type used in `co_return` inside coroutine.
  */
 template<typename Ret>
-struct Task {
+struct [[nodiscard]] Task {
     struct Promise;
     using promise_type = Promise; //< NOLINT: coroutine trait
     std::coroutine_handle<Promise> handle;
@@ -230,7 +230,7 @@ struct Task {
 };
 
 template<>
-struct Task<void> {
+struct [[nodiscard]] Task<void> {
     struct Promise;
     using promise_type = Promise; //< NOLINT: coroutine trait
     std::coroutine_handle<Promise> handle;

@@ -1,15 +1,16 @@
 from conans import ConanFile, CMake
 
 
-# Needed because `libnghttp2` from the center cannot be built on MacOS with our compilation flags
 class NGHttp2Conan(ConanFile):
     name = "nghttp2"
-    version = "1.44.0"
+    version = "1.56.0"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
     generators = "cmake"
-    exports_sources = ["CMakeLists.txt"]
+    exports_sources = [
+        "CMakeLists.txt",
+    ]
 
     def config_options(self):
         if self.settings.os == "Windows":

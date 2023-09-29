@@ -88,6 +88,15 @@ coro::Task<void> coro3() {
     co_return;
 }
 
+coro::Task<std::unique_ptr<int>> coro4() {
+    auto x = std::make_unique<int>(42);
+    co_return x;
+}
+
+coro::Task<std::unique_ptr<int>> coro5() {
+    co_return std::make_unique<int>(42);
+}
+
 TEST_F(CoroTest, Test) {
     int x = co_await coro1();
     ASSERT_EQ(42, x);
@@ -105,6 +114,8 @@ TEST_F(CoroTest, ParallelTest) {
     auto never = [](int /*x*/) { return false; };
     auto z = co_await parallel::any_of_cond<int>(never, coro1(), coro2());
     ASSERT_FALSE(z.has_value());
+    std::unique_ptr<int> x_ptr = co_await parallel::any_of<std::unique_ptr<int>>(coro4(), coro5());
+    ASSERT_EQ(42, *x_ptr);
     co_return;
 }
 

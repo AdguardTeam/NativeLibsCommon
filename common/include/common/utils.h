@@ -126,6 +126,40 @@ static inline std::string_view trim(std::string_view str) {
 }
 
 /**
+ * Check whether 2 strings are equal ignoring case
+ */
+static inline constexpr bool iequals(std::string_view lhs, std::string_view rhs) {
+    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(), [](char l, char r) {
+        return std::tolower(l) == std::tolower(r);
+    });
+}
+
+/**
+ * Find the first occurrence of the given substring ignoring case
+ * @return Position of the first character of the found substring or `npos` if no such substring is found.
+ */
+static inline constexpr std::string_view::size_type ifind(std::string_view haystack, std::string_view needle) {
+    if (needle.empty()) {
+        return 0;
+    }
+    if (haystack.empty()) {
+        return std::string_view::npos;
+    }
+
+    auto c = std::tolower(needle.front());
+    size_t pos = 0;
+    do { // NOLINT(*-avoid-do-while)
+        do { // NOLINT(*-avoid-do-while)
+            if (haystack.length() <= pos || haystack.length() - pos < needle.length()) {
+                return std::string_view::npos;
+            }
+        } while (std::tolower(haystack[pos++]) != c);
+    } while (!iequals(haystack.substr(pos, needle.length() - 1), needle.substr(1)));
+
+    return pos - 1;
+}
+
+/**
  * Check if string starts with prefix
  */
 static inline constexpr bool starts_with(std::string_view str, std::string_view prefix) {
@@ -531,5 +565,17 @@ std::optional<std::string_view> read_line(std::string_view str, size_t pos);
  * @return Thread id
  */
 uint32_t gettid(void);
+
+/**
+ * Encode input data to lowercase hexadecimal string
+ * @param data Input buffer
+ * @return Lowercase hexadecimal representation of input data
+ */
+std::string encode_to_hex(Uint8View data);
+
+/**
+ * Make pointer to C-string into string_view. If the pointer is null, returns empty string.
+ */
+std::string_view safe_string_view(const char *cstr);
 
 } // namespace ag::utils

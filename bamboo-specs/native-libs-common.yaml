@@ -24,8 +24,6 @@ Win build:
           - |-
             call vcvars32
 
-            cd common
-
             if exist build\ rmdir /s /q build || exit /b 1
             mkdir build || exit /b 1
             cd build || exit /b 1
@@ -60,7 +58,7 @@ Win build:
 Linux build:
   key: LB
   docker:
-    image: adguard/core-libs:latest
+    image: adguard/core-libs:1.20
     docker-run-arguments: [ ]
   tasks:
     - checkout:
@@ -80,7 +78,6 @@ Linux build:
             conan remove -f '*'
 
             # Build tests
-            cd common
             mkdir -p build
             cd build
             cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
@@ -127,7 +124,6 @@ Mac build:
             conan remove -f '*'
 
             # Build tests
-            cd common
             mkdir -p build
             cd build
             cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \

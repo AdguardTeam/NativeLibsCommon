@@ -108,6 +108,29 @@ TEST(utils, GenerallyWork) {
 #endif // defined(__APPLE__) && defined(__MACH__)
 }
 
+TEST(utils, iequals) {
+    ASSERT_TRUE(ag::utils::iequals("AaAaA", "aaaaa"));
+    ASSERT_TRUE(ag::utils::iequals("aaaaa", "AaAaA"));
+}
+
+TEST(utils, ifind) {
+    ASSERT_EQ(ag::utils::ifind("AaAaB", "aaaab"), 0);
+    ASSERT_EQ(ag::utils::ifind("aaaab", "AaAaB"), 0);
+    ASSERT_EQ(ag::utils::ifind("", "aaaaa"), std::string_view::npos);
+    ASSERT_EQ(ag::utils::ifind("aaa", ""), 0);
+    ASSERT_EQ(ag::utils::ifind("aaaaa", "AaAaB"), std::string_view::npos);
+    ASSERT_EQ(ag::utils::ifind("AaAaB", "aaaaa"), std::string_view::npos);
+    ASSERT_EQ(ag::utils::ifind("AaAaB", "ab"), 3);
+    ASSERT_EQ(ag::utils::ifind("AaBaB", "Ab"), 1);
+    ASSERT_EQ(ag::utils::ifind("AaAaB", "aaaabb"), std::string_view::npos);
+}
+
+TEST(utils, encode_to_hex) {
+    constexpr uint8_t DATA_0[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x42};
+    ASSERT_EQ("000102030442", ag::utils::encode_to_hex({DATA_0, std::size(DATA_0)}));
+    ASSERT_EQ("", ag::utils::encode_to_hex({}));
+}
+
 TEST(utils, TestSplit2) {
     struct TestData {
         std::string original_str;

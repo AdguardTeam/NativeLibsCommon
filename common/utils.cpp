@@ -203,4 +203,25 @@ uint32_t utils::gettid(void) {
 }
 #endif // _WIN32
 
+std::string utils::encode_to_hex(Uint8View data) {
+    static constexpr char TABLE[] = "0123456789abcdef";
+    static constexpr size_t NIBBLE_BITS = 4;
+    static constexpr uint8_t LEAST_SIGNIFICANT_NIBBLE_MASK = 0x0f;
+
+    std::string out;
+    out.reserve(data.length() * 2);
+
+    for (uint8_t x : data) {
+        // NOLINTNEXTLINE(*-pro-bounds-constant-array-index)
+        out.push_back(TABLE[x >> NIBBLE_BITS]);
+        out.push_back(TABLE[x & LEAST_SIGNIFICANT_NIBBLE_MASK]); // NOLINT(*-pro-bounds-constant-array-index)
+    }
+
+    return out;
+}
+
+std::string_view utils::safe_string_view(const char *cstr) {
+    return (cstr != nullptr) ? std::string_view{cstr} : std::string_view{};
+}
+
 } // namespace ag

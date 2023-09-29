@@ -102,7 +102,11 @@ auto any_of_cond(std::function<bool(const R &)> check_cond, Aws ...aws) {
 template<typename R, typename Aw, typename ...Aws>
 coro::Task<R> any_of(Aw aw, Aws ...aws) {
     std::optional<R> ret = co_await any_of_cond<R>(nullptr, aw, aws...);
-    co_return ret.value();
+    if constexpr (std::is_move_constructible_v<R>) {
+        co_return std::move(ret.value());
+    } else {
+        co_return ret.value();
+    }
 }
 
 /**
