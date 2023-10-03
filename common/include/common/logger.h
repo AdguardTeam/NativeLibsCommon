@@ -39,11 +39,11 @@ public:
      * Note that optnone here is because of clang optimizer bug which leads to making bad format args.
      * https://github.com/AdguardTeam/DnsLibs/issues/182
      * TODO: Recheck when either fmt library or clang will be updated.
+     * Original fix is for Android NDK, LLVM 14
+     * As of LLVM 15 (Xcode 14.3 and newer), bug is not fixed.
      */
     template <typename... Ts>
-#ifdef __ANDROID__
     [[clang::optnone]]
-#endif
     inline void log(LogLevel level, fmt::format_string<Ts...> fmt, Ts&&... args) const {
         vlog(level, fmt::string_view(fmt), fmt::make_format_args(args...));
     }
