@@ -491,7 +491,7 @@ static void log_http3(const char *format, va_list args) {
 
 template <typename T>
 Error<Http3Error> Http3Session<T>::initialize_session(
-        const QuicNetworkPath &path, UniquePtr<SSL, &SSL_free> ssl, ngtcp2_cid client_scid, ngtcp2_cid client_dcid) {
+        const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, ngtcp2_cid client_scid, ngtcp2_cid client_dcid) {
     if (ssl == nullptr) {
         return make_error(Http3Error{}, "SSL handle mustn't be null");
     }
@@ -1103,7 +1103,7 @@ Http3Server::Http3Server(PrivateAccess, const Http3Settings &settings, const Cal
 Http3Server::~Http3Server() = default;
 
 Result<std::unique_ptr<Http3Server>, Http3Error> Http3Server::make(const Http3Settings &settings,
-        const Callbacks &handler, const QuicNetworkPath &path, UniquePtr<SSL, &SSL_free> ssl, ngtcp2_cid client_scid,
+        const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, ngtcp2_cid client_scid,
         ngtcp2_cid client_dcid) {
     auto self = std::make_unique<Http3Server>(PrivateAccess{}, settings, handler);
     auto error = self->initialize_session(path, std::move(ssl), client_scid, client_dcid);
@@ -1268,7 +1268,7 @@ Http3Client::Http3Client(PrivateAccess, const Http3Settings &settings, const Cal
 }
 
 Result<std::unique_ptr<Http3Client>, Http3Error> Http3Client::make(const Http3Settings &settings,
-        const Callbacks &handler, const QuicNetworkPath &path, UniquePtr<SSL, &SSL_free> ssl) {
+        const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl) {
     auto self = std::make_unique<Http3Client>(PrivateAccess{}, settings, handler);
     auto error = self->initialize_session(path, std::move(ssl), {}, {});
     if (error != nullptr) {

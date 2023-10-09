@@ -89,12 +89,12 @@ void Session::flush() {
     ASSERT_EQ(error, nullptr) << error->str();
 }
 
-static void make_ssl(ag::UniquePtr<SSL, &SSL_free> &ssl) {
-    SSL_CTX *ssl_ctx = SSL_CTX_new(TLS_server_method());
+static void make_ssl(bssl::UniquePtr<SSL> &ssl) {
+    bssl::UniquePtr<SSL_CTX> ssl_ctx{SSL_CTX_new(TLS_server_method())};
     ASSERT_NE(ssl_ctx, nullptr) << ERR_error_string(ERR_get_error(), nullptr);
-    ASSERT_EQ(ngtcp2_crypto_boringssl_configure_server_context(ssl_ctx), 0);
+    ASSERT_EQ(ngtcp2_crypto_boringssl_configure_server_context(ssl_ctx.get()), 0);
     SSL_CTX_set_alpn_select_cb(
-            ssl_ctx,
+            ssl_ctx.get(),
             [](SSL *, const uint8_t **out, uint8_t *out_len, const uint8_t *, unsigned, void *) {
                 static constexpr std::string_view ALPN = &NGHTTP3_ALPN_H3[1];
                 *out = (uint8_t *) ALPN.data();
@@ -102,7 +102,7 @@ static void make_ssl(ag::UniquePtr<SSL, &SSL_free> &ssl) {
                 return SSL_TLSEXT_ERR_OK;
             },
             nullptr);
-    SSL_CTX_set_info_callback(ssl_ctx, [](const SSL *ssl, int type_, int value) {
+    SSL_CTX_set_info_callback(ssl_ctx.get(), [](const SSL *ssl, int type_, int value) {
         uint32_t type = type_;
         std::string_view where = "undefined";
         if (type & SSL_ST_CONNECT) {
@@ -127,10 +127,10 @@ static void make_ssl(ag::UniquePtr<SSL, &SSL_free> &ssl) {
             }
         }
     });
-    ASSERT_EQ(1, SSL_CTX_use_certificate(ssl_ctx, CERTIFICATE.get()));
-    ASSERT_EQ(1, SSL_CTX_use_PrivateKey(ssl_ctx, PRIVATE_KEY.get()));
-    ASSERT_EQ(1, SSL_CTX_check_private_key(ssl_ctx));
-    ssl.reset(SSL_new(ssl_ctx));
+    ASSERT_EQ(1, SSL_CTX_use_certificate(ssl_ctx.get(), CERTIFICATE.get()));
+    ASSERT_EQ(1, SSL_CTX_use_PrivateKey(ssl_ctx.get(), PRIVATE_KEY.get()));
+    ASSERT_EQ(1, SSL_CTX_check_private_key(ssl_ctx.get()));
+    ssl.reset(SSL_new(ssl_ctx.get()));
     ASSERT_NE(ssl, nullptr);
     SSL_set_tlsext_host_name(ssl.get(), SERVER_NAME);
     SSL_set_accept_state(ssl.get());
@@ -138,7 +138,7 @@ static void make_ssl(ag::UniquePtr<SSL, &SSL_free> &ssl) {
     if (const char *file = getenv("SSLKEYLOGFILE"); file != nullptr) {
         static ag::UniquePtr<std::FILE, &std::fclose> handle{std::fopen(file, "a")};
         ASSERT_NE(handle, nullptr);
-        SSL_CTX_set_keylog_callback(ssl_ctx, [](const SSL *, const char *line) {
+        SSL_CTX_set_keylog_callback(ssl_ctx.get(), [](const SSL *, const char *line) {
             fprintf(handle.get(), "%s\n", line);
             fflush(handle.get());
         });
@@ -348,7 +348,7 @@ static void register_new_session(ServerSide *self, const ag::SocketAddress &peer
         dbglog(logger, "Packet is 1-RTT");
     }
 
-    ag::UniquePtr<SSL, &SSL_free> ssl;
+    bssl::UniquePtr<SSL> ssl;
     ASSERT_NO_FATAL_FAILURE(make_ssl(ssl));
 
     Session *session = self->sessions.emplace(peer, std::make_unique<Session>(self, peer)).first->second.get();

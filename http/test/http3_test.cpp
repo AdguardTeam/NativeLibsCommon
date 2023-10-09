@@ -29,11 +29,6 @@
 static ag::Logger logger("!CLI");
 
 class Http3Client : public ::testing::Test {
-public:
-    Http3Client() {
-        ag::Logger::set_log_level(ag::LOG_LEVEL_TRACE);
-    }
-
 protected:
     struct Stream {
         std::optional<ag::http::Response> response;
@@ -45,7 +40,7 @@ protected:
 
     ServerSide server_side;
     ag::SocketAddress bound_addr{"127.0.0.1:0"};
-    ag::UniquePtr<SSL, &SSL_free> ssl;
+    bssl::UniquePtr<SSL> ssl;
     ag::UniquePtr<event_base, &event_base_free> base{event_base_new()};
     bool wait_readable_timer_expired = false;
     ag::UniquePtr<event, &event_free> expiry_timer{event_new(
@@ -79,6 +74,8 @@ protected:
     bool handshake_completed = false;
 
     void SetUp() override {
+        ag::Logger::set_log_level(ag::LOG_LEVEL_TRACE);
+
 #ifdef _WIN32
         WSADATA wsa_data = {};
         ASSERT_EQ(0, WSAStartup(MAKEWORD(2, 2), &wsa_data));
@@ -86,10 +83,10 @@ protected:
 
         ASSERT_NO_FATAL_FAILURE(server_side.run());
 
-        SSL_CTX *ssl_ctx = SSL_CTX_new(TLS_server_method());
+        bssl::UniquePtr<SSL_CTX> ssl_ctx{SSL_CTX_new(TLS_server_method())};
         ASSERT_NE(ssl_ctx, nullptr) << ERR_error_string(ERR_get_error(), nullptr);
-        ASSERT_EQ(ngtcp2_crypto_boringssl_configure_client_context(ssl_ctx), 0);
-        SSL_CTX_set_info_callback(ssl_ctx, [](const SSL *ssl, int type_, int value) {
+        ASSERT_EQ(ngtcp2_crypto_boringssl_configure_client_context(ssl_ctx.get()), 0);
+        SSL_CTX_set_info_callback(ssl_ctx.get(), [](const SSL *ssl, int type_, int value) {
             uint32_t type = type_;
             std::string_view where = "undefined";
             if (type & SSL_ST_CONNECT) {
@@ -114,7 +111,7 @@ protected:
                 }
             }
         });
-        ssl.reset(SSL_new(ssl_ctx));
+        ssl.reset(SSL_new(ssl_ctx.get()));
         ASSERT_NE(ssl, nullptr);
         static constexpr std::string_view ALPN = NGHTTP3_ALPN_H3;
         ASSERT_EQ(0, SSL_set_alpn_protos(ssl.get(), (uint8_t *) ALPN.data(), ALPN.size()));
@@ -123,7 +120,7 @@ protected:
 
         if (const char *file = getenv("SSLKEYLOGFILE"); file != nullptr) {
             if (static ag::UniquePtr<std::FILE, &std::fclose> handle{std::fopen(file, "a")}; handle != nullptr) {
-                SSL_CTX_set_keylog_callback(ssl_ctx, [](const SSL *, const char *line) {
+                SSL_CTX_set_keylog_callback(ssl_ctx.get(), [](const SSL *, const char *line) {
                     fprintf(handle.get(), "%s\n", line);
                     fflush(handle.get());
                 });
@@ -400,6 +397,8 @@ TEST_F(Http3Client, OutgoingTrailer) {
 }
 
 TEST_F(Http3Client, Download) {
+    ag::Logger::set_log_level(ag::LOG_LEVEL_DEBUG);
+
     ag::http::Request request(ag::http::HTTP_3_0, "GET", DOWNLOAD_REQUEST_PATH);
     request.authority(SERVER_NAME);
     request.scheme("https");
@@ -431,6 +430,8 @@ TEST_F(Http3Client, Download) {
 }
 
 TEST_F(Http3Client, Upload) {
+    ag::Logger::set_log_level(ag::LOG_LEVEL_DEBUG);
+
     ag::http::Request request(ag::http::HTTP_3_0, "POST", UPLOAD_REQUEST_PATH);
     request.authority(SERVER_NAME);
     request.scheme("https");
