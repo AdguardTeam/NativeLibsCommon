@@ -177,3 +177,5 @@ commit_hash:
     hash: "51cb06413a3c0554884ce38eebbdab87210e92ec"
   "3.0.3":
     hash: "8b2becb49bd8702ec0ef09c7fec19dd37da5bd48"
+  "3.0.4":
+    hash: "6576510351007e9d436f595970604e79821c5864"
