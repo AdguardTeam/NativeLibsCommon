@@ -30,7 +30,7 @@ class NativeLibsCommon(ConanFile):
     def requirements(self):
         self.requires("fmt/8.0.1")
         self.requires("libevent/2.1.11@AdguardTeam/NativeLibsCommon")
-        self.requires("llhttp/8.1.0")
+        self.requires("llhttp/9.1.3@AdguardTeam/NativeLibsCommon")
         self.requires("magic_enum/0.7.3")
         self.requires("nghttp2/1.56.0@AdguardTeam/NativeLibsCommon")
         self.requires("nghttp3/0.15.0@AdguardTeam/NativeLibsCommon")
@@ -43,6 +43,7 @@ class NativeLibsCommon(ConanFile):
 
     def configure(self):
         self.options["gtest"].build_gmock = False
+        self.options["llhttp"].shared = False
         if (self.version is None) or (Version(self.version) >= "1.0.20"):
             self.options["pcre2"].build_pcre2grep = False
 
