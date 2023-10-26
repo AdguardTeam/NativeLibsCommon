@@ -471,8 +471,6 @@ static constexpr ngtcp2_cc_algo to_ng_cc_algo(Http3Settings::CongestionControlAl
         return NGTCP2_CC_ALGO_CUBIC;
     case Http3Settings::BBR:
         return NGTCP2_CC_ALGO_BBR;
-    case Http3Settings::BBR_V2:
-        return NGTCP2_CC_ALGO_BBR_V2;
     }
 }
 
@@ -635,6 +633,7 @@ Error<Http3Error> Http3Session<T>::initialize_session(
 
         if (int status = nghttp3_conn_server_new(&h3_conn, &h3_callbacks, &h3_settings, nghttp3_mem_default(), this);
                 status != 0) {
+            ngtcp2_conn_del(quic_conn);
             return make_error(Http3Error{},
                     AG_FMT("Couldn't create http3 connection: {} ({})", nghttp3_strerror(status), status));
         }
@@ -653,6 +652,7 @@ Error<Http3Error> Http3Session<T>::initialize_session(
 
         if (int status = nghttp3_conn_client_new(&h3_conn, &h3_callbacks, &h3_settings, nghttp3_mem_default(), this);
                 status != 0) {
+            ngtcp2_conn_del(quic_conn);
             return make_error(Http3Error{},
                     AG_FMT("Couldn't create http3 connection: {} ({})", nghttp3_strerror(status), status));
         }
@@ -1102,11 +1102,16 @@ Http3Server::Http3Server(PrivateAccess, const Http3Settings &settings, const Cal
 
 Http3Server::~Http3Server() = default;
 
-Result<std::unique_ptr<Http3Server>, Http3Error> Http3Server::make(const Http3Settings &settings,
-        const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, ngtcp2_cid client_scid,
-        ngtcp2_cid client_dcid) {
+Result<std::unique_ptr<Http3Server>, Http3Error> Http3Server::accept(const Http3Settings &settings,
+        const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, Uint8View packet) {
+    ngtcp2_pkt_hd hd{};
+
+    if (int status = ngtcp2_accept(&hd, packet.data(), packet.size()); status != NGTCP2_NO_ERROR) {
+        return make_error(Http3Error{}, AG_FMT("ngtcp2_accept(): {} ({})", ngtcp2_strerror(status), status));
+    }
+
     auto self = std::make_unique<Http3Server>(PrivateAccess{}, settings, handler);
-    auto error = self->initialize_session(path, std::move(ssl), client_scid, client_dcid);
+    auto error = self->initialize_session(path, std::move(ssl), hd.scid, hd.dcid);
     if (error != nullptr) {
         return error;
     }
@@ -1267,7 +1272,7 @@ Http3Client::Http3Client(PrivateAccess, const Http3Settings &settings, const Cal
         , m_handler(handler) {
 }
 
-Result<std::unique_ptr<Http3Client>, Http3Error> Http3Client::make(const Http3Settings &settings,
+Result<std::unique_ptr<Http3Client>, Http3Error> Http3Client::connect(const Http3Settings &settings,
         const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl) {
     auto self = std::make_unique<Http3Client>(PrivateAccess{}, settings, handler);
     auto error = self->initialize_session(path, std::move(ssl), {}, {});

@@ -1,0 +1,34 @@
+diff --git a/lib/nghttp3_ringbuf.c b/lib/nghttp3_ringbuf.c
+index 61a7d06..8b0b739 100644
+--- a/lib/nghttp3_ringbuf.c
++++ b/lib/nghttp3_ringbuf.c
+@@ -33,9 +33,8 @@
+ 
+ #include "nghttp3_macro.h"
+ 
+-#if defined(_MSC_VER) && !defined(__clang__) &&                                \
+-    (defined(_M_ARM) || defined(_M_ARM64))
+-unsigned int __popcnt(unsigned int x) {
++#ifdef WIN32
++unsigned int nghttp3_popcount(unsigned int x) {
+   unsigned int c = 0;
+   for (; x; ++c) {
+     x &= x - 1;
+@@ -48,7 +47,7 @@ int nghttp3_ringbuf_init(nghttp3_ringbuf *rb, size_t nmemb, size_t size,
+                          const nghttp3_mem *mem) {
+   if (nmemb) {
+ #ifdef WIN32
+-    assert(1 == __popcnt((unsigned int)nmemb));
++    assert(1 == nghttp3_popcount((unsigned int)nmemb));
+ #else
+     assert(1 == __builtin_popcount((unsigned int)nmemb));
+ #endif
+@@ -128,7 +127,7 @@ int nghttp3_ringbuf_reserve(nghttp3_ringbuf *rb, size_t nmemb) {
+   }
+ 
+ #ifdef WIN32
+-  assert(1 == __popcnt((unsigned int)nmemb));
++  assert(1 == nghttp3_popcount((unsigned int)nmemb));
+ #else
+   assert(1 == __builtin_popcount((unsigned int)nmemb));
+ #endif

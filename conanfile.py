@@ -33,8 +33,8 @@ class NativeLibsCommon(ConanFile):
         self.requires("llhttp/9.1.3@AdguardTeam/NativeLibsCommon")
         self.requires("magic_enum/0.7.3")
         self.requires("nghttp2/1.56.0@AdguardTeam/NativeLibsCommon")
-        self.requires("nghttp3/0.15.0@AdguardTeam/NativeLibsCommon")
-        self.requires("ngtcp2/0.19.1@AdguardTeam/NativeLibsCommon")
+        self.requires("nghttp3/1.0.0@AdguardTeam/NativeLibsCommon")
+        self.requires("ngtcp2/1.0.1@AdguardTeam/NativeLibsCommon")
         self.requires("openssl/boring-2023-09-01@AdguardTeam/NativeLibsCommon")
         self.requires("pcre2/10.37@AdguardTeam/NativeLibsCommon")
 

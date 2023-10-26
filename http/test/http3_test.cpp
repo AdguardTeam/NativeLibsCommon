@@ -139,7 +139,7 @@ protected:
         bound_addr = ag::utils::get_local_address(fd).value();
         infolog(logger, "Bound address: {}", bound_addr.str());
 
-        ag::Result make_result = ag::http::Http3Client::make(ag::http::Http3Settings{}, handler,
+        ag::Result make_result = ag::http::Http3Client::connect(ag::http::Http3Settings{}, handler,
                 ag::http::QuicNetworkPath{
                         .local = bound_addr.c_sockaddr(),
                         .local_len = bound_addr.c_socklen(),
@@ -195,7 +195,7 @@ protected:
     }
 
     static void on_body(void *arg, uint64_t stream_id, ag::Uint8View chunk) {
-        infolog(logger, "[Stream={}] {} bytes", stream_id, chunk.size());
+        tracelog(logger, "[Stream={}] {} bytes", stream_id, chunk.size());
         auto *self = (Http3Client *) arg;
         Stream &stream = self->streams[stream_id];
         stream.body.insert(stream.body.end(), chunk.begin(), chunk.end());

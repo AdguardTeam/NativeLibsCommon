@@ -338,22 +338,18 @@ static std::optional<std::pair<ag::SocketAddress, ag::Uint8View>> read_socket(Se
 }
 
 static void register_new_session(ServerSide *self, const ag::SocketAddress &peer, ag::Uint8View packet) {
-    ngtcp2_pkt_hd hd{};
-    ngtcp2_ssize pkt_num_offset = ngtcp2_pkt_decode_hd_long(&hd, packet.data(), packet.size());
-
-    if (pkt_num_offset < 0 || (hd.len + pkt_num_offset) > packet.size()) {
-        dbglog(logger, "Failed to parse QUIC long header");
-        ngtcp2_ssize res = ngtcp2_pkt_decode_hd_short(&hd, socket_buffer, packet.size(), 12);
-        ASSERT_GT(pkt_num_offset, 0) << ngtcp2_strerror(int(res));
-        dbglog(logger, "Packet is 1-RTT");
-    }
-
     bssl::UniquePtr<SSL> ssl;
     ASSERT_NO_FATAL_FAILURE(make_ssl(ssl));
 
     Session *session = self->sessions.emplace(peer, std::make_unique<Session>(self, peer)).first->second.get();
 
-    ag::Result make_result = ag::http::Http3Server::make(ag::http::Http3Settings{},
+    ag::http::QuicNetworkPath path = {
+            .local = self->bound_addr.c_sockaddr(),
+            .local_len = self->bound_addr.c_socklen(),
+            .remote = peer.c_sockaddr(),
+            .remote_len = peer.c_socklen(),
+    };
+    ag::Result make_result = ag::http::Http3Server::accept(ag::http::Http3Settings{},
             ag::http::Http3Server::Callbacks{
                     .arg = session,
                     .on_request = on_request,
@@ -365,17 +361,10 @@ static void register_new_session(ServerSide *self, const ag::SocketAddress &peer
                     .on_output = on_output,
                     .on_expiry_update = on_expiry_update,
             },
-            ag::http::QuicNetworkPath{
-                    .local = self->bound_addr.c_sockaddr(),
-                    .local_len = self->bound_addr.c_socklen(),
-                    .remote = peer.c_sockaddr(),
-                    .remote_len = peer.c_socklen(),
-            },
-            std::move(ssl), hd.scid, hd.dcid);
+            path, std::move(ssl), packet);
     ASSERT_FALSE(make_result.has_error()) << make_result.error()->str();
 
     session->server = std::move(make_result.value());
-    ASSERT_NO_FATAL_FAILURE(session->flush());
 }
 
 const ag::SocketAddress &ServerSide::bound_address() {
@@ -391,18 +380,23 @@ static void serve_connections(ServerSide *self) {
 
         while (true) {
             auto read_result = read_socket(self);
-            ASSERT_TRUE(read_result.has_value()) << evutil_socket_error_to_string(evutil_socket_geterror(self->fd));
+            if (!read_result.has_value()) {
+                warnlog(logger, "Couldn't read socket: {}",
+                        evutil_socket_error_to_string(evutil_socket_geterror(self->fd)));
+                continue;
+            }
 
             auto &[peer, packet] = read_result.value();
             if (packet.empty()) {
                 break;
             }
 
-            dbglog(logger, "{} bytes from {}", packet.size(), peer.str());
+            tracelog(logger, "{} bytes from {}", packet.size(), peer.str());
             auto iter = self->sessions.find(peer);
             if (iter == self->sessions.end()) {
                 ASSERT_NO_FATAL_FAILURE(register_new_session(self, peer, packet));
-                continue;
+                iter = self->sessions.find(peer);
+                ASSERT_NE(iter, self->sessions.end());
             }
 
             Session *session = iter->second.get();

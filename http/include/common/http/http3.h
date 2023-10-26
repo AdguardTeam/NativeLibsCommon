@@ -29,7 +29,6 @@ struct Http3Settings {
         RENO,
         CUBIC,
         BBR,
-        BBR_V2,
     };
 
     // Chrome constant
@@ -225,7 +224,9 @@ protected:
  * static int fd = socket(IPPROTO_UDP);
  * static sockaddr_storage peer = {};
  *
- * auto server = ag::http::Http3Server::make(
+ * int n = recvfrom(fd, buf, &peer);
+ * auto server = ag::http::Http3Server::accept(
+ *         Http3Settings{...},
  *         Http3Server::Callbacks{
  *                 .on_request = [] (void *, uint64_t sid, Request r) {
  *                     stream_id = sid;
@@ -235,11 +236,18 @@ protected:
  *                     sendto(fd, chunk, peer);
  *                 },
  *         },
- *         Http3Settings{...}).value();
+ *         QuicNetworkPath{
+ *                 .local = getsockname(fd),
+ *                 .remote = peer,
+ *         },
+ *         make_ssl(),
+ *         {buf, n}).value();
+ * assert(server->input({buf, n}).has_value());
+ * assert(nullptr == server->flush());
  *
  * while (true) {
  *     int n = recvfrom(fd, buf, &peer);
- *     assert(nullptr == server->input({buf, n}));
+ *     assert(server->input({buf, n}).has_value());
  *     if (!request.has_value()) {
  *         assert(nullptr == server->flush());
  *         continue;
@@ -301,10 +309,11 @@ public:
 
     /**
      * Create an instance.
+     * In case the packet is accepted, it is expected that the application
+     * calls `input()` with the same packet and `flush()` after that.
      */
-    static Result<std::unique_ptr<Http3Server>, Http3Error> make(const Http3Settings &settings,
-            const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, ngtcp2_cid client_scid,
-            ngtcp2_cid client_dcid);
+    static Result<std::unique_ptr<Http3Server>, Http3Error> accept(const Http3Settings &settings,
+            const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, Uint8View packet);
     /**
      * Forge retry packet to send to peer.
      * @return Forged packet if successful, error otherwise.
@@ -397,7 +406,8 @@ private:
  *
  * assert(0 == connect(fd, peer));
  *
- * auto client = ag::http::Http3Client::make(
+ * auto client = ag::http::Http3Client::connect(
+ *         Http3Settings{...},
  *         Http3Client::Callbacks{
  *                 .on_handshake_completed = [] (void *) {
  *                     handshake_completed = true;
@@ -409,7 +419,11 @@ private:
  *                     send(fd, chunk);
  *                 },
  *         },
- *         Http3Settings{...}).value();
+ *         QuicNetworkPath{
+ *                 .local = getsockname(fd),
+ *                 .remote = peer,
+ *         },
+ *         make_ssl()).value();
  * assert(nullptr == client->flush());
  *
  * enum State {
@@ -421,7 +435,7 @@ private:
  *
  * while (true) {
  *     int n = recv(fd, buf);
- *     assert(n == client->input({buf, n}).value());
+ *     assert(nullptr == client->input({buf, n}));
  *     switch (state) {
  *     case HANDSHAKE:
  *         if (!handshake_completed) {
@@ -488,8 +502,10 @@ public:
 
     /**
      * Create an instance.
+     * In case the call succeded, it is expected that the application
+     * calls `flush()` after that.
      */
-    static Result<std::unique_ptr<Http3Client>, Http3Error> make(const Http3Settings &settings,
+    static Result<std::unique_ptr<Http3Client>, Http3Error> connect(const Http3Settings &settings,
             const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl);
     /**
      * Process a raw data chunk raising necessary callbacks.
