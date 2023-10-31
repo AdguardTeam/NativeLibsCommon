@@ -47,6 +47,7 @@ Checks: '
   -readability-implicit-bool-conversion,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -cppcoreguidelines-avoid-magic-numbers, # duplicates readability-magic-numbers
+  -*-static-accessed-through-instance
   '
 
 WarningsAsErrors: '*'

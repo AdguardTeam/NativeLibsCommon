@@ -176,6 +176,21 @@ static inline constexpr bool ends_with(std::string_view str, std::string_view su
 }
 
 /**
+ * Check if `str` starts with `prefix` ignoring case.
+ */
+static inline constexpr bool istarts_with(std::string_view str, std::string_view prefix) {
+    return str.length() >= prefix.length() && iequals(str.substr(0, prefix.length()), prefix);
+}
+
+/**
+ * Check if `str` ends with `suffix` ignoring case.
+ */
+static inline constexpr bool iends_with(std::string_view str, std::string_view suffix) {
+    return str.length() >= suffix.length()
+            && iequals(str.substr(str.length() - suffix.length(), suffix.length()), suffix);
+}
+
+/**
  * Split string by delimiter
  */
 std::vector<std::string_view> split_by(std::string_view str, int delim, bool include_empty = false);

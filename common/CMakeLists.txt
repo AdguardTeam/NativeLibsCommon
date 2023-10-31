@@ -4,11 +4,6 @@ project(ag_common)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
-if (MSVC)
-set(CMAKE_CXX20_STANDARD_COMPILE_OPTION ${CMAKE_CXX20_STANDARD_COMPILE_OPTION} -Zc:char8_t- /MT)
-set(CMAKE_CXX20_EXTENSION_COMPILE_OPTION ${CMAKE_CXX20_EXTENSION_COMPILE_OPTION} -Zc:char8_t- /MT)
-endif()
-
 include(../cmake/conan_bootstrap.cmake)
 conan_bootstrap(SRCROOT ".." CONANFILE "../conanfile.py" SCOPE_NAME native_libs_common)
 
@@ -24,7 +19,9 @@ set(SOURCE_FILES
         cesu8.cpp
         route_resolver.cpp
         net_utils.cpp
-        error.cpp)
+        error.cpp
+        url.cpp
+)
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
@@ -57,3 +54,4 @@ add_unit_test(error_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(cidr_range_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(coro_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(net_utils_test ${TEST_DIR} "" TRUE TRUE)
+add_unit_test(url_test ${TEST_DIR} "" TRUE TRUE)
