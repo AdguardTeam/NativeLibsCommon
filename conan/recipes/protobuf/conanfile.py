@@ -6,7 +6,7 @@ import os
 # https://github.com/protocolbuffers/protobuf/issues/6503
 class ProtobufConan(ConanFile):
     name = "protobuf"
-    version = "3.18.0"
+    version = "3.21.12"
     source_subfolder = "protobuf-%s/src" % version
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
@@ -20,11 +20,11 @@ class ProtobufConan(ConanFile):
 
     def source(self):
         zip_name = "protobuf.zip"
-        url = "https://github.com/protocolbuffers/protobuf/releases/download/v%s/protobuf-cpp-%s.zip" \
-              % (self.version, self.version)
+        url = "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-cpp-%s.zip" \
+              % (self.version)
         # downloading here manually (not via git) is a workaround for strange "No such file" errors
         # on Windows
-        tools.download(url, zip_name, sha256="627e80a0c8ee6733a218813b75babd5414af5a46cb08d0421cd346fd6c45b76d")
+        tools.download(url, zip_name, sha256="c7db1d1fead682be24aa29477f5e224fdfc2bb1adeeaee1214f854a2076de71e")
         tools.unzip(zip_name)
         os.unlink(zip_name)
 

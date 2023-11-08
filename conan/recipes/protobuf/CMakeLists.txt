@@ -6,7 +6,7 @@ conan_basic_setup()
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-set(PROTOBUF_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protobuf-3.18.0/src)
+set(PROTOBUF_BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/protobuf-3.21.12/src)
 set(PROTOBUF_SRC_DIR ${PROTOBUF_BASE_DIR}/google/protobuf)
 set(PROTOBUF_SRC_IO_DIR ${PROTOBUF_SRC_DIR}/io)
 set(PROTOBUF_SRC_STUBS_DIR ${PROTOBUF_SRC_DIR}/stubs)
@@ -18,10 +18,10 @@ set(SOURCES
         ${PROTOBUF_SRC_DIR}/arenastring.cc
         ${PROTOBUF_SRC_DIR}/descriptor.cc
         ${PROTOBUF_SRC_DIR}/descriptor_database.cc
-        ${PROTOBUF_SRC_DIR}/descriptor.pb.cc
         ${PROTOBUF_SRC_DIR}/dynamic_message.cc
         ${PROTOBUF_SRC_DIR}/extension_set.cc
         ${PROTOBUF_SRC_DIR}/extension_set_heavy.cc
+        ${PROTOBUF_SRC_DIR}/generated_enum_util.cc
         ${PROTOBUF_SRC_DIR}/generated_message_reflection.cc
         ${PROTOBUF_SRC_DIR}/generated_message_util.cc
         ${PROTOBUF_SRC_DIR}/implicit_weak_message.cc
@@ -32,6 +32,7 @@ set(SOURCES
         ${PROTOBUF_SRC_DIR}/parse_context.cc
         ${PROTOBUF_SRC_DIR}/reflection_ops.cc
         ${PROTOBUF_SRC_DIR}/repeated_field.cc
+        ${PROTOBUF_SRC_DIR}/repeated_ptr_field.cc
         ${PROTOBUF_SRC_DIR}/text_format.cc
         ${PROTOBUF_SRC_DIR}/unknown_field_set.cc
         ${PROTOBUF_SRC_DIR}/wire_format.cc
