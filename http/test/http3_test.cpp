@@ -253,7 +253,7 @@ protected:
 
         ag::UniquePtr<event, &event_free> read_event(event_new(
                 base.get(), fd, EV_READ | EV_PERSIST,
-                [](int, short, void *arg) {
+                [](evutil_socket_t, short, void *arg) {
                     auto *base = (event_base *) arg;
                     event_base_loopexit(base, nullptr);
                 },
