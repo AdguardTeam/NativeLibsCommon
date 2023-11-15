@@ -1,4 +1,6 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.files import patch
 
 
 class Ngtcp2Conan(ConanFile):
@@ -7,7 +9,6 @@ class Ngtcp2Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
     exports_sources = ["CMakeLists.txt", "patches/popcnt_old_cpu_fix.patch"]
 
@@ -18,15 +19,24 @@ class Ngtcp2Conan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
         self.run("cd source_subfolder && git checkout v0.8.0")
-        tools.patch(base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+        patch(self, base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
+        tc.variables["ENABLE_SHARED_LIB"] = "OFF"
+        tc.variables["ENABLE_OPENSSL"] = "OFF"
+        tc.variables["ENABLE_BORINGSSL"] = "ON"
+        tc.variables["HAVE_SSL_IS_QUIC"] = "ON"
+        tc.variables["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"] = "ON"
+        tc.generate()
+
+    def layout(self):
+        cmake_layout(self)
 
     def build(self):
         cmake = CMake(self)
-        cmake.definitions["ENABLE_SHARED_LIB"] = "OFF"
-        cmake.definitions["ENABLE_OPENSSL"] = "OFF"
-        cmake.definitions["ENABLE_BORINGSSL"] = "ON"
-        cmake.definitions["HAVE_SSL_IS_QUIC"] = "ON"
-        cmake.definitions["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"] = "ON"
         cmake.configure()
         cmake.build()
 

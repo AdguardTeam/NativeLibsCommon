@@ -1,4 +1,6 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.files import patch
 
 
 class NGHttp3Conan(ConanFile):
@@ -7,19 +9,27 @@ class NGHttp3Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {}
     default_options = {}
-    generators = "cmake"
     exports_sources = ["CMakeLists.txt", "patches/popcnt_old_cpu_fix.patch"]
 
     def source(self):
         self.run("git clone https://github.com/ngtcp2/nghttp3.git source_subfolder")
         self.run("cd source_subfolder && git checkout v0.11.0")
-        tools.patch(base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+        patch(self, base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
+        tc.variables["ENABLE_LIB_ONLY"] = "ON"
+        tc.variables["ENABLE_STATIC_LIB"] = "ON"
+        tc.variables["ENABLE_SHARED_LIB"] = "OFF"
+        tc.generate()
+
+    def layout(self):
+        cmake_layout(self)
 
     def build(self):
         cmake = CMake(self)
-        cmake.definitions["ENABLE_LIB_ONLY"] = "ON"
-        cmake.definitions["ENABLE_STATIC_LIB"] = "ON"
-        cmake.definitions["ENABLE_SHARED_LIB"] = "OFF"
         cmake.configure()
         cmake.build()
 

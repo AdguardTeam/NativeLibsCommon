@@ -1,4 +1,5 @@
-from conans import ConanFile, CMake
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 
 
 # Needed because `libnghttp2` from the center cannot be built on MacOS with our compilation flags
@@ -8,7 +9,6 @@ class NGHttp2Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    generators = "cmake"
     exports_sources = ["CMakeLists.txt"]
 
     def config_options(self):
@@ -19,17 +19,26 @@ class NGHttp2Conan(ConanFile):
         self.run("git clone https://github.com/nghttp2/nghttp2.git source_subfolder")
         self.run(f"cd source_subfolder && git checkout v{self.version}")
 
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
+        tc.variables["ENABLE_LIB_ONLY"] = "ON"
+        if self.options.shared:
+            tc.variables["ENABLE_STATIC_LIB"] = "OFF"
+            tc.variables["ENABLE_SHARED_LIB"] = "ON"
+        else:
+            tc.variables["ENABLE_STATIC_LIB"] = "ON"
+            tc.variables["ENABLE_SHARED_LIB"] = "OFF"
+        if tc.variables.get("BUILD_TYPE") == "Debug":
+            tc.variables["DEBUGBUILD"] = "1"
+        tc.generate()
+
+    def layout(self):
+        cmake_layout(self)
+
     def build(self):
         cmake = CMake(self)
-        cmake.definitions["ENABLE_LIB_ONLY"] = "ON"
-        if self.options.shared:
-            cmake.definitions["ENABLE_STATIC_LIB"] = "OFF"
-            cmake.definitions["ENABLE_SHARED_LIB"] = "ON"
-        else:
-            cmake.definitions["ENABLE_STATIC_LIB"] = "ON"
-            cmake.definitions["ENABLE_SHARED_LIB"] = "OFF"
-        if cmake.build_type == "Debug":
-            cmake.definitions["DEBUGBUILD"] = "1"
         cmake.configure()
         cmake.build()
 

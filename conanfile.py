@@ -1,5 +1,6 @@
-from conans import ConanFile, CMake, tools
-from conans.model.version import Version
+from conan import ConanFile, Version
+from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.files import patch
 
 
 class NativeLibsCommon(ConanFile):
@@ -9,7 +10,6 @@ class NativeLibsCommon(ConanFile):
     url = "https://github.com/AdguardTeam/NativeLibsCommon"
     vcs_url = "https://github.com/AdguardTeam/NativeLibsCommon.git"
     description = "Common library for C++ opensource projects"
-    generators = "cmake"
     settings = "os", "compiler", "build_type", "arch"
     options = {
         "shared": [True, False],
@@ -39,7 +39,7 @@ class NativeLibsCommon(ConanFile):
         self.requires("pcre2/10.37@AdguardTeam/NativeLibsCommon")
 
     def build_requirements(self):
-        self.build_requires("gtest/1.11.0")
+        self.tool_requires("gtest/1.11.0")
 
     def configure(self):
         self.options["gtest"].build_gmock = False
@@ -61,24 +61,33 @@ class NativeLibsCommon(ConanFile):
                 self.run("git checkout -f master")
 
             for p in self.patch_files:
-                tools.patch(patch_file=p)
+                patch(self, patch_file=p)
         else:
             version_hash = self.conan_data["commit_hash"][self.version]["hash"]
             self.run("git checkout -f %s" % version_hash)
 
-    def build(self):
-        cmake = CMake(self)
-        # A better way to pass these was not found :(
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
         if self.settings.os == "Linux":
             if self.settings.compiler.libcxx:
                 cxx = "%s" % self.settings.compiler.libcxx
                 cxx = cxx.rstrip('1')
-                cmake.definitions["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % cxx
+                tc.variables["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % cxx
             if self.settings.compiler.version:
-                cmake.definitions["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
+                tc.variables["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
         if self.settings.os == "Macos":
-            cmake.definitions["TARGET_OS"] = "macos"
-        cmake.configure(source_folder=".", build_folder="build")
+            tc.variables["TARGET_OS"] = "macos"
+
+        tc.generate()
+
+    def layout(self):
+        cmake_layout(self)
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
         cmake.build()
 
     def package(self):

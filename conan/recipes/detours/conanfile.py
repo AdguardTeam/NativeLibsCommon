@@ -1,4 +1,4 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
 
 
 class DetoursConan(ConanFile):
@@ -7,7 +7,6 @@ class DetoursConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    generators = "cmake"
 
     def config_options(self):
         if self.settings.os == "Windows":
