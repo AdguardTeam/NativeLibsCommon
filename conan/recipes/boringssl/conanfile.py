@@ -54,3 +54,4 @@ class BoringsslConan(ConanFile):
         self.cpp_info.components["crypto"].names["cmake_find_package_multi"] = "Crypto"
         self.cpp_info.components["ssl"].names["cmake_find_package"] = "SSL"
         self.cpp_info.components["ssl"].names["cmake_find_package_multi"] = "SSL"
+        self.cpp_info.libs = ["ssl", "crypto"]
