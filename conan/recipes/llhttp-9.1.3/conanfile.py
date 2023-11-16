@@ -50,11 +50,11 @@ class LlhttpParserConan(ConanFile):
         tc = CMakeToolchain(self)
         tc.variables["CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS"] = True
         if not self.options.shared:
-            tc.variables["BUILD_SHARED_LIBS"] = False
-            tc.variables["BUILD_STATIC_LIBS"] = True
+            tc.cache_variables["BUILD_SHARED_LIBS"] = False
+            tc.cache_variables["BUILD_STATIC_LIBS"] = True
         else:
-            tc.variables["BUILD_SHARED_LIBS"] = True
-            tc.variables["BUILD_STATIC_LIBS"] = False
+            tc.cache_variables["BUILD_SHARED_LIBS"] = True
+            tc.cache_variables["BUILD_STATIC_LIBS"] = False
         tc.generate()
 
     def generate(self):
