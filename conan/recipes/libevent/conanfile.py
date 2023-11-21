@@ -30,7 +30,6 @@ class LibeventConan(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
-        tc.variables["OPENSSL_ROOT_DIR"] = self.deps_cpp_info["openssl"].rootpath
         if self.options.shared:
             tc.variables["EVENT__LIBRARY_TYPE"] = "SHARED"
         else:
