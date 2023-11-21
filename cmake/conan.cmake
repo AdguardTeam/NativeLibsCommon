@@ -537,7 +537,7 @@ function(old_conan_cmake_install)
     endif()
 
     if(NOT "${return_code}" STREQUAL "0")
-      message(FATAL_ERROR "Conan install failed='${return_code}'")
+      message(FATAL_ERROR "Conan install failed='${return_code}': ${conan_output}")
     endif()
 
 endfunction()
