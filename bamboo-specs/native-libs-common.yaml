@@ -31,7 +31,7 @@ Win build:
             cmake -DCMAKE_BUILD_TYPE=Debug ^
                 -DCMAKE_C_FLAGS_DEBUG=/MT ^
                 -DCMAKE_CXX_FLAGS_DEBUG=/MT ^
-                -G "Visual Studio 17 2022" -A Win32 ^
+                -G Ninja ^
                 ..
 
             cmake --build . --target tests || exit /b 1
@@ -150,7 +150,7 @@ Mac build:
             # Upload built
             conan upload -r art --all -c '*' > upload.txt 2>&1
             # Clean up local cache
-            conan remove -f '*'
+            conan remove -f "*"
             # Conan remove locks
             conan remove --locks
   requirements:

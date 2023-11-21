@@ -35,7 +35,7 @@ class NativeLibsCommon(ConanFile):
         self.requires("nghttp2/1.56.0@AdguardTeam/NativeLibsCommon")
         self.requires("nghttp3/1.0.0@AdguardTeam/NativeLibsCommon")
         self.requires("ngtcp2/1.0.1@AdguardTeam/NativeLibsCommon")
-        self.requires("openssl/boring-2023-09-01@AdguardTeam/NativeLibsCommon")
+        self.requires("openssl/boring-2023-05-17@AdguardTeam/NativeLibsCommon")
         self.requires("pcre2/10.37@AdguardTeam/NativeLibsCommon")
 
     def build_requirements(self):
