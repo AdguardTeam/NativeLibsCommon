@@ -94,8 +94,8 @@ class NativeLibsCommon(ConanFile):
         MODULES = ["common", "http"]
         for m in MODULES:
             self.copy("*.h", dst="include", src="%s/include" % m, keep_path=True)
-            self.copy("*.lib", dst="lib", src="build/%s" % m, keep_path=False)
-            self.copy("*.a", dst="lib", src="build/%s" % m, keep_path=False)
+        self.copy("*.lib", dst="lib", src="build", keep_path=False)
+        self.copy("*.a", dst="lib", src="build", keep_path=False)
 
     def package_info(self):
         self.cpp_info.name = "native_libs_common"
