@@ -79,7 +79,6 @@ class NativeLibsCommon(ConanFile):
                 tc.variables["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
         if self.settings.os == "Macos":
             tc.variables["TARGET_OS"] = "macos"
-        tc.variables["CONAN_EXPORTED"] = "ON"
 
         tc.generate()
 
