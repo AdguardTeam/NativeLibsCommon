@@ -1,6 +1,4 @@
-from conan import ConanFile
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import patch
+from conans import ConanFile, CMake, tools
 
 
 class CurlConan(ConanFile):
@@ -9,11 +7,12 @@ class CurlConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True, "libnghttp2:with_app": False, "libnghttp2:with_hpack": False}
+    generators = "cmake"
     requires = "openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon", \
                "nghttp2/1.44.0@AdguardTeam/NativeLibsCommon", \
                "nghttp3/0.11.0@AdguardTeam/NativeLibsCommon", \
                "ngtcp2/0.15.0@AdguardTeam/NativeLibsCommon", \
-               "zlib/1.3"
+               "zlib/1.2.11"
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def config_options(self):
@@ -23,62 +22,50 @@ class CurlConan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/curl/curl source_subfolder")
         self.run("cd source_subfolder && git checkout curl-8_1_1")
-        patch(self, base_path="source_subfolder", patch_file="patches/01-fix-http2-eof.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/02-fix-http3-eof.patch")
-
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.variables["BUILD_CURL_EXE"] = "OFF"
-        tc.variables["BUILD_SHARED_LIBS"] = "OFF"
-        tc.variables["CURL_DISABLE_COOKIES"] = "ON"
-        tc.variables["CURL_STATICLIB"] = "ON"
-        tc.variables["CURL_USE_LIBSSH2"] = "OFF"
-        tc.variables["CURL_USE_SCHANNEL"] = "OFF"
-        tc.variables["CURL_USE_SECTRANSP"] = "OFF"
-        tc.variables["CURL_USE_OPENSSL"] = "ON"
-        tc.variables["HAVE_SSL_CTX_SET_QUIC_METHOD"] = "ON"
-        tc.variables["CURL_USE_MBEDTLS"] = "OFF"
-        tc.variables["CURL_USE_BEARSSL"] = "OFF"
-        tc.variables["CURL_USE_NSS"] = "OFF"
-        tc.variables["CURL_USE_WOLFSSL"] = "OFF"
-        tc.variables["ENABLE_MANUAL"] = "OFF"
-        tc.variables["HTTP_ONLY"] = "ON"
-        tc.variables["USE_NGHTTP2"] = "ON"
-        tc.variables["USE_NGTCP2"] = "ON"
-        tc.variables["USE_NGHTTP3"] = "ON"
-
-        nghttp2 = self.dependencies["nghttp2"].package_folder.replace("\\", "/")
-        nghttp3 = self.dependencies["nghttp3"].package_folder.replace("\\", "/")
-        ngtcp2 = self.dependencies["ngtcp2"].package_folder.replace("\\", "/")
-
-        tc.variables["NGHTTP2_INCLUDE_DIR"] = nghttp2 + "/include"
-        tc.variables["NGHTTP3_INCLUDE_DIR"] = nghttp3 + "/include"
-        tc.variables["NGTCP2_INCLUDE_DIR"] = ngtcp2 + "/include"
-
-        if self.settings.os == "Windows":
-            tc.variables["NGHTTP2_LIBRARY"] = nghttp2 + "/lib/nghttp2.lib"
-            tc.variables["NGHTTP3_LIBRARY"] = nghttp3 + "/lib/nghttp3.lib"
-            tc.variables["NGTCP2_LIBRARY"] = ngtcp2 + "/lib/ngtcp2.lib"
-            tc.variables["ngtcp2_crypto_boringssl_LIBRARY"] = \
-                ngtcp2 + "/lib/ngtcp2_crypto_boringssl.lib"
-        else:
-            tc.variables["NGHTTP2_LIBRARY"] = nghttp2 + "/lib/libnghttp2.a"
-            tc.variables["NGHTTP3_LIBRARY"] = nghttp3 + "/lib/libnghttp3.a"
-            tc.variables["NGTCP2_LIBRARY"] = ngtcp2 + "/lib/libngtcp2.a"
-            tc.variables["ngtcp2_crypto_boringssl_LIBRARY"] = \
-                ngtcp2 + "/lib/libngtcp2_crypto_boringssl.a"
-
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
+        tools.patch(base_path="source_subfolder", patch_file="patches/01-fix-http2-eof.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/02-fix-http3-eof.patch")
 
     def build(self):
         cmake = CMake(self)
+        cmake.definitions["BUILD_CURL_EXE"] = "OFF"
+        cmake.definitions["BUILD_SHARED_LIBS"] = "OFF"
+        cmake.definitions["CURL_DISABLE_COOKIES"] = "ON"
+        cmake.definitions["CURL_STATICLIB"] = "ON"
+        cmake.definitions["CURL_USE_LIBSSH2"] = "OFF"
+        cmake.definitions["CURL_USE_SCHANNEL"] = "OFF"
+        cmake.definitions["CURL_USE_SECTRANSP"] = "OFF"
+        cmake.definitions["CURL_USE_OPENSSL"] = "ON"
+        cmake.definitions["HAVE_SSL_CTX_SET_QUIC_METHOD"] = "ON"
+        cmake.definitions["CURL_USE_MBEDTLS"] = "OFF"
+        cmake.definitions["CURL_USE_BEARSSL"] = "OFF"
+        cmake.definitions["CURL_USE_NSS"] = "OFF"
+        cmake.definitions["CURL_USE_WOLFSSL"] = "OFF"
+        cmake.definitions["ENABLE_MANUAL"] = "OFF"
+        cmake.definitions["HTTP_ONLY"] = "ON"
+        cmake.definitions["USE_NGHTTP2"] = "ON"
+        cmake.definitions["USE_NGTCP2"] = "ON"
+        cmake.definitions["USE_NGHTTP3"] = "ON"
+
+        cmake.definitions["OPENSSL_ROOT_DIR"] = self.deps_cpp_info["openssl"].rootpath
+
+        cmake.definitions["NGHTTP2_INCLUDE_DIR"] = self.deps_cpp_info["nghttp2"].rootpath + "/include"
+        cmake.definitions["NGHTTP2_LIBRARY"] = self.deps_cpp_info["nghttp2"].rootpath + "/lib/nghttp2.*"
+
+        cmake.definitions["NGHTTP3_INCLUDE_DIR"] = self.deps_cpp_info["nghttp3"].rootpath + "/include"
+        cmake.definitions["NGHTTP3_LIBRARY"] = self.deps_cpp_info["nghttp3"].rootpath + "/lib/nghttp3.*"
+
+        cmake.definitions["NGTCP2_INCLUDE_DIR"] = self.deps_cpp_info["ngtcp2"].rootpath + "/include"
+        cmake.definitions["NGTCP2_LIBRARY"] = self.deps_cpp_info["ngtcp2"].rootpath + "/lib/ngtcp2.*"
+        cmake.definitions["ngtcp2_crypto_boringssl_LIBRARY"] = \
+            self.deps_cpp_info["ngtcp2"].rootpath + "/lib/ngtcp2_crypto_boringssl.*"
+
         cmake.configure()
         cmake.build()
+
+        # Explicit way:
+        # self.run('cmake %s/hello %s'
+        #          % (self.source_folder, cmake.command_line))
+        # self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
         self.copy("*.h", dst="include/curl", src="source_subfolder/include/curl")

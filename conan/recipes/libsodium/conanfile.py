@@ -1,5 +1,4 @@
-from conan import ConanFile
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conans import ConanFile, CMake, tools
 
 
 class LibsodiumConan(ConanFile):
@@ -8,6 +7,7 @@ class LibsodiumConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
+    generators = "cmake"
     exports_sources = ["CMakeLists.txt", "sodiumConfig.cmake.in"]
 
     def config_options(self):
@@ -18,19 +18,11 @@ class LibsodiumConan(ConanFile):
         self.run("git clone https://github.com/jedisct1/libsodium.git libsodium")
         self.run("cd libsodium && git checkout 1.0.18")
 
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.variables["BUILD_SHARED_LIBS"]="OFF"
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
-
     def build(self):
         cmake = CMake(self)
-        cmake.configure()
+        build_dir = "%s/build" % self.source_folder
+        cmake.definitions["BUILD_SHARED_LIBS"]="OFF"
+        cmake.configure(build_folder=build_dir)
         cmake.build()
         cmake.install()
 

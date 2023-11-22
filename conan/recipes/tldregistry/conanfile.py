@@ -1,5 +1,4 @@
-from conan import ConanFile
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conans import ConanFile, CMake
 
 
 class LdnsConan(ConanFile):
@@ -8,17 +7,9 @@ class LdnsConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {}
     default_options = {}
+    generators = "cmake"
     requires = []
     exports_sources = ["include/*", "src/*", "chromium/*", "CMakeLists.txt"]
-
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
 
     def build(self):
         cmake = CMake(self)

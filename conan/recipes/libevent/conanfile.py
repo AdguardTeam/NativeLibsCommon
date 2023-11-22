@@ -1,6 +1,5 @@
-from conan import ConanFile
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import patch
+from conans import ConanFile, CMake, tools
+
 
 class LibeventConan(ConanFile):
     name = "libevent"
@@ -8,6 +7,7 @@ class LibeventConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
+    generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
@@ -18,40 +18,27 @@ class LibeventConan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/libevent/libevent.git source_subfolder")
         self.run("cd source_subfolder && git checkout release-2.1.11-stable")
-        patch(self, base_path="source_subfolder", patch_file="patches/0001-Maximum-evbuffer-read-configuration.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/bufferevent-prepare-fd.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/bufferevent-socket-connect-error.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/evutil_socket_error_to_string_lang.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/reinit_notifyfds.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/win32-disable-evsig.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/linux-disable-sysctl.patch")
-
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.cache_variables["OPENSSL_ROOT_DIR"] = self.dependencies["openssl"].package_folder.replace("\\", "/")
-        tc.cache_variables["OPENSSL_INCLUDE_DIR"] = self.dependencies["openssl"].package_folder.replace("\\", "/") + "/include"
-        tc.cache_variables["OPENSSL_CRYPTO_LIBRARY"] = "OpenSSL::Crypto"
-
-        if self.options.shared:
-            tc.variables["EVENT__LIBRARY_TYPE"] = "SHARED"
-        else:
-            tc.variables["EVENT__LIBRARY_TYPE"] = "STATIC"
-        tc.variables["EVENT__DISABLE_TESTS"] = "ON"
-        tc.variables["EVENT__DISABLE_REGRESS"] = "ON"
-        tc.variables["EVENT__DISABLE_BENCHMARK"] = "ON"
-        tc.variables["EVENT__DISABLE_SAMPLES"] = "ON"
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
+        tools.patch(base_path="source_subfolder", patch_file="patches/0001-Maximum-evbuffer-read-configuration.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/bufferevent-prepare-fd.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/bufferevent-socket-connect-error.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/evutil_socket_error_to_string_lang.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/reinit_notifyfds.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/win32-disable-evsig.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/linux-disable-sysctl.patch")
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure()
-        # self.run('cmake %s %s || cmake %s %s'
-        #          % (self.source_folder, cmake.command_line, self.source_folder, cmake.command_line))
+        cmake.definitions["OPENSSL_ROOT_DIR"] = self.deps_cpp_info["openssl"].rootpath
+        if self.options.shared:
+            cmake.definitions["EVENT__LIBRARY_TYPE"] = "SHARED"
+        else:
+            cmake.definitions["EVENT__LIBRARY_TYPE"] = "STATIC"
+        cmake.definitions["EVENT__DISABLE_TESTS"] = "ON"
+        cmake.definitions["EVENT__DISABLE_REGRESS"] = "ON"
+        cmake.definitions["EVENT__DISABLE_BENCHMARK"] = "ON"
+        cmake.definitions["EVENT__DISABLE_SAMPLES"] = "ON"
+        self.run('cmake %s %s || cmake %s %s'
+                 % (self.source_folder, cmake.command_line, self.source_folder, cmake.command_line))
         cmake.build()
 
     def package(self):

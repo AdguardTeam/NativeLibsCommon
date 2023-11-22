@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 project(ldns C CXX)
-
-find_package(libevent REQUIRED)
-link_libraries(libevent::libevent)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)

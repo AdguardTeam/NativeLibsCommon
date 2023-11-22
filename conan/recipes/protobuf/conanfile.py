@@ -1,6 +1,4 @@
-from conan import ConanFile
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import download, unzip, copy
+from conans import ConanFile, CMake, tools
 import os
 
 
@@ -8,11 +6,12 @@ import os
 # https://github.com/protocolbuffers/protobuf/issues/6503
 class ProtobufConan(ConanFile):
     name = "protobuf"
-    version = "3.21.12"
+    version = "3.18.0"
     source_subfolder = "protobuf-%s/src" % version
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
+    generators = "cmake"
     exports_sources = ["CMakeLists.txt"]
 
     def config_options(self):
@@ -21,22 +20,13 @@ class ProtobufConan(ConanFile):
 
     def source(self):
         zip_name = "protobuf.zip"
-        url = "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protobuf-cpp-%s.zip" \
-              % (self.version)
+        url = "https://github.com/protocolbuffers/protobuf/releases/download/v%s/protobuf-cpp-%s.zip" \
+              % (self.version, self.version)
         # downloading here manually (not via git) is a workaround for strange "No such file" errors
         # on Windows
-        download(conanfile=self, url=url, filename=zip_name, sha256="c7db1d1fead682be24aa29477f5e224fdfc2bb1adeeaee1214f854a2076de71e")
-        unzip(self, zip_name)
+        tools.download(url, zip_name, sha256="627e80a0c8ee6733a218813b75babd5414af5a46cb08d0421cd346fd6c45b76d")
+        tools.unzip(zip_name)
         os.unlink(zip_name)
-
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
 
     def build(self):
         cmake = CMake(self)

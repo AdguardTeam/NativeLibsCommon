@@ -1,6 +1,5 @@
-from conan import ConanFile
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import patch
+from conans import ConanFile, CMake, tools
+
 
 class BoringsslConan(ConanFile):
     name = "openssl"
@@ -8,6 +7,7 @@ class BoringsslConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
+    generators = "cmake"
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def config_options(self):
@@ -17,16 +17,7 @@ class BoringsslConan(ConanFile):
     def source(self):
         self.run("git clone https://boringssl.googlesource.com/boringssl source_subfolder")
         self.run("cd source_subfolder && git checkout 8349dfc87e46d5914b0fefbb33241a95a9eef07d")
-        patch(self, base_path="source_subfolder", patch_file="patches/00_warnings.patch")
-
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
+        tools.patch(base_path="source_subfolder", patch_file="patches/00_warnings.patch")
 
     def build(self):
         cmake = CMake(self)
@@ -43,16 +34,4 @@ class BoringsslConan(ConanFile):
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
-        self.cpp_info.set_property("cmake_file_name", "OpenSSL")
-        self.cpp_info.set_property("cmake_find_mode", "both")
-        self.cpp_info.names["cmake_find_package"] = "OpenSSL"
-        self.cpp_info.components["crypto"].set_property("cmake_target_name", "OpenSSL::Crypto")
-        self.cpp_info.components["crypto"].set_property("pkg_config_name", "libcrypto")
-        self.cpp_info.components["ssl"].set_property("cmake_target_name", "OpenSSL::SSL")
-        self.cpp_info.components["ssl"].set_property("pkg_config_name", "libssl")
-        self.cpp_info.components["crypto"].names["cmake_find_package"] = "Crypto"
-        self.cpp_info.components["crypto"].names["cmake_find_package_multi"] = "Crypto"
-        self.cpp_info.components["ssl"].names["cmake_find_package"] = "SSL"
-        self.cpp_info.components["ssl"].names["cmake_find_package_multi"] = "SSL"
-        self.cpp_info.components["ssl"].libs = ["ssl"]
-        self.cpp_info.components["crypto"].libs = ["crypto"]
+        self.cpp_info.libs = ["ssl", "crypto"]

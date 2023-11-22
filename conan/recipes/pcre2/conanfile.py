@@ -1,8 +1,7 @@
-from conan import ConanFile, Version
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import get, rmdir, replace_in_file
-from conan.errors import ConanInvalidConfiguration
+from conans import ConanFile, CMake, tools
+from conans.errors import ConanInvalidConfiguration
 import os
+
 
 class PCRE2Conan(ConanFile):
     name = "pcre2"
@@ -38,15 +37,16 @@ class PCRE2Conan(ConanFile):
     }
 
     exports_sources = "CMakeLists.txt"
+    generators = "cmake", "cmake_find_package"
     _cmake = None
 
     @property
     def _source_subfolder(self):
-        return self.source_folder + "/source_subfolder"
+        return "source_subfolder"
 
     @property
     def _build_subfolder(self):
-        return self.build_folder + "/build_subfolder"
+        return "build_subfolder"
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -72,57 +72,52 @@ class PCRE2Conan(ConanFile):
             self.requires("bzip2/1.0.8")
 
     def source(self):
-        get(self, **self.conan_data["sources"][self.version])
+        tools.get(**self.conan_data["sources"][self.version])
         extracted_dir = self.name + "-" + self.version
         os.rename(extracted_dir, self._source_subfolder)
-
-    def layout(self):
-        cmake_layout(self)
 
     def _patch_sources(self):
         # Do not add ${PROJECT_SOURCE_DIR}/cmake because it contains a custom
         # FindPackageHandleStandardArgs.cmake which can break conan generators
         cmakelists = os.path.join(self._source_subfolder, "CMakeLists.txt")
-        if Version(self.version) < "10.34":
-            replace_in_file(self, cmakelists, "SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)", "")
+        if tools.Version(self.version) < "10.34":
+            tools.replace_in_file(cmakelists, "SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)", "")
         else:
-            replace_in_file(self, cmakelists, "LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)", "")
+            tools.replace_in_file(cmakelists, "LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)", "")
 
+    def _configure_cmake(self):
+        if self._cmake:
+            return self._cmake
 
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.variables["PCRE2_BUILD_PCRE2GREP"] = self.options.build_pcre2grep
-        tc.variables["PCRE2_SUPPORT_LIBZ"] = self.options.get_safe("with_zlib", False)
-        tc.variables["PCRE2_SUPPORT_LIBBZ2"] = self.options.get_safe("with_bzip2", False)
-        tc.variables["PCRE2_BUILD_TESTS"] = False
+        self._cmake = CMake(self)
+        self._cmake.definitions["PCRE2_BUILD_PCRE2GREP"] = self.options.build_pcre2grep
+        self._cmake.definitions["PCRE2_SUPPORT_LIBZ"] = self.options.get_safe("with_zlib", False)
+        self._cmake.definitions["PCRE2_SUPPORT_LIBBZ2"] = self.options.get_safe("with_bzip2", False)
+        self._cmake.definitions["PCRE2_BUILD_TESTS"] = False
         if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
             runtime = not self.options.shared and "MT" in self.settings.compiler.runtime
-            tc.variables["PCRE2_STATIC_RUNTIME"] = runtime
-        tc.variables["PCRE2_DEBUG"] = self.settings.build_type == "Debug"
-        tc.variables["PCRE2_BUILD_PCRE2_8"] = self.options.build_pcre2_8
-        tc.variables["PCRE2_BUILD_PCRE2_16"] = self.options.build_pcre2_16
-        tc.variables["PCRE2_BUILD_PCRE2_32"] = self.options.build_pcre2_32
-        tc.variables["PCRE2_SUPPORT_JIT"] = self.options.support_jit
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
+            self._cmake.definitions["PCRE2_STATIC_RUNTIME"] = runtime
+        self._cmake.definitions["PCRE2_DEBUG"] = self.settings.build_type == "Debug"
+        self._cmake.definitions["PCRE2_BUILD_PCRE2_8"] = self.options.build_pcre2_8
+        self._cmake.definitions["PCRE2_BUILD_PCRE2_16"] = self.options.build_pcre2_16
+        self._cmake.definitions["PCRE2_BUILD_PCRE2_32"] = self.options.build_pcre2_32
+        self._cmake.definitions["PCRE2_SUPPORT_JIT"] = self.options.support_jit
+        self._cmake.configure(build_folder=self._build_subfolder)
+        return self._cmake
 
     def build(self):
-        cmake = CMake(self)
         self._patch_sources()
-        cmake.configure()
+        cmake = self._configure_cmake()
         cmake.build()
 
     def package(self):
         self.copy(pattern="LICENCE", dst="licenses", src=self._source_subfolder)
-        cmake = CMake(self)
+        cmake = self._configure_cmake()
         cmake.install()
-        rmdir(self, os.path.join(self.package_folder, "man"))
-        rmdir(self, os.path.join(self.package_folder, "share"))
-        rmdir(self, os.path.join(self.package_folder, "lib", "pkgconfig"))
+        cmake.patch_config_paths()
+        tools.rmdir(os.path.join(self.package_folder, "man"))
+        tools.rmdir(os.path.join(self.package_folder, "share"))
+        tools.rmdir(os.path.join(self.package_folder, "lib", "pkgconfig"))
 
     def package_info(self):
         self.cpp_info.names["pkg_config"] = "libpcre2"

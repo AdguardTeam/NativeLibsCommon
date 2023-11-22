@@ -1,6 +1,4 @@
-from conan import ConanFile
-from conan.errors import ConanInvalidConfiguration
-from conan.tools.files import patch
+from conans import ConanFile, tools
 from os import environ
 
 
@@ -8,6 +6,7 @@ class QuicheConan(ConanFile):
     name = "quiche"
     version = "0.17.1"
     settings = "os", "compiler", "build_type", "arch"
+    generators = "cmake"
     requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
@@ -18,8 +17,8 @@ class QuicheConan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/cloudflare/quiche.git source_subfolder")
         self.run(f"cd source_subfolder && git checkout {self.version}")
-        patch(self, base_path="source_subfolder", patch_file="patches/crate_type.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/ssize_t.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/crate_type.patch")
+        tools.patch(base_path="source_subfolder", patch_file="patches/ssize_t.patch")
 
     def build(self):
         environ["RUSTFLAGS"] = "%s -C relocation-model=pic" \
@@ -97,6 +96,7 @@ class QuicheConan(ConanFile):
             self.cpp_info.system_libs = ["UserEnv"]
         else:
             self.cpp_info.exelinkflags = ["-ldl"]
+
         self.cpp_info.libs = ["quiche"]
         self.cpp_info.requires = [
             "openssl::ssl",

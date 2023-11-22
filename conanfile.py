@@ -1,6 +1,5 @@
-from conan import ConanFile, Version
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import patch
+from conans import ConanFile, CMake, tools
+from conans.model.version import Version
 
 
 class NativeLibsCommon(ConanFile):
@@ -10,6 +9,7 @@ class NativeLibsCommon(ConanFile):
     url = "https://github.com/AdguardTeam/NativeLibsCommon"
     vcs_url = "https://github.com/AdguardTeam/NativeLibsCommon.git"
     description = "Common library for C++ opensource projects"
+    generators = "cmake"
     settings = "os", "compiler", "build_type", "arch"
     options = {
         "shared": [True, False],
@@ -39,7 +39,7 @@ class NativeLibsCommon(ConanFile):
         self.requires("pcre2/10.37@AdguardTeam/NativeLibsCommon")
 
     def build_requirements(self):
-        self.tool_requires("gtest/1.11.0")
+        self.build_requires("gtest/1.11.0")
 
     def configure(self):
         self.options["gtest"].build_gmock = False
@@ -61,41 +61,32 @@ class NativeLibsCommon(ConanFile):
                 self.run("git checkout -f master")
 
             for p in self.patch_files:
-                patch(self, patch_file=p)
+                tools.patch(patch_file=p)
         else:
             version_hash = self.conan_data["commit_hash"][self.version]["hash"]
             self.run("git checkout -f %s" % version_hash)
 
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
+    def build(self):
+        cmake = CMake(self)
+        # A better way to pass these was not found :(
         if self.settings.os == "Linux":
             if self.settings.compiler.libcxx:
                 cxx = "%s" % self.settings.compiler.libcxx
                 cxx = cxx.rstrip('1')
-                tc.variables["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % cxx
+                cmake.definitions["CMAKE_CXX_FLAGS"] = "-stdlib=%s" % cxx
             if self.settings.compiler.version:
-                tc.variables["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
+                cmake.definitions["CMAKE_CXX_COMPILER_VERSION"] = self.settings.compiler.version
         if self.settings.os == "Macos":
-            tc.variables["TARGET_OS"] = "macos"
-
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
-
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
+            cmake.definitions["TARGET_OS"] = "macos"
+        cmake.configure(source_folder=".", build_folder="build")
         cmake.build()
 
     def package(self):
         MODULES = ["common", "http"]
         for m in MODULES:
             self.copy("*.h", dst="include", src="%s/include" % m, keep_path=True)
-        self.copy("*.lib", dst="lib", src="build", keep_path=False)
-        self.copy("*.a", dst="lib", src="build", keep_path=False)
+            self.copy("*.lib", dst="lib", src="build/%s" % m, keep_path=False)
+            self.copy("*.a", dst="lib", src="build/%s" % m, keep_path=False)
 
     def package_info(self):
         self.cpp_info.name = "native_libs_common"

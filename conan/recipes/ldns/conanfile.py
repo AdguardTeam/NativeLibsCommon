@@ -1,6 +1,5 @@
-from conan import ConanFile
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import patch
+from conans import ConanFile, CMake, tools
+
 
 class LdnsConan(ConanFile):
     name = "ldns"
@@ -8,7 +7,8 @@ class LdnsConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    requires = ["libevent/2.1.11@AdguardTeam/NativeLibsCommon"]
+    generators = "cmake"
+    requires = ["libevent/2.1.11"]
     exports_sources = ["compat/*", "windows/*", "*.patch", "CMakeLists.txt"]
 
     def config_options(self):
@@ -18,19 +18,7 @@ class LdnsConan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/NLnetLabs/ldns.git")
         self.run("cd ldns && git checkout 7128ef56649e0737f236bc5d5d640de38ff0036d")
-        patch(self, base_path="ldns", patch_file="windows.patch")
-
-    def layout(self):
-        cmake_layout(self, src_folder="src")
-
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.generate()
-
-    def layout(self):
-        cmake_layout(self)
+        tools.patch(base_path="ldns", patch_file="windows.patch")
 
     def build(self):
         cmake = CMake(self)
