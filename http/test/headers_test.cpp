@@ -217,10 +217,9 @@ TEST(RequestHttpHeaders, H1ToString) {
 }
 
 TEST(RequestHttpHeaders, H2ToString) {
-    constexpr std::string_view EXPECTED = "GET HTTP/2.0\r\n"
+    constexpr std::string_view EXPECTED = "GET /path HTTP/2.0\r\n"
                                           ":scheme: https\r\n"
                                           ":authority: example.com\r\n"
-                                          ":path: /path\r\n"
                                           "a: 1\r\n"
                                           "a: 2\r\n"
                                           "b: 3\r\n"
@@ -240,10 +239,9 @@ TEST(RequestHttpHeaders, H2ToString) {
 }
 
 TEST(RequestHttpHeaders, H3ToString) {
-    constexpr std::string_view EXPECTED = "OPTIONS HTTP/3.0\r\n"
+    constexpr std::string_view EXPECTED = "OPTIONS * HTTP/3.0\r\n"
                                           ":scheme: https\r\n"
                                           ":authority: example.com\r\n"
-                                          ":path: *\r\n"
                                           "a: 1\r\n"
                                           "a: 2\r\n"
                                           "b: 3\r\n"

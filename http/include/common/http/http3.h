@@ -103,7 +103,7 @@ struct QuicNetworkPath {
 
 class Http3Server;
 class Http3Client;
-enum Http3Error {};
+enum class Http3Error {};
 
 /**
  * Contains common code of client- and server-side implementations.
@@ -289,6 +289,8 @@ public:
         void (*on_data_sent)(void *arg, uint64_t stream_id, size_t n);
         /** The next expiry deadline has been updated */
         void (*on_expiry_update)(void *arg, ag::Nanos period);
+        /** More streams available from client */
+        void (*on_available_streams)(void *arg);
     };
 
     enum InputResult {
@@ -487,6 +489,8 @@ public:
         void (*on_data_sent)(void *arg, uint64_t stream_id, size_t n);
         /** The next expiry deadline has been updated */
         void (*on_expiry_update)(void *arg, ag::Nanos period);
+        /** More streams available from server */
+        void (*on_available_streams)(void *arg);
     };
 
     Http3Client(PrivateAccess, const Http3Settings &settings, const Callbacks &handler);
@@ -577,9 +581,7 @@ private:
 
 template <>
 struct ErrorCodeToString<http::Http3Error> {
-    std::string operator()(http::Http3Error) {
-        return {};
-    }
+    std::string operator()(http::Http3Error);
 };
 
 } // namespace ag

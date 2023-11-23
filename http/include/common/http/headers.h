@@ -502,15 +502,25 @@ struct fmt::formatter<ag::http::Request> {
         }
         case ag::http::HTTP_2_0:
         case ag::http::HTTP_3_0: {
-            fmt::format_to(ctx.out(), "{}\r\n", self.version());
+            auto path = self.path();
+            auto authority = self.authority();
+            bool is_connect = (method == "CONNECT");
+            if (is_connect) {
+                fmt::format_to(ctx.out(), "{} {}\r\n", !authority.empty() ? authority : "<empty :authority>", self.version());
+            } else {
+                fmt::format_to(ctx.out(), "{} {}\r\n", !path.empty() ? path : "<empty :path>", self.version());
+            }
             if (auto scheme = self.scheme(); !scheme.empty()) {
                 fmt::format_to(ctx.out(), ":scheme: {}\r\n", scheme);
             }
-            if (auto authority = self.authority(); !authority.empty()) {
-                fmt::format_to(ctx.out(), ":authority: {}\r\n", authority);
-            }
-            if (auto path = self.path(); !path.empty()) {
-                fmt::format_to(ctx.out(), ":path: {}\r\n", path);
+            if (is_connect) {
+                if (!path.empty()) {
+                    fmt::format_to(ctx.out(), ":path: {}\r\n", path);
+                }
+            } else {
+                if (!authority.empty()) {
+                    fmt::format_to(ctx.out(), ":authority: {}\r\n", authority);
+                }
             }
             break;
         }

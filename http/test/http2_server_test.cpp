@@ -49,10 +49,9 @@ constexpr uint8_t GET_REQUEST_FRAME_ES[] = {0x00, 0x00, 0x26, // length
         0x31, 0xd7, 0x3d, 0x93, 0x7f, 0x7a, 0x88, 0x25, 0xb6, 0x50, 0xc3, 0xab, 0xbc, 0xf2, 0xe1, 0x53, 0x03, 0x2a,
         0x2f, 0x2a};
 
-constexpr std::string_view GET_REQUEST_STR = "GET HTTP/2.0\r\n"
+constexpr std::string_view GET_REQUEST_STR = "GET /bytes/42 HTTP/2.0\r\n"
                                              ":scheme: http\r\n"
                                              ":authority: httpbingo.org\r\n"
-                                             ":path: /bytes/42\r\n"
                                              "user-agent: curl/7.88.1\r\n"
                                              "accept: */*\r\n\r\n";
 
