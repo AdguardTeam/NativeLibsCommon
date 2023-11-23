@@ -540,6 +540,14 @@ Error<Http3Error> Http3Session<T>::initialize_session(
                     },
             .stream_close = on_quic_stream_close,
             .recv_retry = ngtcp2_crypto_recv_retry_cb,
+            .extend_max_local_streams_bidi =
+                    [](ngtcp2_conn *, uint64_t max_streams, void *arg) {
+                        auto *self = (Http3Session *) arg;
+                        if (const auto &h = static_cast<T *>(self)->m_handler; h.on_available_streams != nullptr) {
+                            h.on_available_streams(h.arg);
+                        }
+                        return 0;
+                    },
             .rand =
                     [](uint8_t *dest, size_t destlen, const ngtcp2_rand_ctx *) {
                         RAND_bytes(dest, destlen);
@@ -559,9 +567,6 @@ Error<Http3Error> Http3Session<T>::initialize_session(
                     [](ngtcp2_conn *, uint64_t max_streams, void *arg) {
                         auto *self = (Http3Session *) arg;
                         nghttp3_conn_set_max_client_streams_bidi(self->m_http_conn.get(), max_streams);
-                        if (const auto &h = static_cast<T *>(self)->m_handler; h.on_available_streams != nullptr) {
-                            h.on_available_streams(h.arg);
-                        }
                         return 0;
                     },
             .extend_max_stream_data =
