@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-if(NOT CMAKE_LIBRARY_PATH MATCHES ".*conan2.*")
+if(NOT CMAKE_INSTALL_PREFIX MATCHES "conan2")
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "cmake/conan_provider.cmake")
 endif()
 project(native_libs_common C CXX)
