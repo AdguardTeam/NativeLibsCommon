@@ -462,7 +462,7 @@ struct fmt::formatter<ag::http::Header<T>> {
     }
 
     template <typename FormatContext>
-    auto format(const ag::http::Header<T> &self, FormatContext &ctx) {
+    auto format(const ag::http::Header<T> &self, FormatContext &ctx) const {
         return fmt::format_to(ctx.out(), "{}: {}", self.name, self.value);
     }
 };
@@ -475,7 +475,7 @@ struct fmt::formatter<ag::http::Headers> {
     }
 
     template <typename FormatContext>
-    auto format(const ag::http::Headers &self, FormatContext &ctx) {
+    auto format(const ag::http::Headers &self, FormatContext &ctx) const {
         return fmt::format_to(ctx.out(), "{}\r\n", fmt::join(self.begin(), self.end(), "\r\n"));
     }
 };
@@ -488,7 +488,7 @@ struct fmt::formatter<ag::http::Request> {
     }
 
     template <typename FormatContext>
-    auto format(const ag::http::Request &self, FormatContext &ctx) {
+    auto format(const ag::http::Request &self, FormatContext &ctx) const {
         auto method = self.method();
         fmt::format_to(ctx.out(), "{} ", method.empty() ? "OPTIONS" : method);
 
@@ -538,7 +538,7 @@ struct fmt::formatter<ag::http::Response> {
     }
 
     template <typename FormatContext>
-    auto format(const ag::http::Response &self, FormatContext &ctx) {
+    auto format(const ag::http::Response &self, FormatContext &ctx) const {
         ag::http::Version version = self.version();
         std::string_view status_message = (version < ag::http::Version::HTTP_2_0) ? self.status_string() : "";
         if (self.headers().length() == 0) {

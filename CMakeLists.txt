@@ -1,5 +1,10 @@
-cmake_minimum_required(VERSION 3.10)
-project(native_libs_common)
+cmake_minimum_required(VERSION 3.24)
+set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "cmake/conan_provider.cmake")
+project(native_libs_common C CXX)
+
+SET(CMAKE_CXX_STANDARD 20)
+SET(CMAKE_C_STANDARD 11)
+set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
 # Better stack traces in Sentry
 if (MSVC)

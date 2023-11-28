@@ -13,7 +13,7 @@ So if a recipe is from conan-center, you won't be able to store binaries because
 the highest priority by default.
 
 ```shell
-conan remote add -i 0 $REMOTE_NAME https://$ARTIFACTORY_HOST/artifactory/api/conan/$REPO_NAME
+conan remote add --index 0 $REMOTE_NAME https://$ARTIFACTORY_HOST/artifactory/api/conan/$REPO_NAME
 ```
 
 We customized some packages, so they need to be exported to local conan repository.
@@ -22,32 +22,32 @@ We customized some packages, so they need to be exported to local conan reposito
 ./scripts/export_conan.py
 ```
 
-If you want to upload exported recipes to conan remote repository, use following command:
+If you want to upload built binaries and recipes to conan remote repository, use following command:
 
 ```shell
 conan upload -r $REMOTE_NAME -c '*'
 ```
 
-After successful build, you may want to upload built binaries to remote repo:
+If you want to upload exported only recipes to conan remote repository, use following command:
+
 ```shell
-conan upload -t $REMOTE_NAME -c '*' --all
+conan upload -r $REMOTE_NAME -c '*' --only-recipe
 ```
+
 
 ## Testing changes as a dependency
 
-To test local changes in the library in case it is used as a conan package dependency,
+To test local changes in the library when it is used as a Conan package dependency,
 do the following:
 
-1) Create patch files: e.g., execute `git diff > 1.patch` in the project root.
-2) Add paths to the patch files in `<root>/conanfile.py`, see the `patch_files` field.
-3) Change the `vcs_url` field in `<root>/conanfile.py` if the default one is not suitable.
-4) Export the conan package with the special version number: `conan export . /777@AdguardTeam/NativeLibsCommon`.
-5) In the project that uses `native_libs_common` as a dependency, change the version to `777`
-   (e.g. `native_libs_common/1.0.0@AdguardTeam/NativeLibsCommon` -> `native_libs_common/777@AdguardTeam/NativeLibsCommon`).
-6) Re-run cmake command.  
-   Notes:
-    * if one has already exported the library in such way, the cached version must be purged: `conan remove -f native_libs_common/777`,
-    * by default the patches are applied to the `master` branch, specify the `commit_hash` option to test changes against the specific commit.
+1) If the default `vcs_url` in `<root>/conanfile.py` is not suitable, change it accordingly.
+2) Commit the changes you wish to test.
+3) Execute `./script/export_conan.py local`. This script will export the package, assigning the last commit hash as its version.
+4) In the project that depends on `native_libs_common`, update the version to `<commit_hash>` (where `<commit_hash>` is the hash of the target commit):
+Replace `native_libs_common/1.0.0@adguard_team/native_libs_common` with `native_libs_common/<commit_hash>@adguard_team/native_libs_common`.
+5) Re-run the cmake command.
+   Note:
+    * If you have already exported the library in this way, the cached version must be purged: `conan remove -f native_libs_common/<commit_hash>`.
 
 ## Code style
 

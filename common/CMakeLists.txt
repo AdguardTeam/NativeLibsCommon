@@ -1,11 +1,8 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.24)
 project(ag_common)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
-
-include(../cmake/conan_bootstrap.cmake)
-conan_bootstrap(SRCROOT ".." CONANFILE "../conanfile.py" SCOPE_NAME native_libs_common)
 
 set(SOURCE_FILES
         utils.cpp
@@ -25,11 +22,14 @@ set(SOURCE_FILES
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
-target_include_directories(${PROJECT_NAME} PUBLIC include)
+find_package(fmt REQUIRED)
+find_package(libevent REQUIRED)
+find_package(pcre2 REQUIRED)
 
+target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_compile_definitions(${PROJECT_NAME} PUBLIC PCRE2_STATIC=1 PCRE2_CODE_UNIT_WIDTH=8)
-target_link_libraries(${PROJECT_NAME} CONAN_PKG::fmt CONAN_PKG::libevent
-        CONAN_PKG::pcre2)
+target_link_libraries(${PROJECT_NAME} fmt::fmt libevent::libevent
+        pcre2::pcre2)
 if (NOT MSVC)
     target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
     target_compile_options(${PROJECT_NAME}  PRIVATE -fno-exceptions)

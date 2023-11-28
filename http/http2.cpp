@@ -2,7 +2,7 @@
 #include <atomic>
 
 #include <event2/buffer.h>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 #include "common/http/http2.h"
 #include "common/logger.h"
@@ -613,7 +613,7 @@ Error<Http2Error> Http2Session<T>::submit_body_impl(uint32_t stream_id, ag::Uint
 
 template <typename T>
 Error<Http2Error> Http2Session<T>::reset_stream_impl(uint32_t stream_id, nghttp2_error_code error_code) {
-    log_sid(trace, m_id, stream_id, "Error={}", error_code);
+    log_sid(trace, m_id, stream_id, "Error={}", magic_enum::enum_name(error_code));
 
     if (int status = nghttp2_submit_rst_stream(m_session.get(), NGHTTP2_FLAG_NONE, int32_t(stream_id), error_code);
             status != NGHTTP2_NO_ERROR) {

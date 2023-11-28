@@ -1,6 +1,6 @@
 #include <atomic>
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 #include "common/http/http1.h"
 #include "common/logger.h"
@@ -354,7 +354,7 @@ Result<typename Http1Session<T>::InputResult, Http1Error> Http1Session<T>::input
     case HPE_PAUSED_UPGRADE:
         return InputUpgrade{};
     default:
-        return make_error(Http1Error{}, AG_FMT("{} ({})", llhttp_errno_name(err), err));
+        return make_error(Http1Error{}, AG_FMT("{} ({})", llhttp_errno_name(err), magic_enum::enum_name(err)));
     }
 }
 

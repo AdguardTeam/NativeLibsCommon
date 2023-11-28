@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <limits.h>
 
 #ifdef _WIN32
 #include <basetsd.h>

@@ -1,13 +1,10 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.24)
 project(ag_common_http)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
 set(NLC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
-include(${NLC_DIR}/cmake/conan_bootstrap.cmake)
-conan_bootstrap(SRCROOT ".." CONANFILE "../conanfile.py" SCOPE_NAME native_libs_common)
 
 set(SOURCE_FILES
         headers.cpp
@@ -25,19 +22,28 @@ if (NOT TARGET ag_common)
     add_subdirectory(${NLC_DIR}/common ${CMAKE_BINARY_DIR}/common)
 endif (NOT TARGET ag_common)
 
+find_package(fmt REQUIRED)
+find_package(magic_enum REQUIRED)
+find_package(nghttp2 REQUIRED)
+find_package(nghttp3 REQUIRED)
+find_package(ngtcp2 REQUIRED)
+find_package(llhttp REQUIRED)
+find_package(libevent REQUIRED)
+find_package(OpenSSL REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE ag_common)
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        CONAN_PKG::magic_enum
+        magic_enum::magic_enum
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-        CONAN_PKG::fmt
-        CONAN_PKG::libevent
-        CONAN_PKG::llhttp
-        CONAN_PKG::nghttp2
-        CONAN_PKG::nghttp3
-        CONAN_PKG::ngtcp2
-        CONAN_PKG::openssl
+        fmt::fmt
+        libevent::libevent
+        llhttp::llhttp
+        nghttp2::nghttp2
+        nghttp3::nghttp3
+        ngtcp2::ngtcp2
+        openssl::openssl
 )
 
 if (MSVC)
@@ -58,6 +64,6 @@ add_unit_test(http2_client_test ${TEST_DIR} ${CMAKE_CURRENT_SOURCE_DIR} TRUE TRU
 add_unit_test(http2_server_test ${TEST_DIR} ${CMAKE_CURRENT_SOURCE_DIR} TRUE TRUE)
 
 add_library(http3_test_helper_lib STATIC ${TEST_DIR}/http3_server_side.cpp)
-target_link_libraries(http3_test_helper_lib PRIVATE CONAN_PKG::gtest)
+target_link_libraries(http3_test_helper_lib PRIVATE gtest::gtest)
 link_libraries(http3_test_helper_lib)
 add_unit_test(http3_test ${TEST_DIR} ${CMAKE_CURRENT_SOURCE_DIR} TRUE TRUE)
