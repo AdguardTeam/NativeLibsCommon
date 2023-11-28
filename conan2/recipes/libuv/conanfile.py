@@ -38,8 +38,6 @@ class libuvConan(ConanFile):
     def configure(self):
         if self.options.shared:
             del self.options.fPIC
-        del self.settings.compiler.cppstd
-        del self.settings.compiler.libcxx
         if self.settings.compiler == "msvc":
             if int(self.settings.compiler.version.value) < 14:
                 raise ConanInvalidConfiguration("Visual Studio 2015 or higher required")

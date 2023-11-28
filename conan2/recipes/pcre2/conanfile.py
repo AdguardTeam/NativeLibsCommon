@@ -55,9 +55,6 @@ class PCRE2Conan(ConanFile):
     def configure(self):
         if self.options.shared:
             del self.options.fPIC4
-        if self.settings.os != "Windows":
-            del self.settings.compiler.libcxx
-        del self.settings.compiler.cppstd
         if not self.options.build_pcre2grep:
             del self.options.with_zlib
             del self.options.with_bzip2
