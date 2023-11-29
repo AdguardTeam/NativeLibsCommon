@@ -1,5 +1,6 @@
 #include <atomic>
 #include <cassert>
+#include <utility>
 
 #include <openssl/evp.h>
 #include <openssl/rand.h>

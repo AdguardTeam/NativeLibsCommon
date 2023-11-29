@@ -33,8 +33,8 @@ struct Header {
 template <typename T, typename U, typename V>
 Header<T> make_header(U &&name, V &&value) {
     return Header<T>{
-            .name{std::forward<U>(name)},
-            .value{std::forward<V>(value)},
+            .name{T{std::forward<U>(name)}},
+            .value{T{std::forward<V>(value)}},
     };
 }
 

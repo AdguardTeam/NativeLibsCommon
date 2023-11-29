@@ -404,8 +404,6 @@ else ()
     if (HAVE_AVX512FINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_AVX512FINTRIN_H=1)
         target_compile_options(${PROJECT_NAME} PRIVATE -mavx512f)
-    else ()
-        target_compile_options(${PROJECT_NAME} PRIVATE -mno-avx512f)
     endif ()
 
     check_c_source_compiles(

@@ -11,7 +11,7 @@
 #include <winsock2.h>
 #else
 #include <netdb.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #endif
 
 #include <event2/event.h>

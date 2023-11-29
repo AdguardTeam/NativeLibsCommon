@@ -13,7 +13,7 @@ enum ExchangeErrorCode {
 
 // clang-format off
 template <>
-struct ErrorCodeToString<ExchangeErrorCode> {
+struct ag::ErrorCodeToString<ExchangeErrorCode> {
     std::string operator()(ExchangeErrorCode code) {
         switch (code) {
         case TIMED_OUT: return "Timed out";
@@ -57,7 +57,7 @@ TEST(ErrorTest, TestError) {
 enum TestErrorEmptyString {};
 
 template <>
-struct ErrorCodeToString<TestErrorEmptyString> {
+struct ag::ErrorCodeToString<TestErrorEmptyString> {
     std::string operator()(TestErrorEmptyString) {
         return {};
     }

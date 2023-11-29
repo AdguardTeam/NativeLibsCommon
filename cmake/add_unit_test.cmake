@@ -28,7 +28,7 @@ function(add_unit_test TEST_NAME TEST_DIR EXTRA_INCLUDES IS_GTEST EXPAND_GTEST)
         target_link_libraries(${TEST_NAME} PRIVATE gtest::gtest)
     endif()
 
-    if (${EXPAND_GTEST})
+    if (NOT CMAKE_CROSSCOMPILING AND ${EXPAND_GTEST})
         gtest_discover_tests(${TEST_NAME})
     else()
         add_test(${TEST_NAME} ${TEST_NAME})
