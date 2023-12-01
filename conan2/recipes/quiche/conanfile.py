@@ -9,12 +9,8 @@ class QuicheConan(ConanFile):
     name = "quiche"
     version = "0.17.1"
     settings = "os", "compiler", "build_type", "arch"
-    requires = ["openssl/boring-2021-05-11@adguard_team/native_libs_common"]
+    requires = ["openssl/boring-2023-05-17@adguard_team/native_libs_common"]
     exports_sources = ["CMakeLists.txt", "patches/*"]
-
-    def config_options(self):
-        if self.settings.os == "Windows":
-            del self.options.fPIC
 
     def source(self):
         self.run("git clone https://github.com/cloudflare/quiche.git source_subfolder")
@@ -30,6 +26,7 @@ class QuicheConan(ConanFile):
 
         os = self.settings.os
         arch = str(self.settings.arch)
+        openssl_path = self.dependencies["openssl"].package_folder.replace("\\", "/")
         if os == "Linux":
             if arch == "armv8":
                 arch = "aarch64"
@@ -79,14 +76,19 @@ class QuicheConan(ConanFile):
                 target = "x86_64-apple-darwin"
             cargo_args = "build %s --target %s" % (cargo_build_type, target)
         elif os == "Windows":
+            if arch == "x86_64":
+                target = "x86_64-pc-windows-msvc"
+            else:
+                target = "i686-pc-windows-msvc"
             environ["RUSTFLAGS"] = "%s -C target-feature=+crt-static" % environ["RUSTFLAGS"]
-            cargo_args = "build %s --target i686-pc-windows-msvc" % cargo_build_type
+            cargo_args = "build %s --target %s" % (cargo_build_type, target)
         else:
             raise ConanInvalidConfiguration("Unsupported OS: %s" % os)
 
-        cargo_quiche_features = "--no-default-features --features ffi"
+        environ["QUICHE_BSSL_PATH"] = "%s/lib" % openssl_path
+        cargo_quiche_features = "--no-default-features --features \"ffi boringssl-vendored\""
         cargo_args = "%s %s" % (cargo_args, cargo_quiche_features)
-        self.run("cd source_subfolder/quiche && cargo %s" % cargo_args)
+        self.run("cd source_subfolder/quiche && cargo %s" % (cargo_args))
 
     def package(self):
         copy(self, "*.h", src=join(self.source_folder, "source_subfolder/quiche/include"), dst=join(self.package_folder, "include"), keep_path = True)

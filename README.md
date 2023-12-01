@@ -1,5 +1,48 @@
 # Native libs common stuff
 
+#### Prerequisites
+
+* Conan C++ package manager 2.0.4 or higher
+* CMake 3.24 or higher
+* GCC 9 or higher / Clang 8 or higher
+
+## Build
+
+### Linux
+
+```shell
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_FLAGS="-stdlib=libc++"  \
+    ..               
+```
+
+### Windows
+
+```shell
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
+    -DCMAKE_C_FLAGS_DEBUG=/MT ^
+    -DCMAKE_CXX_FLAGS_DEBUG=/MT ^
+    -DCONAN_HOST_PROFILE="../conan2/profiles/windows-msvc.jinja;auto-cmake" ^
+    -G Ninja ^
+    ..
+```
+
+### macOS
+
+```shell
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCONAN_HOST_PROFILE="../conan2/profiles/apple.jinja;auto-cmake" \
+    -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+    ..
+```
+
 Currently, it contains Conan recipes for AdGuard libs
 
 ## How to use conan
