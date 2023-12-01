@@ -36,17 +36,26 @@ public:
      * @param fmt Format string. Use FMT_STRING to enable type checks
      * @param args Format arguments
      *
-     * Note that optnone here is because of clang optimizer bug which leads to making bad format args.
+     * Note that optnone is here because of clang optimizer bug which leads to making bad format args.
      * https://github.com/AdguardTeam/DnsLibs/issues/182
      * TODO: Recheck when either fmt library or clang will be updated.
      * Original fix is for Android NDK, LLVM 14
      * As of LLVM 15 (Xcode 14.3 and newer), bug is not fixed.
+     * Note that _MSC_VER is here because of MSVC bug of non-working fmt static checks in lambdas.
+     * Original fix is for MSVC 19.38 (VS 17.8.2)
      */
+#if _MSC_VER >= 1938
+    template <typename... Ts>
+    inline void log(LogLevel level, fmt::string_view fmt, Ts&&... args) const {
+        vlog(level, fmt, fmt::make_format_args(args...));
+    }
+#else
     template <typename... Ts>
     [[clang::optnone]]
     inline void log(LogLevel level, fmt::format_string<Ts...> fmt, Ts&&... args) const {
         vlog(level, fmt::string_view(fmt), fmt::make_format_args(args...));
     }
+#endif
 
     /**
      * @return True if log level  is enabled on current logger
