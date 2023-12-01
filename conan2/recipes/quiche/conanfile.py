@@ -86,7 +86,7 @@ class QuicheConan(ConanFile):
             raise ConanInvalidConfiguration("Unsupported OS: %s" % os)
 
         environ["QUICHE_BSSL_PATH"] = "%s/lib" % openssl_path
-        cargo_quiche_features = "--no-default-features --features \"ffi boringssl-vendored\""
+        cargo_quiche_features = "--no-default-features --features ffi"
         cargo_args = "%s %s" % (cargo_args, cargo_quiche_features)
         self.run("cd source_subfolder/quiche && cargo %s" % (cargo_args))
 
