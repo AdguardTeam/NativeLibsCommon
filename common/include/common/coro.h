@@ -1,7 +1,9 @@
 #pragma once
 
 #include <optional>
+#pragma GCC visibility push(default)
 #include <future>
+#pragma GCC visibility pop
 #include <version>
 
 #if defined _LIBCPP_VERSION && _LIBCPP_VERSION < 14000

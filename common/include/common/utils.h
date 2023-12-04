@@ -1,6 +1,8 @@
 #pragma once
 
+#pragma GCC visibility push(default)
 #include <future>
+#pragma GCC visibility pop
 #include <algorithm>
 #include <array>
 #include <functional>
