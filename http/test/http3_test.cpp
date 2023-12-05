@@ -305,25 +305,35 @@ TEST_F(Http3Client, Exchange) {
     streams[request_result.value()] = {};
     ASSERT_NO_FATAL_FAILURE(flush_session());
 
+    bool waiting_for_close = false;
+    int waited_iterations = 0;
+    static constexpr int WAIT_ITERATIONS = 10;
+
     while (true) {
         ASSERT_NO_FATAL_FAILURE(wait_readable(ag::Secs{5}));
         ASSERT_NO_FATAL_FAILURE(read_out_socket());
 
-        ASSERT_LE(streams.size(), 1);
-        if (streams.empty()) {
-            ASSERT_NO_FATAL_FAILURE(flush_session());
-            continue;
-        }
+        ASSERT_EQ(streams.size(), 1);
 
         const auto &[stream_id, stream] = *streams.begin();
-        ASSERT_EQ(stream.closed, stream.response.has_value());
+        if (waiting_for_close) {
+            ASSERT_NO_FATAL_FAILURE(flush_session());
+            if (stream.closed) {
+                break;
+            }
+            if (++waited_iterations > WAIT_ITERATIONS) {
+                FAIL() << "Stream not closed after " << waited_iterations << " iterations";
+                break;
+            }
+            continue;
+        }
         if (!stream.response.has_value()) {
             ASSERT_NO_FATAL_FAILURE(flush_session());
             continue;
         }
 
         ASSERT_EQ(stream.response->status_code(), 200) << stream.response->str();
-        break;
+        waiting_for_close = true;
     }
 }
 
