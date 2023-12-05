@@ -1,6 +1,6 @@
 from conan import ConanFile
 from conan.errors import ConanInvalidConfiguration
-from conan.tools.files import patch, copy
+from conan.tools.files import patch, copy, replace_in_file
 from os import environ
 from os.path import join
 
@@ -78,6 +78,10 @@ class QuicheConan(ConanFile):
         elif os == "Windows":
             if arch == "x86_64":
                 target = "x86_64-pc-windows-msvc"
+            elif arch == "armv8":
+                target = "aarch64-pc-windows-msvc"
+                replace_in_file(self, join(self.source_folder, "source_subfolder/quiche", "Cargo.toml"), "ring = \"0.16\"", "ring = \"0.17\"")
+                environ["PATH"] = f"{environ["PATH"]};C:\\Program Files\\LLVM\\bin;C:\\Program Files (x86)\\LLVM\\bin"
             else:
                 target = "i686-pc-windows-msvc"
             environ["RUSTFLAGS"] = "%s -C target-feature=+crt-static" % environ["RUSTFLAGS"]
