@@ -51,6 +51,7 @@ class libuvConan(ConanFile):
         deps.generate()
         tc = CMakeToolchain(self)
         tc.cache_variables["LIBUV_BUILD_TESTS"] = False
+        tc.cache_variables["BUILD_SHARED_LIBS"] = self.options.shared
         tc.generate()
 
     def layout(self):
