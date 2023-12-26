@@ -35,11 +35,11 @@ class QuicheConan(ConanFile):
             if arch == "armv7":
                 arch = "arm"
 
-            environ["CROSS_COMPILE"] = "1"
             compilers_from_conf = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
             musl = "musl" in compilers_from_conf['c']
             eabi = "eabi" if arch == "arm" else ""
             cargo_args = "build %s --target %s-unknown-linux-%s%s" % (cargo_build_type, arch, "musl" if musl else "gnu", eabi)
+            environ["CROSS_COMPILE"] = ("%s-linux-musl%s" % (arch, eabi)) if musl else ("%s-unknown-linux-gnu" % (arch))
         elif os == "Android":
             if "ANDROID_HOME" in environ and "ANDROID_NDK_HOME" not in environ:
                 environ["ANDROID_NDK_HOME"] = "%s/ndk-bundle" % environ["ANDROID_HOME"]
