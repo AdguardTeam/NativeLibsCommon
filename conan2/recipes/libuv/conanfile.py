@@ -51,7 +51,6 @@ class libuvConan(ConanFile):
         deps.generate()
         tc = CMakeToolchain(self)
         tc.cache_variables["LIBUV_BUILD_TESTS"] = False
-        tc.cache_variables["BUILD_SHARED_LIBS"] = self.options.shared
         tc.generate()
 
     def layout(self):
@@ -69,7 +68,9 @@ class libuvConan(ConanFile):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs = collect_libs(self)
+        self.cpp_info.set_property("cmake_target_name", "uv" if self.options.shared else "uv_a")
+        self.cpp_info.libs = ["uv" if self.options.shared else "uv_a"]
+        self.cpp_info.set_property("pkg_config_name", "libuv" if self.options.shared else "libuv-static")
         if self.options.shared:
             self.cpp_info.defines = ["USING_UV_SHARED=1"]
         if self.settings.os == "Linux":
