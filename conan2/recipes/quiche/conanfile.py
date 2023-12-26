@@ -32,8 +32,13 @@ class QuicheConan(ConanFile):
                 arch = "aarch64"
             elif arch == "x86":
                 arch = "i686"
+            if arch == "armv7":
+                arch = "arm"
 
-            cargo_args = "build %s --target %s-unknown-linux-gnu" % (cargo_build_type, arch)
+            compilers_from_conf = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+            musl = "musl" in compilers_from_conf['c']
+            eabi = "eabi" if arch == "arm" else ""
+            cargo_args = "build %s --target %s-unknown-linux-%s%s" % (cargo_build_type, arch, "musl" if musl else "gnu", eabi)
         elif os == "Android":
             if "ANDROID_HOME" in environ and "ANDROID_NDK_HOME" not in environ:
                 environ["ANDROID_NDK_HOME"] = "%s/ndk-bundle" % environ["ANDROID_HOME"]
@@ -81,7 +86,7 @@ class QuicheConan(ConanFile):
             elif arch == "armv8":
                 target = "aarch64-pc-windows-msvc"
                 replace_in_file(self, join(self.source_folder, "source_subfolder/quiche", "Cargo.toml"), "ring = \"0.16\"", "ring = \"0.17\"")
-                environ["PATH"] = f"{environ["PATH"]};C:\\Program Files\\LLVM\\bin;C:\\Program Files (x86)\\LLVM\\bin"
+                environ["PATH"] = f"{environ['PATH']};C:\\Program Files\\LLVM\\bin;C:\\Program Files (x86)\\LLVM\\bin"
             else:
                 target = "i686-pc-windows-msvc"
             environ["RUSTFLAGS"] = "%s -C target-feature=+crt-static" % environ["RUSTFLAGS"]
