@@ -35,6 +35,7 @@ class QuicheConan(ConanFile):
             if arch == "armv7":
                 arch = "arm"
 
+            environ["CROSS_COMPILE"] = "1"
             compilers_from_conf = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
             musl = "musl" in compilers_from_conf['c']
             eabi = "eabi" if arch == "arm" else ""
