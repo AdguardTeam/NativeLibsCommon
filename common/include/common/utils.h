@@ -82,8 +82,8 @@ inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T, N>::value;
  */
 #define AG_FMT(FORMAT, ...) fmt::format(FMT_STRING(FORMAT), __VA_ARGS__)
 
-namespace ag::utils {
-
+namespace ag {
+namespace utils {
 /**
  * Transform string to lowercase
  */
@@ -590,4 +590,37 @@ std::string encode_to_hex(Uint8View data);
  */
 std::string_view safe_string_view(const char *cstr);
 
-} // namespace ag::utils
+} // namespace utils
+
+template <class R>
+concept Spannable = requires(R &&r) { std::span(std::forward<R>(r)); };
+
+/**
+ * @brief Converts a span of type T to a span of uint8_t.
+ *
+ * @tparam T The type of the elements in the source span. Must satisfy the Spannable concept.
+ * @param source The source span to be converted.
+ * @return A Uint8Span representing the source span as bytes.
+ */
+template <Spannable T>
+Uint8Span as_u8s(T &&source) {
+    std::span sp(std::forward<T>(source));
+    auto byte_span = std::as_writable_bytes(sp);
+    return Uint8Span(reinterpret_cast<uint8_t *>(byte_span.data()), byte_span.size());
+}
+
+/**
+ * @brief Converts a span of type T to a string_view of uint8_t.
+ *
+ * @tparam T The type of the elements in the source span. Must satisfy the Spannable concept.
+ * @param source The source span to be converted.
+ * @return A Uint8View representing the source span as bytes.
+ */
+template <Spannable T>
+Uint8View as_u8v(T &&source) {
+    std::span sp(std::forward<T>(source));
+    auto byte_span = std::as_writable_bytes(sp);
+    return Uint8View(reinterpret_cast<const uint8_t *>(byte_span.data()), byte_span.size());
+}
+
+} // namespace ag

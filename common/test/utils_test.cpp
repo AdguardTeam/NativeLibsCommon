@@ -4,6 +4,9 @@
 #include "common/socket_address.h"
 #include "common/utils.h"
 
+#include <span>
+#include <vector>
+
 TEST(utils, GenerallyWork) {
     ASSERT_TRUE(ag::utils::is_valid_ip6("::"));
     ASSERT_TRUE(ag::utils::is_valid_ip6("::1"));
@@ -143,9 +146,12 @@ TEST(utils, TestSplit2) {
 
     const TestData TEST_DATA[] = {
             {"test-string", '-', "-", {"test", "string"}, {"test", "string"}, {"test", "string"}},
-            {"another/string/with/multiple/delims", '/', "/", {"another", "string/with/multiple/delims"}, {"another/string/with/multiple", "delims"}, {"another", "string/with/multiple/delims"}},
-            {"string_with spaces", ' ', "_ ", {"string_with", "spaces"}, {"string_with", "spaces"}, {"string", "with spaces"}},
-            {"string_no_delims", 'x', "xy", {"string_no_delims", ""}, {"string_no_delims", ""}, {"string_no_delims", ""}},
+            {"another/string/with/multiple/delims", '/', "/", {"another", "string/with/multiple/delims"},
+                    {"another/string/with/multiple", "delims"}, {"another", "string/with/multiple/delims"}},
+            {"string_with spaces", ' ', "_ ", {"string_with", "spaces"}, {"string_with", "spaces"},
+                    {"string", "with spaces"}},
+            {"string_no_delims", 'x', "xy", {"string_no_delims", ""}, {"string_no_delims", ""},
+                    {"string_no_delims", ""}},
             {"", ' ', "_ ", {"", ""}, {"", ""}, {"", ""}},
             {"two__delims", '_', " _", {"two", "_delims"}, {"two_", "delims"}, {"two", "_delims"}},
             {"two delims", ' ', " _", {"two", "delims"}, {"two", "delims"}, {"two", "delims"}},
@@ -154,7 +160,7 @@ TEST(utils, TestSplit2) {
             {"//doubleAtStart", '/', "/ ", {"", "/doubleAtStart"}, {"/", "doubleAtStart"}, {"", "/doubleAtStart"}},
     };
 
-    for (const auto& data : TEST_DATA) {
+    for (const auto &data : TEST_DATA) {
         auto split_res = ag::utils::split2_by(data.original_str, data.single_delim);
         EXPECT_EQ(split_res, data.result);
 
@@ -163,5 +169,41 @@ TEST(utils, TestSplit2) {
 
         auto split_by_any_res = ag::utils::split2_by_any_of(data.original_str, data.multiple_delim);
         EXPECT_EQ(split_by_any_res, data.any_result);
+    }
+}
+
+TEST(Uint8SpanTest, VectorTest) {
+    std::vector<uint8_t> vec = {1, 2, 3, 4, 42};
+    const auto vec_span = ag::as_u8s(vec);
+    ASSERT_EQ(vec_span.size(), vec.size());
+    for (size_t i = 0; i < vec.size(); ++i) {
+        ASSERT_EQ(vec_span[i], vec[i]);
+    }
+}
+
+TEST(Uint8SpanTest, StringTest) {
+    std::string str = "Hello, world!";
+    const auto str_span = ag::as_u8s(str);
+    ASSERT_EQ(str_span.size(), str.size());
+    for (size_t i = 0; i < str.size(); ++i) {
+        ASSERT_EQ(str_span[i], static_cast<uint8_t>(str[i]));
+    }
+}
+
+TEST(Uint8ViewTest, VectorTest) {
+    std::vector<uint8_t> vec = {1, 2, 3, 4, 42};
+    const auto vec_view = ag::as_u8v(vec);
+    ASSERT_EQ(vec_view.size(), vec.size());
+    for (size_t i = 0; i < vec.size(); ++i) {
+        ASSERT_EQ(vec_view[i], vec[i]);
+    }
+}
+
+TEST(Uint8ViewTest, StringTest) {
+    std::string str = "Hello, world!";
+    const auto str_view = ag::as_u8v(str);
+    ASSERT_EQ(str_view.size(), str.size());
+    for (size_t i = 0; i < str.size(); ++i) {
+        ASSERT_EQ(str_view[i], static_cast<uint8_t>(str[i]));
     }
 }

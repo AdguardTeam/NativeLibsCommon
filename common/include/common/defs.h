@@ -15,6 +15,7 @@ typedef SSIZE_T ssize_t;
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -37,6 +38,7 @@ using Millis = std::chrono::milliseconds;
 using Micros = std::chrono::microseconds;
 using Nanos = std::chrono::nanoseconds;
 
+using Uint8Span = std::span<uint8_t>;
 using Uint8View = std::basic_string_view<uint8_t>;
 using Uint8Vector = std::vector<uint8_t>;
 template <typename K, typename V>
