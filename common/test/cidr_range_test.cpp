@@ -101,13 +101,13 @@ TEST_F(CidrRangeTest, testContains) {
     ASSERT_TRUE(range3.contains("192.168.0.1"));
     ASSERT_FALSE(range3.contains("193.168.0.1"));
     auto addr1 = CidrRange::get_address_from_string("2000::1").value();
-    ASSERT_TRUE(range1.contains(Uint8View(addr1.data(), addr1.size())));
+    ASSERT_TRUE(range1.contains(ag::as_u8v(addr1)));
     auto addr2 = CidrRange::get_address_from_string("5000::1").value();
-    ASSERT_FALSE(range1.contains(Uint8View(addr2.data(), addr2.size())));
+    ASSERT_FALSE(range1.contains(ag::as_u8v(addr2)));
     auto addr3 = CidrRange::get_address_from_string("192.168.0.1").value();
-    ASSERT_TRUE(range3.contains(Uint8View(addr3.data(), addr3.size())));
+    ASSERT_TRUE(range3.contains(ag::as_u8v(addr3)));
     auto addr4 = CidrRange::get_address_from_string("193.168.0.1").value();
-    ASSERT_FALSE(range3.contains(Uint8View(addr4.data(), addr4.size())));
+    ASSERT_FALSE(range3.contains(ag::as_u8v(addr4)));
 }
 
 static void test_excluding_ranges(

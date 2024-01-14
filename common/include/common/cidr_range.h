@@ -186,7 +186,7 @@ public:
             return false;
         }
 
-        return contains(Uint8View(address.value().data(), address.value().size()));
+        return contains(ag::as_u8v(address.value()));
     }
 
     /**
