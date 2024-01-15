@@ -619,7 +619,7 @@ Uint8Span as_u8s(T &&source) {
 template <Spannable T>
 Uint8View as_u8v(T &&source) {
     std::span sp(std::forward<T>(source));
-    auto byte_span = std::as_writable_bytes(sp);
+    auto byte_span = std::as_bytes(sp);
     return Uint8View(reinterpret_cast<const uint8_t *>(byte_span.data()), byte_span.size());
 }
 
