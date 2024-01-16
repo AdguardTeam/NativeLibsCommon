@@ -81,8 +81,9 @@ public:
 
     /**
      * @return String containing IP address
+     * @param ipv6_brackets Add brackets for IPv6
      */
-    [[nodiscard]] std::string host_str() const;
+    [[nodiscard]] std::string host_str(bool ipv6_brackets = false) const;
 
     /**
      * @return String containing IP address and port

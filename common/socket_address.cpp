@@ -197,10 +197,10 @@ uint16_t SocketAddress::port() const {
     }
 }
 
-std::string SocketAddress::host_str() const {
+std::string SocketAddress::host_str(bool ipv6_brackets) const {
     char host[INET6_ADDRSTRLEN] = "";
     getnameinfo(c_sockaddr(), c_socklen(), host, sizeof(host), nullptr, 0, NI_NUMERICHOST);
-    if (m_ss.ss_family == AF_INET6) {
+    if (m_ss.ss_family == AF_INET6 && ipv6_brackets) {
         return AG_FMT("[{}]", host);
     }
     return host;
@@ -209,7 +209,7 @@ std::string SocketAddress::host_str() const {
 std::string SocketAddress::str() const {
     char port[6] = "0"; // NOLINT(readability-magic-numbers)
     getnameinfo(c_sockaddr(), c_socklen(), nullptr, 0, port, sizeof(port), NI_NUMERICSERV);
-    return AG_FMT("{}:{}", host_str(), port);
+    return AG_FMT("{}:{}", host_str(/*ipv6_brackets*/ true), port);
 }
 
 bool SocketAddress::valid() const {
