@@ -67,8 +67,10 @@ struct Scheduler {
             }
             void await_resume() {}
 
-            // To test with non-copyable non-movable awaitables
             Awaitable(Scheduler *self, Millis timeout) : self{self}, millis{timeout} {}
+
+            // This is to test all_of/any_of with temporary non-copyable non-movable awaitables.
+            // RVO must be applied to move this awaitable shared state, else code will not compile.
             Awaitable(Awaitable &&) = delete;
             Awaitable(const Awaitable &) = delete;
             void operator=(Awaitable &&) = delete;
