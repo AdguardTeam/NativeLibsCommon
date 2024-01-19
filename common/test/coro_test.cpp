@@ -66,8 +66,15 @@ struct Scheduler {
                 self->schedule(h, millis);
             }
             void await_resume() {}
+
+            // To test with non-copyable non-movable awaitables
+            Awaitable(Scheduler *self, Millis timeout) : self{self}, millis{timeout} {}
+            Awaitable(Awaitable &&) = delete;
+            Awaitable(const Awaitable &) = delete;
+            void operator=(Awaitable &&) = delete;
+            void operator=(const Awaitable &) = delete;
         };
-        return Awaitable{.self = this, .millis = millis};
+        return Awaitable{this, millis};
     }
 };
 
@@ -146,13 +153,13 @@ TEST_F(CoroTest, Sleep) {
     co_await m_scheduler.sleep(SLEEP_TIME);
     ASSERT_GE(timer.elapsed<Millis>(), SLEEP_TIME);
     timer.reset();
-    co_await parallel::all_of_void(
+    co_await parallel::all_of(
             m_scheduler.sleep(SLEEP_TIME),
             m_scheduler.sleep(SLEEP_TIME * 2)
     );
     ASSERT_GE(timer.elapsed<Millis>(), SLEEP_TIME * 2);
     timer.reset();
-    co_await parallel::any_of_void(
+    co_await parallel::any_of(
             m_scheduler.sleep(SLEEP_TIME),
             m_scheduler.sleep(SLEEP_TIME * 2)
     );

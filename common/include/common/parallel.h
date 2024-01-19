@@ -20,10 +20,11 @@ struct AnyOfCondSharedState : public std::enable_shared_from_this<AnyOfCondShare
     size_t remaining = 0;
     std::optional<R> return_value{};
 
-    coro::Task<void> add(auto aw) {
+    template <typename Aw>
+    coro::Task<void> add(Aw &&aw) {
         auto weak_self = this->weak_from_this();
         this->remaining++;
-        auto r = co_await aw;
+        auto r = co_await std::forward<Aw>(aw);
         if (weak_self.expired()) {
             co_return;
         }
@@ -55,8 +56,9 @@ struct AnyOfCondAwaitable {
 
     std::shared_ptr<AnyOfCondSharedState<R>> state;
 
-    void add(auto aw) {
-        coro::run_detached(state->add(aw));
+    template <typename Aw>
+    void add(Aw &&aw) {
+        coro::run_detached(state->add(std::forward<Aw>(aw)));
     }
 
     bool await_ready() {
@@ -87,11 +89,14 @@ struct AnyOfCondAwaitable {
  * finished and matched condition.
  */
 template<typename R, typename ...Aws>
-auto any_of_cond(std::function<bool(const R &)> check_cond, Aws ...aws) {
+auto any_of_cond(std::function<bool(const R &)> check_cond, Aws &&...aws) {
     AnyOfCondAwaitable<R> ret{std::move(check_cond)};
-    (ret.add(aws), ...);
+    (ret.add(std::forward<Aws>(aws)), ...);
     return ret;
 }
+
+template <typename R>
+concept NonVoid = !std::is_void_v<R>;
 
 /**
  * Returns when any of awaitables is finished.
@@ -99,9 +104,9 @@ auto any_of_cond(std::function<bool(const R &)> check_cond, Aws ...aws) {
  * @tparam R Return type of every awaitable in parameters.
  * @return Awaitable with return type R.
  */
-template<typename R, typename Aw, typename ...Aws>
-coro::Task<R> any_of(Aw aw, Aws ...aws) {
-    std::optional<R> ret = co_await any_of_cond<R>(nullptr, aw, aws...);
+template<NonVoid R, typename Aw, typename ...Aws>
+coro::Task<R> any_of(Aw &&aw, Aws &&...aws) {
+    std::optional<R> ret = co_await any_of_cond<R>(nullptr, std::forward<Aw>(aw), std::forward<Aws>(aws)...);
     if constexpr (std::is_move_constructible_v<R>) {
         co_return std::move(ret.value());
     } else {
@@ -116,11 +121,11 @@ coro::Task<R> any_of(Aw aw, Aws ...aws) {
  * @return Awaitable with void return type.
  */
 template<typename ...Awaitables>
-coro::Task<void> any_of_void(Awaitables ...awaitables) {
-    co_await any_of<bool>([](Awaitables a) -> coro::Task<bool> {
-        co_await a;
+coro::Task<void> any_of(Awaitables &&...awaitables) {
+    co_await any_of<bool>([](Awaitables &&a) -> coro::Task<bool> {
+        co_await std::forward<Awaitables>(a);
         co_return true;
-    }(std::move(awaitables))...);
+    }(std::forward<Awaitables>(awaitables))...);
     co_return;
 }
 
@@ -131,9 +136,10 @@ struct AllOfSharedState {
     size_t remaining = 0;
     std::vector<R> return_values{};
 
-    coro::Task<void> add(auto aw) {
+    template <typename Aw>
+    coro::Task<void> add(Aw &&aw) {
         this->remaining++;
-        auto r = co_await aw;
+        auto r = co_await std::forward<Aw>(aw);
         std::unique_lock l(this->mutex);
         this->return_values.emplace_back(std::move(r));
         if (--this->remaining == 0) {
@@ -151,8 +157,9 @@ template<typename R>
 struct AllOfAwaitable {
     std::shared_ptr<AllOfSharedState<R>> state;
 
-    void add(auto aw) {
-        coro::run_detached(state->add(aw));
+    template <typename Aw>
+    void add(Aw &&aw) {
+        coro::run_detached(state->add(std::forward<Aw>(aw)));
     }
 
     bool await_ready() {
@@ -180,10 +187,10 @@ struct AllOfAwaitable {
  * @tparam R Return type of every awaitable in parameters.
  * @return Awaitable with return type R
  */
-template<typename R, typename ...Aws>
-auto all_of(Aws ...aws) {
+template<NonVoid R, typename ...Aws>
+auto all_of(Aws &&...aws) {
     AllOfAwaitable<R> ret = {.state = std::make_shared<AllOfSharedState<R>>()};
-    (ret.add(std::move(aws)), ...);
+    (ret.add(std::forward<Aws>(aws)), ...);
     return ret;
 }
 
@@ -193,11 +200,11 @@ auto all_of(Aws ...aws) {
  * @return Awaitable with void return type.
  */
 template<typename ...Awaitables>
-coro::Task<void> all_of_void(Awaitables ...awaitables) {
-    (void) co_await all_of<bool>([](Awaitables a) -> coro::Task<bool> {
-        co_await a;
+coro::Task<void> all_of(Awaitables &&...awaitables) {
+    (void) co_await all_of<bool>([](Awaitables &&a) -> coro::Task<bool> {
+        co_await std::forward<Awaitables>(a);
         co_return true;
-    }(std::move(awaitables))...);
+    }(std::forward<Awaitables>(awaitables))...);
     co_return;
 }
 
