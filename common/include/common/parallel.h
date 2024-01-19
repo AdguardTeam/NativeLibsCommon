@@ -126,7 +126,7 @@ auto any_of(Aw &&aw, Aws &&...aws) {
  * @return Awaitable with void return type.
  */
 template<typename ...Aws>
-coro::Task<void> any_of(Aws &&...aws) {
+auto any_of(Aws &&...aws) {
     // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
     auto any_of_cond_awaitable = any_of<bool>([](Aws &&a) -> coro::Task<bool> {
         co_await std::forward<Aws>(a);
