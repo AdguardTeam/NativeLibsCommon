@@ -98,6 +98,9 @@ auto any_of_cond(std::function<bool(const R &)> check_cond, Aws &&...aws) {
 template <typename R>
 concept NonVoid = !std::is_void_v<R>;
 
+template <typename R>
+concept Void = std::is_void_v<R>;
+
 /**
  * Returns when any of awaitables is finished.
  * Remaining awaitables will be completed anyway, but without continuation.
@@ -109,14 +112,12 @@ auto any_of(Aw &&aw, Aws &&...aws) {
     // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
     auto any_of_cond_awaitable = any_of_cond<R>(nullptr, std::forward<Aw>(aw), std::forward<Aws>(aws)...);
 
-    return [](auto any_of_cond_awaitable) -> coro::Task<R> {
-        std::optional<R> ret = co_await any_of_cond_awaitable;
-        if constexpr (std::is_move_constructible_v<R>) {
-            co_return std::move(ret.value());
-        } else {
-            co_return ret.value();
-        }
+    auto await_and_transform_result = [](auto any_of_cond_awaitable) -> coro::Task<R> {
+        R ret = (co_await any_of_cond_awaitable).value();
+        co_return ret;
     }(std::move(any_of_cond_awaitable));
+
+    return await_and_transform_result;
 }
 
 /**
@@ -125,7 +126,7 @@ auto any_of(Aw &&aw, Aws &&...aws) {
  * Return type of awaitables in parameters may be any.
  * @return Awaitable with void return type.
  */
-template<typename ...Aws>
+template<Void R, typename ...Aws>
 auto any_of(Aws &&...aws) {
     // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
     auto any_of_cond_awaitable = any_of<bool>([](Aws &&a) -> coro::Task<bool> {
@@ -133,10 +134,12 @@ auto any_of(Aws &&...aws) {
         co_return true;
     }(std::forward<Aws>(aws))...);
 
-    return [](auto any_of_cond_awaitable) -> coro::Task<void> {
-        co_await any_of_cond_awaitable;
+    auto await_and_transform_result = [](auto any_of_cond_awaitable) -> coro::Task<R> {
+        (void) co_await any_of_cond_awaitable;
         co_return;
     }(std::move(any_of_cond_awaitable));
+
+    return await_and_transform_result;
 }
 
 template<typename R>
@@ -209,7 +212,7 @@ auto all_of(Aws &&...aws) {
  * Return type of awaitables in parameters may be any.
  * @return Awaitable with void return type.
  */
-template<typename ...Awaitables>
+template<Void R, typename ...Awaitables>
 auto all_of(Awaitables &&...awaitables) {
     // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
     auto all_of_awaitable = all_of<bool>([](Awaitables &&a) -> coro::Task<bool> {
@@ -217,10 +220,12 @@ auto all_of(Awaitables &&...awaitables) {
         co_return true;
     }(std::forward<Awaitables>(awaitables))...);
 
-    return [](auto all_of_awaitable) -> coro::Task<void> {
-        co_await all_of_awaitable;
+    auto await_and_transform_result = [](auto all_of_awaitable) -> coro::Task<R> {
+        (void) co_await all_of_awaitable;
         co_return;
     }(std::move(all_of_awaitable));
+
+    return await_and_transform_result;
 }
 
 } // namespace ag::parallel

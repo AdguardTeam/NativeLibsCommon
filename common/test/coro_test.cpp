@@ -155,13 +155,13 @@ TEST_F(CoroTest, Sleep) {
     co_await m_scheduler.sleep(SLEEP_TIME);
     ASSERT_GE(timer.elapsed<Millis>(), SLEEP_TIME);
     timer.reset();
-    co_await parallel::all_of(
+    co_await parallel::all_of<void>(
             m_scheduler.sleep(SLEEP_TIME),
             m_scheduler.sleep(SLEEP_TIME * 2)
     );
     ASSERT_GE(timer.elapsed<Millis>(), SLEEP_TIME * 2);
     timer.reset();
-    co_await parallel::any_of(
+    co_await parallel::any_of<void>(
             m_scheduler.sleep(SLEEP_TIME),
             m_scheduler.sleep(SLEEP_TIME * 2)
     );
