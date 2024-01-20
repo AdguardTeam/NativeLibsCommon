@@ -89,7 +89,7 @@ struct AnyOfCondAwaitable {
  */
 template<typename R, typename ...Aws>
 auto any_of_cond(std::function<bool(const R &)> check_cond, Aws &&...aws) {
-    // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
+    // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     AnyOfCondAwaitable<R> ret{std::move(check_cond)};
     (ret.add(std::forward<Aws>(aws)), ...);
     return ret;
@@ -109,7 +109,7 @@ concept Void = std::is_void_v<R>;
  */
 template<NonVoid R, typename Aw, typename ...Aws>
 auto any_of(Aw &&aw, Aws &&...aws) {
-    // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
+    // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     auto any_of_cond_awaitable = any_of_cond<R>(nullptr, std::forward<Aw>(aw), std::forward<Aws>(aws)...);
 
     auto await_and_transform_result = [](auto any_of_cond_awaitable) -> coro::Task<R> {
@@ -128,7 +128,7 @@ auto any_of(Aw &&aw, Aws &&...aws) {
  */
 template<Void R, typename ...Aws>
 auto any_of(Aws &&...aws) {
-    // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
+    // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     auto any_of_cond_awaitable = any_of<bool>([](Aws &&a) -> coro::Task<bool> {
         co_await std::forward<Aws>(a);
         co_return true;
@@ -201,7 +201,7 @@ struct AllOfAwaitable {
  */
 template<NonVoid R, typename ...Aws>
 auto all_of(Aws &&...aws) {
-    // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
+    // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     AllOfAwaitable<R> ret = {.state = std::make_shared<AllOfSharedState<R>>()};
     (ret.add(std::forward<Aws>(aws)), ...);
     return ret;
@@ -214,7 +214,7 @@ auto all_of(Aws &&...aws) {
  */
 template<Void R, typename ...Awaitables>
 auto all_of(Awaitables &&...awaitables) {
-    // Execute this immediately to copy/move all awaitables info shared state - parameters may be temporary
+    // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     auto all_of_awaitable = all_of<bool>([](Awaitables &&a) -> coro::Task<bool> {
         co_await std::forward<Awaitables>(a);
         co_return true;
