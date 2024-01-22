@@ -113,7 +113,7 @@ auto any_of(Aw &&aw, Aws &&...aws) {
     auto any_of_cond_awaitable = any_of_cond<R>(nullptr, std::forward<Aw>(aw), std::forward<Aws>(aws)...);
 
     auto await_and_transform_result = [](auto any_of_cond_awaitable) -> coro::Task<R> {
-        R ret = (co_await any_of_cond_awaitable).value();
+        R ret = std::move(co_await any_of_cond_awaitable).value();
         co_return ret;
     }(std::move(any_of_cond_awaitable));
 
