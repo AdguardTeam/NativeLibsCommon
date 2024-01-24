@@ -26,7 +26,7 @@ class BoringsslConan(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
-        if self.settings.os == "Windows" and self.settings.arch =="armv8":
+        if (self.settings.os == "Windows" and self.settings.arch == "armv8") or self.settings.arch == "mips":
             tc.cache_variables["OPENSSL_NO_ASM"] = "ON"
         tc.generate()
 
