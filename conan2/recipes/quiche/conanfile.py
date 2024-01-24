@@ -32,12 +32,10 @@ class QuicheConan(ConanFile):
                 arch = "aarch64"
             elif arch == "x86":
                 arch = "i686"
-            if arch == "armv7":
-                arch = "arm"
 
             compilers_from_conf = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
             musl = "musl" in compilers_from_conf['c']
-            eabi = "eabi" if arch == "arm" else ""
+            eabi = "eabi" if (arch == "arm" or arch == "armv7") else ""
             cargo_args = "build %s --target %s-unknown-linux-%s%s" % (cargo_build_type, arch, "musl" if musl else "gnu", eabi)
             environ["CROSS_COMPILE"] = ("%s-linux-musl%s" % (arch, eabi)) if musl else ("%s-unknown-linux-gnu" % (arch))
         elif os == "Android":
