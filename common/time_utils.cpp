@@ -21,7 +21,7 @@ tm gmtime_from_system_time(SystemTime timepoint) {
     _gmtime64_s(&tm_info, &t);
 #elif defined(ANDROID) && !defined(__LP64__)
     gmtime64_r(&t, &tm_info);
-#elif defined(__LP64__)
+#elif defined(__LP64__) || _REDIR_TIME64
     time_t ttime = t;
     gmtime_r(&ttime, &tm_info);
 #else
@@ -36,7 +36,7 @@ SystemTime system_time_from_gmtime(const tm &tm_info) {
             _mkgmtime64(const_cast<tm *>(&tm_info))
 #elif defined(ANDROID) && !defined(__LP64__)
             timegm64(const_cast<tm *>(&tm_info))
-#elif defined(__LP64__)
+#elif defined(__LP64__) || _REDIR_TIME64
             timegm(const_cast<tm *>(&tm_info))
 #else
 #error "Unsupported platform"
@@ -56,7 +56,7 @@ tm localtime_from_system_time(SystemTime timepoint) {
     return {};
 #elif defined(ANDROID) && !defined(__LP64__)
     localtime64_r(&t, &tm_info);
-#elif defined(__LP64__)
+#elif defined(__LP64__) || _REDIR_TIME64
     time_t tt = t;
     localtime_r(&tt, &tm_info);
 #else

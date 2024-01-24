@@ -15,7 +15,7 @@ protected:
     }
 };
 
-#ifndef _WIN32
+#if !defined(_WIN32) && defined(__SIZEOF_INT128__)
 static __int128_t number_of_ips(const CidrRange &range) {
     int pow = range.get_address().size() * 8 - range.get_prefix_len();
     return ((__int128_t) 1) << pow;
@@ -28,7 +28,7 @@ static __int128_t number_of_ips(const std::vector<CidrRange> &ranges) {
     }
     return result;
 }
-#endif // _WIN32
+#endif // !defined(_WIN32) && defined(__SIZEOF_INT128__)
 
 TEST_F(CidrRangeTest, testUtilMethods) {
     auto addr1 = CidrRange::get_address_from_string("127.0.0.1");
@@ -129,7 +129,7 @@ static void test_excluding_ranges(
         }
     }
 
-#ifndef _WIN32
+#if !defined(_WIN32) && defined(__SIZEOF_INT128__)
     __int128_t ips_num = number_of_ips(resulting_ranges);
     __int128_t ips_num_exc = number_of_ips(excluded_ranges);
     __int128_t ips_num_with_exc = ips_num + ips_num_exc;
@@ -145,7 +145,7 @@ static void test_excluding_ranges(
             (long long) (ips_num_with_exc >> 64), (long long) ips_num_with_exc);
 
     ASSERT_EQ(number_of_ips(original_ranges), ips_num_with_exc);
-#endif // _WIN32
+#endif // !defined(_WIN32) && defined(__SIZEOF_INT128__)
 }
 
 TEST_F(CidrRangeTest, testExcludeIpv6) {
