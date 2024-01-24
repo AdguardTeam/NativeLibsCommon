@@ -1,0 +1,31 @@
+diff --git a/crypto/CMakeLists.txt b/crypto/CMakeLists.txt
+index ef47623..8822444 100644
+--- a/crypto/CMakeLists.txt
++++ b/crypto/CMakeLists.txt
+@@ -14,10 +14,12 @@ endif()
+ 
+ set(
+   CRYPTO_SOURCES_ASM
+-  curve25519/asm/x25519-asm-arm.S
+   hrss/asm/poly_rq_mul.S
+   poly1305/poly1305_arm_asm.S
+ )
++if(ANDROID OR CMAKE_SIZEOF_VOID_P EQUAL 8)
++list(APPEND CRYPTO_SOURCES_ASM curve25519/asm/x25519-asm-arm.S)
++endif()
+ perlasm(CRYPTO_SOURCES aarch64 chacha/chacha-armv8 chacha/asm/chacha-armv8.pl)
+ perlasm(CRYPTO_SOURCES aarch64 cipher_extra/chacha20_poly1305_armv8 cipher_extra/asm/chacha20_poly1305_armv8.pl)
+ perlasm(CRYPTO_SOURCES aarch64 test/trampoline-armv8 test/asm/trampoline-armv8.pl)
+diff --git a/crypto/curve25519/internal.h b/crypto/curve25519/internal.h
+index 1420601..842c7f7 100644
+--- a/crypto/curve25519/internal.h
++++ b/crypto/curve25519/internal.h
+@@ -24,7 +24,7 @@ extern "C" {
+ #include "../internal.h"
+ 
+ 
+-#if defined(OPENSSL_ARM) && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_APPLE)
++#if defined(OPENSSL_ARM) && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_APPLE) && defined(__clang__)
+ #define BORINGSSL_X25519_NEON
+ 
+ // x25519_NEON is defined in asm/x25519-arm.S.

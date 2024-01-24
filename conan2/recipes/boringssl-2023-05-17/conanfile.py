@@ -1,6 +1,6 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import copy
+from conan.tools.files import copy, get, patch
 from os.path import join
 
 
@@ -17,8 +17,10 @@ class BoringsslConan(ConanFile):
             del self.options.fPIC
 
     def source(self):
-        self.run("git clone https://boringssl.googlesource.com/boringssl source_subfolder")
-        self.run("cd source_subfolder && git checkout dd5219451c3ce26221762a15d867edf43b463bb2")
+        get(self,
+            url="https://boringssl.googlesource.com/boringssl/+archive/dd5219451c3ce26221762a15d867edf43b463bb2.tar.gz",
+            destination="source_subfolder")
+        patch(self, patch_file=join(self.export_sources_folder, "patches/01-gcc-armv7.patch"), base_path="source_subfolder")
 
     def generate(self):
         deps = CMakeDeps(self)
