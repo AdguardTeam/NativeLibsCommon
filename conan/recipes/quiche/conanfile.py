@@ -33,6 +33,8 @@ class QuicheConan(ConanFile):
                 arch = "aarch64"
             elif arch == "x86":
                 arch = "i686"
+            elif arch == "mips":
+                arch = "mipsel"
 
             cargo_args = "build %s --target %s-unknown-linux-gnu" % (cargo_build_type, arch)
         elif os == "Android":
