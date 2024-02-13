@@ -1,4 +1,7 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.files import patch, copy
+from os.path import join
 
 
 class Ngtcp2Conan(ConanFile):
@@ -7,8 +10,7 @@ class Ngtcp2Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    generators = "cmake"
-    requires = ["openssl/boring-2021-05-11@AdguardTeam/NativeLibsCommon"]
+    requires = ["openssl/boring-2023-05-17@adguard_team/native_libs_common"]
     exports_sources = ["CMakeLists.txt", "patches/popcnt_old_cpu_fix.patch"]
 
     def config_options(self):
@@ -18,31 +20,37 @@ class Ngtcp2Conan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
         self.run(f"cd source_subfolder && git checkout v{self.version}")
-        tools.patch(base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+        patch(self, base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
+        tc.cache_variables["OPENSSL_ROOT_DIR"] = self.dependencies["openssl"].package_folder.replace("\\", "/")
+        tc.cache_variables["ENABLE_SHARED_LIB"] = "OFF"
+        tc.cache_variables["ENABLE_OPENSSL"] = "OFF"
+        tc.cache_variables["ENABLE_BORINGSSL"] = "ON"
+        tc.cache_variables["HAVE_SSL_IS_QUIC"] = "ON"
+        tc.cache_variables["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"] = "ON"
+        tc.generate()
+
+    def layout(self):
+        cmake_layout(self)
 
     def build(self):
         cmake = CMake(self)
-        cmake.definitions["ENABLE_SHARED_LIB"] = "OFF"
-        cmake.definitions["ENABLE_OPENSSL"] = "OFF"
-        cmake.definitions["ENABLE_BORINGSSL"] = "ON"
-        cmake.definitions["HAVE_SSL_IS_QUIC"] = "ON"
-        cmake.definitions["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"] = "ON"
         cmake.configure()
         cmake.build()
 
-        # Explicit way:
-        # self.run('cmake %s/hello %s'
-        #          % (self.source_folder, cmake.command_line))
-        # self.run("cmake --build . %s" % cmake.build_config)
-
     def package(self):
-        self.copy("*.h", dst="include", src="source_subfolder/lib/includes")
-        self.copy("*.h", dst="include", src="source_subfolder/crypto/includes")
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.dylib", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
+        copy(self, "*.h", src=join(self.build_folder, "source_subfolder/lib/includes"), dst=join(self.package_folder, "include"), keep_path = True)
+        copy(self, "*.h", src=join(self.source_folder, "source_subfolder/lib/includes"), dst=join(self.package_folder, "include"), keep_path = True)
+        copy(self, "*.h", src=join(self.source_folder, "source_subfolder/crypto/includes"), dst=join(self.package_folder, "include"), keep_path = True)
+        copy(self, "*.lib", self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
+        copy(self, "*.a", self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
+        copy(self, "*.dll", self.build_folder, dst=join(self.package_folder, "bin"), keep_path=False)
+        copy(self, "*.so", self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
+        copy(self, "*.dylib", self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
 
     def package_info(self):
         self.cpp_info.libs = ["ngtcp2", "ngtcp2_crypto_boringssl"]

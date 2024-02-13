@@ -16,7 +16,7 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_CXX_FLAGS="-stdlib=libc++"  \
-    ..               
+    ..
 ```
 
 ### Windows
@@ -26,7 +26,7 @@ mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ^
     -DCMAKE_C_FLAGS_DEBUG=/MT ^
     -DCMAKE_CXX_FLAGS_DEBUG=/MT ^
-    -DCONAN_HOST_PROFILE="../conan2/profiles/windows-msvc.jinja;auto-cmake" ^
+    -DCONAN_HOST_PROFILE="../conan/profiles/windows-msvc.jinja;auto-cmake" ^
     -G Ninja ^
     ..
 ```
@@ -38,7 +38,7 @@ mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
-    -DCONAN_HOST_PROFILE="../conan2/profiles/apple.jinja;auto-cmake" \
+    -DCONAN_HOST_PROFILE="../conan/profiles/apple.jinja;auto-cmake" \
     -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
     ..
 ```

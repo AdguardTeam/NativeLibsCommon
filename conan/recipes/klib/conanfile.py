@@ -1,4 +1,6 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.files import copy
+from os.path import join
 
 
 class KlibConan(ConanFile):
@@ -7,7 +9,6 @@ class KlibConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    generators = "cmake"
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -18,5 +19,5 @@ class KlibConan(ConanFile):
         self.run("cd klib && git checkout e1b2a40de8e2a46c05cc5dac9c6e5e8d15ae722c")
 
     def package(self):
-        self.copy("khash.h", dst="include", src="klib")
-        self.copy("kvec.h", dst="include", src="klib")
+        copy(self, "khash.h", src=join(self.source_folder, "klib"), dst=join(self.package_folder, "include"), keep_path = True)
+        copy(self, "kvec.h", src=join(self.source_folder, "klib"), dst=join(self.package_folder, "include"), keep_path = True)

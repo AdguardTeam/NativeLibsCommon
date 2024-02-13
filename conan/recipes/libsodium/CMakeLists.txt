@@ -19,8 +19,6 @@ message("SODIUM_LIBRARY_VERSION_MAJOR: ${SODIUM_LIBRARY_VERSION_MAJOR}")
 message("SODIUM_LIBRARY_VERSION_MINOR: ${SODIUM_LIBRARY_VERSION_MINOR}")
 
 project(sodium VERSION ${VERSION} LANGUAGES C ASM)
-include(${CMAKE_BINARY_DIR}/../conanbuildinfo.cmake)
-conan_basic_setup()
 
 add_compile_options(-w)
 
@@ -406,8 +404,6 @@ else ()
     if (HAVE_AVX512FINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_AVX512FINTRIN_H=1)
         target_compile_options(${PROJECT_NAME} PRIVATE -mavx512f)
-    else ()
-        target_compile_options(${PROJECT_NAME} PRIVATE -mno-avx512f)
     endif ()
 
     check_c_source_compiles(

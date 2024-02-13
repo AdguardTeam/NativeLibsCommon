@@ -24,7 +24,7 @@ import yaml
 
 work_dir = os.path.dirname(os.path.realpath(__file__))
 project_dir = os.path.dirname(work_dir)
-recipes_dir = os.path.join(project_dir, 'conan2', 'recipes')
+recipes_dir = os.path.join(project_dir, 'conan', 'recipes')
 
 with open(os.path.join(project_dir, "conandata.yml"), "r") as file:
     yaml_data = yaml.safe_load(file)

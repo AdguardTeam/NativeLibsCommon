@@ -1,5 +1,6 @@
-from conans import ConanFile, CMake, tools
-
+from conan import ConanFile
+from conan.tools.files import copy
+from os.path import join
 
 class DetoursConan(ConanFile):
     name = "detours"
@@ -7,7 +8,6 @@ class DetoursConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    generators = "cmake"
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -21,9 +21,9 @@ class DetoursConan(ConanFile):
         self.run("cd source_subfolder\\src && set CC=cl && set CXX=cl && nmake")
 
     def package(self):
-        self.copy("*.h", dst="include", src="source_subfolder/include")
-        self.copy("*detours.lib", dst="lib", keep_path=False)
-        self.copy("*detours.pdb", dst="lib", keep_path=False)
+        copy(self, "*.h", src=join(self.source_folder, "source_subfolder/include"), dst=join(self.package_folder, "include"), keep_path = True)
+        copy(self, "*detours.lib", src=self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
+        copy(self, "*detours.pdb", src=self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
 
     def package_info(self):
         self.cpp_info.libs = ["detours"]
