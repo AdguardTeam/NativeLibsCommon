@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "common/logger.h"
+#include "common/socket_address.h"
 
 class FileHandler {
 public:
@@ -68,4 +69,15 @@ TEST(Logger, Works) {
     ag::Logger::set_callback(logtofile);
     dbglog(logger, "{}", "Hello, world!");
     ag::Logger::set_callback(ag::Logger::LOG_TO_STDERR);
+}
+
+TEST(Logger, SocketAddressFormatter) {
+#ifdef _WIN32
+    WSADATA wsa_data = {};
+    ASSERT_EQ(0, WSAStartup(MAKEWORD(2, 2), &wsa_data));
+#endif
+
+    ag::Logger logger("TEST_LOGGER");
+    infolog(logger, "{}", ag::SocketAddress{"1.2.3.4:443"});
+    infolog(logger, "{}", ag::SocketAddress{"[12:03:04:05::0067]:443"});
 }

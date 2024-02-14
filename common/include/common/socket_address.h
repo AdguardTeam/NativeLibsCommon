@@ -1,11 +1,13 @@
 #pragma once
 
+#include <string>
 #include <string_view>
 #include <vector>
 
 #ifdef __ANDROID__
 #include <netinet/in.h>  // not building on android if not included
 #endif                   // __ANDROID__
+
 #include <event2/util.h> // for sockaddr, sockaddr_storage, getaddrinfo, getnameinfo
 
 #include "common/defs.h"
@@ -136,6 +138,11 @@ private:
     [[nodiscard]] ag::SocketAddress to_ipv4_unmapped() const;
     [[nodiscard]] ag::SocketAddress to_ipv4_mapped() const;
 };
+
+// Provide an 'fmt' formatter.
+inline auto format_as(const SocketAddress &address) {
+    return address.str();
+}
 
 } // namespace ag
 
