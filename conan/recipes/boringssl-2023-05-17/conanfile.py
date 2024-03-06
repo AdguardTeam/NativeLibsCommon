@@ -21,6 +21,8 @@ class BoringsslConan(ConanFile):
             url="https://boringssl.googlesource.com/boringssl/+archive/dd5219451c3ce26221762a15d867edf43b463bb2.tar.gz",
             destination="source_subfolder")
         patch(self, patch_file=join(self.export_sources_folder, "patches/01-gcc-armv7.patch"), base_path="source_subfolder")
+        patch(self, patch_file=join(self.export_sources_folder, "patches/02-mips.patch"), base_path="source_subfolder")
+        patch(self, patch_file=join(self.export_sources_folder, "patches/03-sni_last_ext_permutation.patch"), base_path="source_subfolder")
 
     def generate(self):
         deps = CMakeDeps(self)
