@@ -24,6 +24,9 @@ namespace ag {
 
 namespace http {
 
+// OpenSSL alerts will be prepended with 1000 to distinguish from QUIC and HTTP/3 error codes
+static constexpr auto SSL_ALERT_CODES_START = 1000;
+
 struct Http3Settings {
     enum CongestionControlAlgorithm {
         RENO,
@@ -127,7 +130,7 @@ protected:
     explicit Http3Session(const Http3Settings &settings);
 
     Error<Http3Error> initialize_session(
-            const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, ngtcp2_cid client_scid, ngtcp2_cid client_dcid);
+            const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl, ngtcp2_cid client_scid, ngtcp2_cid client_dcid);
 
     int input_impl(const QuicNetworkPath &path, Uint8View chunk);
     Error<Http3Error> submit_trailer_impl(uint64_t stream_id, const Headers &headers);
@@ -159,7 +162,7 @@ protected:
     UniquePtr<ngtcp2_conn, &ngtcp2_conn_del> m_quic_conn;
     UniquePtr<nghttp3_conn, &nghttp3_conn_del> m_http_conn;
     ngtcp2_crypto_conn_ref m_ref;
-    bssl::UniquePtr<SSL> m_ssl;
+    ag::UniquePtr<SSL, &SSL_free> m_ssl;
     std::unordered_map<uint64_t, Stream> m_streams;
     Http3Settings m_settings;
     ngtcp2_ccerr m_last_error{};
@@ -315,7 +318,7 @@ public:
      * calls `input()` with the same packet and `flush()` after that.
      */
     static Result<std::unique_ptr<Http3Server>, Http3Error> accept(const Http3Settings &settings,
-            const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, Uint8View packet);
+            const Callbacks &handler, const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl, Uint8View packet);
     /**
      * Forge retry packet to send to peer.
      * @return Forged packet if successful, error otherwise.
@@ -510,7 +513,7 @@ public:
      * calls `flush()` after that.
      */
     static Result<std::unique_ptr<Http3Client>, Http3Error> connect(const Http3Settings &settings,
-            const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl);
+            const Callbacks &handler, const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl);
     /**
      * Process a raw data chunk raising necessary callbacks.
      * @return Some error if failed, null otherwise.

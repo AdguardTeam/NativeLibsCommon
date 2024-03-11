@@ -28,8 +28,8 @@ class Ngtcp2Conan(ConanFile):
         tc = CMakeToolchain(self)
         tc.cache_variables["OPENSSL_ROOT_DIR"] = self.dependencies["openssl"].package_folder.replace("\\", "/")
         tc.cache_variables["ENABLE_SHARED_LIB"] = "OFF"
-        tc.cache_variables["ENABLE_OPENSSL"] = "OFF"
-        tc.cache_variables["ENABLE_BORINGSSL"] = "ON"
+        tc.cache_variables["ENABLE_OPENSSL"] = "boringssl" not in str(self.dependencies["openssl"].ref.version)
+        tc.cache_variables["ENABLE_BORINGSSL"] = "boringssl" in str(self.dependencies["openssl"].ref.version)
         tc.cache_variables["HAVE_SSL_IS_QUIC"] = "ON"
         tc.cache_variables["HAVE_SSL_SET_QUIC_EARLY_DATA_CONTEXT"] = "ON"
         tc.generate()
@@ -53,5 +53,8 @@ class Ngtcp2Conan(ConanFile):
         copy(self, "*.dylib", self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["ngtcp2", "ngtcp2_crypto_boringssl"]
+        if "boringssl" in str(self.dependencies["openssl"].ref.version):
+            self.cpp_info.libs = ["ngtcp2", "ngtcp2_crypto_boringssl"]
+        else:
+            self.cpp_info.libs = ["ngtcp2", "ngtcp2_crypto_quictls"]
         self.cpp_info.defines.append("NGTCP2_STATICLIB=1")

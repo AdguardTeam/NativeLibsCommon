@@ -17,8 +17,14 @@
 #include <event2/event.h>
 #include <event2/util.h>
 #include <gtest/gtest.h>
-#include <ngtcp2/ngtcp2_crypto_boringssl.h>
+#include <openssl/err.h>
 #include <openssl/ssl.h>
+
+#ifdef OPENSSL_IS_BORINGSSL
+#include <ngtcp2/ngtcp2_crypto_boringssl.h>
+#else
+#include <ngtcp2/ngtcp2_crypto_quictls.h>
+#endif
 
 #include "common/http/http3.h"
 #include "common/logger.h"
@@ -40,7 +46,7 @@ protected:
 
     ServerSide server_side;
     ag::SocketAddress bound_addr{"127.0.0.1:0"};
-    bssl::UniquePtr<SSL> ssl;
+    ag::UniquePtr<SSL, &SSL_free> ssl;
     ag::UniquePtr<event_base, &event_base_free> base{event_base_new()};
     bool wait_readable_timer_expired = false;
     ag::UniquePtr<event, &event_free> expiry_timer{event_new(
@@ -83,9 +89,13 @@ protected:
 
         ASSERT_NO_FATAL_FAILURE(server_side.run());
 
-        bssl::UniquePtr<SSL_CTX> ssl_ctx{SSL_CTX_new(TLS_server_method())};
+        ag::UniquePtr<SSL_CTX, &SSL_CTX_free> ssl_ctx{SSL_CTX_new(TLS_server_method())};
         ASSERT_NE(ssl_ctx, nullptr) << ERR_error_string(ERR_get_error(), nullptr);
+#ifdef OPENSSL_IS_BORINGSSL
         ASSERT_EQ(ngtcp2_crypto_boringssl_configure_client_context(ssl_ctx.get()), 0);
+#else
+        ASSERT_EQ(ngtcp2_crypto_quictls_configure_client_context(ssl_ctx.get()), 0);
+#endif
         SSL_CTX_set_info_callback(ssl_ctx.get(), [](const SSL *ssl, int type_, int value) {
             uint32_t type = type_;
             std::string_view where = "undefined";

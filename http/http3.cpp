@@ -2,6 +2,7 @@
 #include <cassert>
 #include <utility>
 
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
@@ -490,7 +491,7 @@ static void log_http3(const char *format, va_list args) {
 
 template <typename T>
 Error<Http3Error> Http3Session<T>::initialize_session(
-        const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, ngtcp2_cid client_scid, ngtcp2_cid client_dcid) {
+        const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl, ngtcp2_cid client_scid, ngtcp2_cid client_dcid) {
     if (ssl == nullptr) {
         return make_error(Http3Error{NGTCP2_ERR_INTERNAL}, "SSL handle mustn't be null");
     }
@@ -1033,7 +1034,7 @@ void Http3Session<T>::handle_rx_connection_close() {
         log_id(dbg, m_id, "Connection closed due to transport error 0x{:x}: '{}'", error->error_code,
                 std::string_view{(char *) error->reason, error->reasonlen});
         uint64_t tls_alert = error->error_code & 0xffu; // NOLINT(*-magic-numbers)
-        code = SSL_R_SSLV3_ALERT_CLOSE_NOTIFY + tls_alert;
+        code = SSL_ALERT_CODES_START + tls_alert;
         break;
     }
     case NGTCP2_CCERR_TYPE_APPLICATION: {
@@ -1115,7 +1116,7 @@ Http3Server::Http3Server(PrivateAccess, const Http3Settings &settings, const Cal
 Http3Server::~Http3Server() = default;
 
 Result<std::unique_ptr<Http3Server>, Http3Error> Http3Server::accept(const Http3Settings &settings,
-        const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl, Uint8View packet) {
+        const Callbacks &handler, const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl, Uint8View packet) {
     ngtcp2_pkt_hd hd{};
 
     if (int status = ngtcp2_accept(&hd, packet.data(), packet.size()); status != NGTCP2_NO_ERROR) {
@@ -1248,8 +1249,8 @@ Error<Http3Error> Http3Server::reset_stream(uint64_t stream_id, int error_code) 
 }
 
 void Http3Server::set_session_close_error(int error_code, Uint8View reason) {
-    if (error_code > SSL_R_SSLV3_ALERT_CLOSE_NOTIFY) {
-        int alert_code = error_code - SSL_R_SSLV3_ALERT_CLOSE_NOTIFY;
+    if (error_code > SSL_ALERT_CODES_START) {
+        int alert_code = error_code - SSL_ALERT_CODES_START;
         std::string_view alert_string = SSL_alert_desc_string_long(alert_code);
         ngtcp2_ccerr_set_tls_alert(
                 &m_last_error, alert_code, (const uint8_t *) alert_string.data(), alert_string.size());
@@ -1284,7 +1285,7 @@ Http3Client::Http3Client(PrivateAccess, const Http3Settings &settings, const Cal
 }
 
 Result<std::unique_ptr<Http3Client>, Http3Error> Http3Client::connect(const Http3Settings &settings,
-        const Callbacks &handler, const QuicNetworkPath &path, bssl::UniquePtr<SSL> ssl) {
+        const Callbacks &handler, const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl) {
     auto self = std::make_unique<Http3Client>(PrivateAccess{}, settings, handler);
     auto error = self->initialize_session(path, std::move(ssl), {}, {});
     if (error != nullptr) {
@@ -1381,8 +1382,8 @@ Error<Http3Error> Http3Client::reset_stream(uint64_t stream_id, int error_code) 
 }
 
 void Http3Client::set_session_close_error(int error_code, Uint8View reason) {
-    if (error_code > SSL_R_SSLV3_ALERT_CLOSE_NOTIFY) {
-        int alert_code = error_code - SSL_R_SSLV3_ALERT_CLOSE_NOTIFY;
+    if (error_code > SSL_ALERT_CODES_START) {
+        int alert_code = error_code - SSL_ALERT_CODES_START;
         std::string_view alert_string = SSL_alert_desc_string_long(alert_code);
         ngtcp2_ccerr_set_tls_alert(
                 &m_last_error, alert_code, (const uint8_t *) alert_string.data(), alert_string.size());

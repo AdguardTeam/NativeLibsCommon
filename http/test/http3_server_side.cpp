@@ -16,11 +16,17 @@
 #include <event2/event.h>
 #include <event2/util.h>
 #include <gtest/gtest.h>
-#include <ngtcp2/ngtcp2_crypto_boringssl.h>
 #include <openssl/bio.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
+#include <openssl/err.h>
+
+#ifdef OPENSSL_IS_BORINGSSL
+#include <ngtcp2/ngtcp2_crypto_boringssl.h>
+#else
+#include <ngtcp2/ngtcp2_crypto_quictls.h>
+#endif
 
 #include "common/http/http3.h"
 #include "common/logger.h"
@@ -89,10 +95,14 @@ void Session::flush() {
     ASSERT_EQ(error, nullptr) << error->str();
 }
 
-static void make_ssl(bssl::UniquePtr<SSL> &ssl) {
-    bssl::UniquePtr<SSL_CTX> ssl_ctx{SSL_CTX_new(TLS_server_method())};
+static void make_ssl(ag::UniquePtr<SSL, &SSL_free> &ssl) {
+    ag::UniquePtr<SSL_CTX, &SSL_CTX_free> ssl_ctx{SSL_CTX_new(TLS_server_method())};
     ASSERT_NE(ssl_ctx, nullptr) << ERR_error_string(ERR_get_error(), nullptr);
+#ifdef OPENSSL_IS_BORINGSSL
     ASSERT_EQ(ngtcp2_crypto_boringssl_configure_server_context(ssl_ctx.get()), 0);
+#else
+    ASSERT_EQ(ngtcp2_crypto_quictls_configure_server_context(ssl_ctx.get()), 0);
+#endif
     SSL_CTX_set_alpn_select_cb(
             ssl_ctx.get(),
             [](SSL *, const uint8_t **out, uint8_t *out_len, const uint8_t *, unsigned, void *) {
@@ -338,7 +348,7 @@ static std::optional<std::pair<ag::SocketAddress, ag::Uint8View>> read_socket(Se
 }
 
 static void register_new_session(ServerSide *self, const ag::SocketAddress &peer, ag::Uint8View packet) {
-    bssl::UniquePtr<SSL> ssl;
+    ag::UniquePtr<SSL, &SSL_free> ssl;
     ASSERT_NO_FATAL_FAILURE(make_ssl(ssl));
 
     Session *session = self->sessions.emplace(peer, std::make_unique<Session>(self, peer)).first->second.get();
