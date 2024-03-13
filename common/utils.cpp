@@ -53,7 +53,8 @@ std::vector<std::string_view> utils::split_by(std::string_view str, std::string_
 }
 
 std::vector<std::string_view> utils::split_by(std::string_view str, int delim, bool include_empty) {
-    return split_by_any_of(str, {(char *) &delim, 1}, include_empty);
+    auto ch = (char) delim;
+    return split_by_any_of(str, {&ch, 1}, include_empty);
 }
 
 std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::string_view delim, bool include_empty) {
@@ -104,11 +105,13 @@ static std::array<std::string_view, 2> split2(std::string_view str, std::string_
 }
 
 std::array<std::string_view, 2> utils::split2_by(std::string_view str, int delim) {
-    return split2(str, {(char *) &delim, 1}, false);
+    auto ch = (char) delim;
+    return split2(str, {&ch, 1}, false);
 }
 
 std::array<std::string_view, 2> utils::rsplit2_by(std::string_view str, int delim) {
-    return split2(str, {(char *) &delim, 1}, true);
+    auto ch = (char) delim;
+    return split2(str, {&ch, 1}, true);
 }
 
 std::array<std::string_view, 2> utils::split2_by_any_of(std::string_view str, std::string_view delim) {
