@@ -472,6 +472,14 @@ class OpenSSLConan(ConanFile):
             cflags.append("-fembed-bitcode")
             cxxflags.append("-fembed-bitcode")
 
+        if "mips" in str(self.settings.arch):
+            ldflags.append("-latomic")
+            compilers_from_conf = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+            if "-gcc" in compilers_from_conf['c']:
+                cross_compile = compilers_from_conf['c'][:-3]
+                os.environ["AR"] = f"{cross_compile}ar"
+                os.environ["RANLIB"] = f"{cross_compile}ranlib"
+
         config = config_template.format(
             targets=targets,
             target=self._target,
