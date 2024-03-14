@@ -212,6 +212,7 @@ class OpenSSLConan(ConanFile):
                 "armv8_32": "aarch64_asm",
                 "armv8.3": "aarch64_asm",
                 "mips": "mips32_asm",
+                "mipsel": "mips32_asm",
                 "mips64": "mips64_asm",
                 "sparc": "sparcv8_asm",
                 "sparcv9": "sparcv9_asm",
@@ -222,7 +223,7 @@ class OpenSSLConan(ConanFile):
                 "ppc64": "ppc64_asm",
                 "s390": "s390x_asm",
                 "s390x": "s390x_asm"
-            }.get(str(self.settings.os), None)
+            }.get(str(self.settings.arch), None)
 
     @property
     def _targets(self):
@@ -245,6 +246,7 @@ class OpenSSLConan(ConanFile):
             "Linux-armv8.3-*": "linux-aarch64",
             "Linux-armv8-32-*": "linux-arm64ilp32",
             "Linux-mips-*": "linux-mips32",
+            "Linux-mipsel-*": "linux-mips32",
             "Linux-mips64-*": "linux-mips64",
             "Linux-ppc32-*": "linux-ppc32",
             "Linux-ppc32le-*": "linux-pcc32",
