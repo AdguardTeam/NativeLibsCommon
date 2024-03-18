@@ -1,0 +1,20 @@
+diff --git a/include/openssl/base.h b/include/openssl/base.h
+index 3141676e1..815eaaf6f 100644
+--- a/include/openssl/base.h
++++ b/include/openssl/base.h
+@@ -138,6 +138,15 @@ extern "C" {
+ 
+ #if defined(_WIN32)
+ #define OPENSSL_WINDOWS
++
++// Avoid conflicts with Windows headers
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
++
+ #endif
+ 
+ // Trusty isn't Linux but currently defines __linux__. As a workaround, we

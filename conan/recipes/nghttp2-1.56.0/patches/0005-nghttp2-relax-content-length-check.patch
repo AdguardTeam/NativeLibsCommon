@@ -1,0 +1,13 @@
+diff --git a/lib/nghttp2_http.c b/lib/nghttp2_http.c
+index 7e63154e..52d528bb 100644
+--- a/lib/nghttp2_http.c
++++ b/lib/nghttp2_http.c
+@@ -528,7 +528,7 @@ int nghttp2_http_on_remote_end_stream(nghttp2_stream *stream) {
+   }
+ 
+   if (stream->content_length != -1 &&
+-      stream->content_length != stream->recv_content_length) {
++      stream->content_length < stream->recv_content_length) {
+     return -1;
+   }
+ 

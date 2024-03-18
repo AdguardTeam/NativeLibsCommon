@@ -1,0 +1,20 @@
+diff --git a/lib/includes/nghttp2/nghttp2.h b/lib/includes/nghttp2/nghttp2.h
+index eb220074..b4bff906 100644
+--- a/lib/includes/nghttp2/nghttp2.h
++++ b/lib/includes/nghttp2/nghttp2.h
+@@ -5837,6 +5837,15 @@ typedef void (*nghttp2_debug_vprintf_callback)(const char *format,
+ NGHTTP2_EXTERN void nghttp2_set_debug_vprintf_callback(
+     nghttp2_debug_vprintf_callback debug_vprintf_callback);
+ 
++/*
++ * Extern by AdGuard
++ */
++NGHTTP2_EXTERN int nghttp2_session_update_local_settings(
++    nghttp2_session *session, nghttp2_settings_entry *iv, size_t niv);
++
++NGHTTP2_EXTERN nghttp2_stream *nghttp2_session_get_stream(
++    nghttp2_session *session, int32_t stream_id);
++
+ #ifdef __cplusplus
+ }
+ #endif

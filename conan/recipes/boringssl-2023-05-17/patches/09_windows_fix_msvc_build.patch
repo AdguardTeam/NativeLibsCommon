@@ -1,0 +1,36 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 0bf394d77..dc7d5ae38 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -209,6 +209,9 @@ elseif(MSVC)
+               # possible loss of data
+       "C4267" # conversion from 'size_t' to 'int', possible loss of data
+       "C4706" # assignment within conditional expression
++      "C5105" # AdGuard: UB warning treated as error in WinBase.h on VS v17.3.6
++      "C5105" # AdGuard: UB warning treated as error in WinBase.h on VS v17.3.6
++      "C4746" # AdGuard: arm64 build fails with warning treated as error: "volatile access of 'kBoringSSLBinaryTag' is subject to /volatile:<iso|ms> setting; consider using __iso_volatile_load/store intrinsic functions"
+       )
+   string(REPLACE "C" " -wd" MSVC_DISABLED_WARNINGS_STR
+                             ${MSVC_DISABLED_WARNINGS_LIST})
+diff --git a/crypto/internal.h b/crypto/internal.h
+index 9edfd0e2d..a2a14fdfd 100644
+--- a/crypto/internal.h
++++ b/crypto/internal.h
+@@ -126,7 +126,7 @@
+ #endif
+ 
+ #if !defined(__cplusplus)
+-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
++#if !defined(_MSC_VER) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L // AdGuard: Newer VS (v17.3.6) defines __STDC_VERSION__ >= 201112L but doesn't implement C11 properly (e.g. there's no stdalign.h)
+ #include <stdalign.h>
+ #elif defined(_MSC_VER) && !defined(__clang__)
+ #define alignas(x) __declspec(align(x))
+@@ -161,7 +161,7 @@
+ #if !defined(__cplusplus)
+ #if !defined(OPENSSL_C11_ATOMIC) && defined(OPENSSL_THREADS) &&   \
+     !defined(__STDC_NO_ATOMICS__) && defined(__STDC_VERSION__) && \
+-    __STDC_VERSION__ >= 201112L
++    __STDC_VERSION__ >= 201112L && !defined(_MSC_VER) // AdGuard: Newer VS (v17.3.6) defines __STDC_VERSION__ >= 201112L but doesn't implement C11 properly (e.g. there's no stdalign.h)
+ #define OPENSSL_C11_ATOMIC
+ #endif
+ 

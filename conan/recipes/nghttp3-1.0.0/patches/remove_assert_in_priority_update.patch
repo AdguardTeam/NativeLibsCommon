@@ -1,0 +1,14 @@
+diff --git a/lib/nghttp3_conn.c b/lib/nghttp3_conn.c
+index 25aaf68..842696d 100644
+--- a/lib/nghttp3_conn.c
++++ b/lib/nghttp3_conn.c
+@@ -978,7 +978,9 @@ nghttp3_ssize nghttp3_conn_read_control(nghttp3_conn *conn,
+       /* We need to buffer Priority Field Value because it might be
+          fragmented. */
+       len = (size_t)nghttp3_min(rstate->left, (int64_t)(end - p));
++#if 0 // Disabled by AdGuard - sometimes server can send empty priority field
+       assert(len > 0);
++#endif
+       if (conn->rx.pri_fieldbuflen == 0 && rstate->left == (int64_t)len) {
+         /* Everything is in the input buffer.  Apply same length
+            limit we impose when buffering the field. */

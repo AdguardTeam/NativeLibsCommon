@@ -1,0 +1,28 @@
+diff --git a/lib/nghttp2_http.c b/lib/nghttp2_http.c
+index ecdeb21d..7e63154e 100644
+--- a/lib/nghttp2_http.c
++++ b/lib/nghttp2_http.c
+@@ -197,7 +197,10 @@ static int http_request_on_header(nghttp2_stream *stream, nghttp2_hd_nv *nv,
+   case NGHTTP2_TOKEN_PROXY_CONNECTION:
+   case NGHTTP2_TOKEN_TRANSFER_ENCODING:
+   case NGHTTP2_TOKEN_UPGRADE:
+-    return NGHTTP2_ERR_HTTP_HEADER;
++      // https://github.com/AdguardTeam/CoreLibs/issues/867
++      // Changed from failing to removing fields because some servers may send these headers
++      // We remove these headers because they may affect proxy logic
++      return NGHTTP2_ERR_REMOVE_HTTP_HEADER;
+   case NGHTTP2_TOKEN_TE:
+     if (!lstrieq("trailers", nv->value->base, nv->value->len)) {
+       return NGHTTP2_ERR_HTTP_HEADER;
+@@ -294,7 +297,10 @@ static int http_response_on_header(nghttp2_stream *stream, nghttp2_hd_nv *nv,
+   case NGHTTP2_TOKEN_PROXY_CONNECTION:
+   case NGHTTP2_TOKEN_TRANSFER_ENCODING:
+   case NGHTTP2_TOKEN_UPGRADE:
+-    return NGHTTP2_ERR_HTTP_HEADER;
++      // https://github.com/AdguardTeam/CoreLibs/issues/867
++      // Changed from failing to removing fields because some servers may send these headers
++      // We remove these headers because they may affect proxy logic
++      return NGHTTP2_ERR_REMOVE_HTTP_HEADER;
+   case NGHTTP2_TOKEN_TE:
+     if (!lstrieq("trailers", nv->value->base, nv->value->len)) {
+       return NGHTTP2_ERR_HTTP_HEADER;

@@ -1,8 +1,9 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import patch, copy
+from conan.tools.apple import is_apple_os
 from os.path import join
-
+import os
 
 class LibeventConan(ConanFile):
     name = "libevent"
@@ -20,14 +21,11 @@ class LibeventConan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/libevent/libevent.git source_subfolder")
         self.run("cd source_subfolder && git checkout release-2.1.11-stable")
-        patch(self, base_path="source_subfolder", patch_file="patches/0001-Maximum-evbuffer-read-configuration.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/bufferevent-prepare-fd.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/bufferevent-socket-connect-error.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/evutil_socket_error_to_string_lang.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/reinit_notifyfds.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/win32-disable-evsig.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/linux-disable-sysctl.patch")
-        patch(self, base_path="source_subfolder", patch_file="patches/fix_detect_mscv.patch")
+        # Apply all patches from the `patches` directory
+        patches_path = os.path.join("patches")
+        patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
+        for patch_name in patches:
+            patch(self, base_path="source_subfolder", patch_file=os.path.join(patches_path, patch_name))
 
     def generate(self):
         deps = CMakeDeps(self)
@@ -73,3 +71,5 @@ class LibeventConan(ConanFile):
             self.cpp_info.libs = ["event", "event_core", "event_extra", "event_openssl"]
         else:
             self.cpp_info.libs = ["event", "event_core", "event_extra", "event_pthreads", "event_openssl"]
+        if is_apple_os(self):
+            self.cpp_info.frameworks = ['Foundation', 'SystemConfiguration']

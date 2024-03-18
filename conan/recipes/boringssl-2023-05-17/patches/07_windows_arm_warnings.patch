@@ -1,0 +1,24 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 44a963f30..0bf394d77 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -203,6 +203,8 @@ elseif(MSVC)
+   set(MSVC_DISABLED_WARNINGS_LIST
+       "C4100" # 'exarg' : unreferenced formal parameter
+       "C4127" # conditional expression is constant
++      "C4132" # const object should be initialized
++      "C4146" # unary minus operator applied to unsigned type, result still unsigned
+       "C4244" # 'function' : conversion from 'int' to 'uint8_t',
+               # possible loss of data
+       "C4267" # conversion from 'size_t' to 'int', possible loss of data
+@@ -405,6 +407,10 @@ if(OPENSSL_NO_SSE2_FOR_TESTING)
+   add_definitions(-DOPENSSL_NO_SSE2_FOR_TESTING)
+ endif()
+ 
++if(WIN32 AND OPENSSL_NO_ASM)
++  add_definitions(-DOPENSSL_STATIC_ARMCAP)
++endif()
++
+ if(USE_CUSTOM_LIBCXX)
+   if(NOT CLANG)
+     message(FATAL_ERROR "USE_CUSTOM_LIBCXX only supported with Clang")

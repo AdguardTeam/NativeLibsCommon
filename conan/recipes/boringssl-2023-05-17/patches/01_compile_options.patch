@@ -1,0 +1,42 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c939e4246..44a963f30 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -511,6 +511,37 @@ add_custom_command(
+ 
+ add_library(crypto_test_data OBJECT crypto_test_data.cc)
+ 
++# Begin AdGuard compile options
++if(MSVC)
++  set(CompilerFlags
++      CMAKE_CXX_FLAGS
++      CMAKE_CXX_FLAGS_DEBUG
++      CMAKE_CXX_FLAGS_RELEASE
++      CMAKE_C_FLAGS
++      CMAKE_C_FLAGS_DEBUG
++      CMAKE_C_FLAGS_RELEASE)
++  foreach(CompilerFlag ${CompilerFlags})
++    string(REPLACE "/MDd" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
++    string(REPLACE "/MTd" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
++    string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
++    string(REPLACE "/RTC1" "" ${CompilerFlag} "${${CompilerFlag}}")
++  endforeach()
++endif()
++if(WIN32)
++  # Minimum supported Windows API is 6.1 (Windows 7)
++  add_definitions(-D_WIN32_WINNT=0x0601)
++  add_definitions(-D__USE_MINGW_ANSI_STDIO=1 -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE)
++  if(MSVC)
++    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MT /Zi /EHs-c-")
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT /Zi /EHs-c-")
++  else()
++    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing -fno-exceptions")
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing -fno-exceptions")
++    link_libraries(-static)
++  endif()
++endif()
++# End AdGuard compile options
++
+ add_subdirectory(crypto)
+ add_subdirectory(ssl)
+ add_subdirectory(ssl/test)

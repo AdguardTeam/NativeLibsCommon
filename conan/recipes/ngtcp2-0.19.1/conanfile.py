@@ -2,6 +2,7 @@ from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import patch, copy
 from os.path import join
+import os
 
 
 class Ngtcp2Conan(ConanFile):
@@ -20,7 +21,11 @@ class Ngtcp2Conan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
         self.run(f"cd source_subfolder && git checkout v{self.version}")
-        patch(self, base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+        # Apply all patches from the `patches` directory
+        patches_path = os.path.join("patches")
+        patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
+        for patch_name in patches:
+            patch(self, base_path="source_subfolder", patch_file=os.path.join(patches_path, patch_name))
 
     def generate(self):
         deps = CMakeDeps(self)

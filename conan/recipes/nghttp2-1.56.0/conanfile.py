@@ -1,7 +1,8 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import copy
+from conan.tools.files import copy, patch
 from os.path import join
+import os
 
 
 class NGHttp2Conan(ConanFile):
@@ -10,9 +11,8 @@ class NGHttp2Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    exports_sources = [
-        "CMakeLists.txt",
-    ]
+    exports_sources = ["CMakeLists.txt", "patches/*"]
+
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -21,6 +21,11 @@ class NGHttp2Conan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/nghttp2/nghttp2.git source_subfolder")
         self.run(f"cd source_subfolder && git checkout v{self.version}")
+        # Apply all patches from the `patches` directory
+        patches_path = os.path.join("patches")
+        patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
+        for patch_name in patches:
+            patch(self, base_path="source_subfolder", patch_file=os.path.join(patches_path, patch_name))
 
     def generate(self):
         deps = CMakeDeps(self)

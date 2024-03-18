@@ -1,0 +1,25 @@
+diff --git a/evutil.c b/evutil.c
+index 09847439..3a963709 100644
+--- a/evutil.c
++++ b/evutil.c
+@@ -1688,7 +1688,19 @@ evutil_gai_strerror(int err)
+ 		return "system error";
+ 	default:
+ #if defined(USE_NATIVE_GETADDRINFO) && defined(_WIN32)
+-		return gai_strerrorA(err);
++        {
++            static char buff[GAI_STRERROR_BUFFER_SIZE];
++            (void) FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM
++                                  | FORMAT_MESSAGE_IGNORE_INSERTS
++                                  | FORMAT_MESSAGE_MAX_WIDTH_MASK,
++                                  NULL,
++                                  err,
++                                  MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
++                                  (LPSTR) buff,
++                                  GAI_STRERROR_BUFFER_SIZE,
++                                  NULL);
++            return buff;
++        }
+ #elif defined(USE_NATIVE_GETADDRINFO)
+ 		return gai_strerror(err);
+ #else

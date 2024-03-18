@@ -2,6 +2,7 @@ from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import patch, copy
 from os.path import join
+import os
 
 
 class NGHttp3Conan(ConanFile):
@@ -10,12 +11,16 @@ class NGHttp3Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {}
     default_options = {}
-    exports_sources = ["CMakeLists.txt", "patches/popcnt_old_cpu_fix.patch"]
+    exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def source(self):
         self.run("git clone https://github.com/ngtcp2/nghttp3.git source_subfolder")
         self.run(f"cd source_subfolder && git checkout v{self.version}")
-        patch(self, base_path="source_subfolder", patch_file="patches/popcnt_old_cpu_fix.patch")
+        # Apply all patches from the `patches` directory
+        patches_path = os.path.join("patches")
+        patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
+        for patch_name in patches:
+            patch(self, base_path="source_subfolder", patch_file=os.path.join(patches_path, patch_name))
 
     def generate(self):
         deps = CMakeDeps(self)

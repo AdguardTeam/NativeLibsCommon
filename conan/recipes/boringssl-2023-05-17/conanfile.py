@@ -2,7 +2,7 @@ from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import copy, get, patch
 from os.path import join
-
+import os
 
 class BoringsslConan(ConanFile):
     name = "openssl"
@@ -20,9 +20,11 @@ class BoringsslConan(ConanFile):
         get(self,
             url="https://boringssl.googlesource.com/boringssl/+archive/dd5219451c3ce26221762a15d867edf43b463bb2.tar.gz",
             destination="source_subfolder")
-        patch(self, patch_file=join(self.export_sources_folder, "patches/01-gcc-armv7.patch"), base_path="source_subfolder")
-        patch(self, patch_file=join(self.export_sources_folder, "patches/02-mips.patch"), base_path="source_subfolder")
-        patch(self, patch_file=join(self.export_sources_folder, "patches/03-sni_last_ext_permutation.patch"), base_path="source_subfolder")
+        # Apply all patches from the `patches` directory
+        patches_path = os.path.join("patches")
+        patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
+        for patch_name in patches:
+            patch(self, base_path="source_subfolder", patch_file=os.path.join(patches_path, patch_name))
 
     def generate(self):
         deps = CMakeDeps(self)

@@ -1,0 +1,56 @@
+diff --git a/lib/nghttp2_session.c b/lib/nghttp2_session.c
+index 7d71e4f8..56b90181 100644
+--- a/lib/nghttp2_session.c
++++ b/lib/nghttp2_session.c
+@@ -4190,11 +4190,20 @@ int nghttp2_session_on_request_headers_received(nghttp2_session *session,
+   }
+   session->last_recv_stream_id = frame->hd.stream_id;
+ 
+-  if (session_is_incoming_concurrent_streams_max(session)) {
+-    return session_inflate_handle_invalid_connection(
+-        session, frame, NGHTTP2_ERR_PROTO,
+-        "request HEADERS: max concurrent streams exceeded");
+-  }
++// This code is commented out because it violates https://datatracker.ietf.org/doc/html/rfc7540#section-5.1.2
++//
++// When the number of concurrent incoming streams exceeds the maximum, the connection must not be closed;
++// instead, the extra streams must be refused by sending RST_STREAM with either a REFUSED_STREAM or a
++// PROTOCOL_ERROR error code, which is done below.
++//
++// Without this patch, we erroneously close the connection when Chrome opens a number of streams before
++// receiving a SETTINGS frame with a lower limit.
++//
++//  if (session_is_incoming_concurrent_streams_max(session)) {
++//    return session_inflate_handle_invalid_connection(
++//        session, frame, NGHTTP2_ERR_PROTO,
++//        "request HEADERS: max concurrent streams exceeded");
++//  }
+ 
+   if (!session_allow_incoming_new_stream(session)) {
+     /* We just ignore stream after GOAWAY was sent */
+@@ -4281,11 +4290,20 @@ int nghttp2_session_on_push_response_headers_received(nghttp2_session *session,
+         "HEADERS: no HEADERS allowed from client in reserved state");
+   }
+ 
+-  if (session_is_incoming_concurrent_streams_max(session)) {
+-    return session_inflate_handle_invalid_connection(
+-        session, frame, NGHTTP2_ERR_PROTO,
+-        "push response HEADERS: max concurrent streams exceeded");
+-  }
++// This code is commented out because it violates https://datatracker.ietf.org/doc/html/rfc7540#section-5.1.2
++//
++// When the number of concurrent incoming streams exceeds the maximum, the connection must not be closed;
++// instead, the extra streams must be refused by sending RST_STREAM with either a REFUSED_STREAM or a
++// PROTOCOL_ERROR error code, which is done below.
++//
++// Without this patch, we erroneously close the connection when Chrome opens a number of streams before
++// receiving a SETTINGS frame with a lower limit.
++//
++//  if (session_is_incoming_concurrent_streams_max(session)) {
++//    return session_inflate_handle_invalid_connection(
++//        session, frame, NGHTTP2_ERR_PROTO,
++//        "push response HEADERS: max concurrent streams exceeded");
++//  }
+ 
+   if (!session_allow_incoming_new_stream(session)) {
+     /* We don't accept new stream after GOAWAY was sent. */

@@ -1,0 +1,33 @@
+diff --git a/crypto/boringssl/boringssl.c b/crypto/boringssl/boringssl.c
+index 50b89110..6083769a 100644
+--- a/crypto/boringssl/boringssl.c
++++ b/crypto/boringssl/boringssl.c
+@@ -451,6 +451,7 @@ int ngtcp2_crypto_read_write_crypto_data(
+       switch (err) {
+       case SSL_ERROR_WANT_READ:
+       case SSL_ERROR_WANT_WRITE:
++      case SSL_ERROR_WANT_CERTIFICATE_VERIFY: //< Added by AdGuard for asynchronous certificate verification
+         return 0;
+       case SSL_ERROR_SSL:
+         return -1;
+diff --git a/lib/ngtcp2_conn.c b/lib/ngtcp2_conn.c
+index 601c26c1..c7777b2d 100644
+--- a/lib/ngtcp2_conn.c
++++ b/lib/ngtcp2_conn.c
+@@ -10546,6 +10546,16 @@ void ngtcp2_conn_tls_handshake_completed(ngtcp2_conn *conn) {
+   }
+ }
+ 
++// Added by AdGuard for asynchronous certificate verification
++int ngtcp2_conn_resume_handshake(ngtcp2_conn *conn) {
++    int r = conn->callbacks.recv_crypto_data(conn, NGTCP2_ENCRYPTION_LEVEL_HANDSHAKE, conn->rx.offset, NULL, 0, conn->user_data);
++    if (r == 0 && (conn->flags & NGTCP2_CONN_FLAG_TLS_HANDSHAKE_COMPLETED)
++            && !(conn->flags & NGTCP2_CONN_FLAG_HANDSHAKE_COMPLETED)) {
++        conn_handshake_completed(conn);
++    }
++    return r;
++}
++
+ int ngtcp2_conn_get_handshake_completed(ngtcp2_conn *conn) {
+   return conn_is_tls_handshake_completed(conn) &&
+          (conn->flags & NGTCP2_CONN_FLAG_HANDSHAKE_COMPLETED);

@@ -1,0 +1,37 @@
+diff --git a/event.c b/event.c
+index e664e30b..c316da8d 100644
+--- a/event.c
++++ b/event.c
+@@ -1768,6 +1768,11 @@ event_process_active_single_queue(struct event_base *base,
+ 	return count;
+ }
+ 
++#ifdef __MACH__
++extern void *_objc_autoreleasePoolPush();
++extern void _objc_autoreleasePoolPop(void *pool_ctx);
++#endif
++
+ /*
+  * Active events are stored in priority queues.  Lower priorities are always
+  * process before higher priorities.  Low priority events can starve high
+@@ -1784,6 +1789,9 @@ event_process_active(struct event_base *base)
+ 	struct timeval tv;
+ 	const int maxcb = base->max_dispatch_callbacks;
+ 	const int limit_after_prio = base->limit_callbacks_after_prio;
++#ifdef __MACH__
++	void *pool_ctx = _objc_autoreleasePoolPush();
++#endif
+ 	if (base->max_dispatch_time.tv_sec >= 0) {
+ 		update_time_cache(base);
+ 		gettime(base, &tv);
+@@ -1816,6 +1824,10 @@ event_process_active(struct event_base *base)
+ done:
+ 	base->event_running_priority = -1;
+ 
++#ifdef __MACH__
++    _objc_autoreleasePoolPop(pool_ctx);
++#endif
++
+ 	return c;
+ }
+ 
