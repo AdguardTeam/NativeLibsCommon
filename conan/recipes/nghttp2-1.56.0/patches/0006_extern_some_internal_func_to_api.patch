@@ -12,7 +12,7 @@ index eb220074..b4bff906 100644
 +NGHTTP2_EXTERN int nghttp2_session_update_local_settings(
 +    nghttp2_session *session, nghttp2_settings_entry *iv, size_t niv);
 +
-+NGHTTP2_EXTERN nghttp2_stream *nghttp2_session_get_stream(
++NGHTTP2_EXTERN struct nghttp2_stream *nghttp2_session_get_stream(
 +    nghttp2_session *session, int32_t stream_id);
 +
  #ifdef __cplusplus
