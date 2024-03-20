@@ -20,6 +20,7 @@ class BoringsslConan(ConanFile):
         get(self,
             url="https://boringssl.googlesource.com/boringssl/+archive/dd5219451c3ce26221762a15d867edf43b463bb2.tar.gz",
             destination="source_subfolder")
+
         # Apply all patches from the `patches` directory
         patches_path = os.path.join("patches")
         patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
