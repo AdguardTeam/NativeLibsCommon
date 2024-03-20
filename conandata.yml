@@ -329,3 +329,5 @@ commit_hash:
     hash: "33771fbe49b5c4f062c06c29dd957aa67281c1c9"
   "6.0.11":
     hash: "d53ea4dba0a98af845fb61c296c3dec0dc74bfdd"
+  "6.0.12":
+    hash: "88c0d0fd1e8edc9ccccbe014345637156e66714e"
