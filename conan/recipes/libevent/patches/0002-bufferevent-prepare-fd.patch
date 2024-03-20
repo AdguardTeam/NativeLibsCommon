@@ -50,7 +50,7 @@ index 48cd1535..74479be2 100644
 +   @param ctx the user-specified context for this bufferevent
 +   @return 1 on success, 0 if error occurred and socket must be closed
 + */
-+typedef int (*ag_bufferevent_prepare_cb)(int fd, const struct sockaddr *sa, int salen, void *ctx);
++typedef int (*ag_bufferevent_prepare_cb)(evutil_socket_t fd, const struct sockaddr *sa, int salen, void *ctx);
 +
  /**
     A read or write callback for a bufferevent.
