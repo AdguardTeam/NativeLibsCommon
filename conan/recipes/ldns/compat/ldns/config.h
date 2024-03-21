@@ -259,7 +259,9 @@
 #define HAVE_REALLOC 1
 
 /* Define to 1 if you have the `sleep' function. */
+#ifndef _WIN32
 #define HAVE_SLEEP 1
+#endif
 
 /* Define to 1 if you have the `snprintf' function. */
 #define HAVE_SNPRINTF 1
@@ -679,6 +681,17 @@ int ldns_dname_compare_v(const void *a, const void *b);
 #define random(x) rand(x)
 #endif
 
+#ifdef _WIN32
+#include <event2/util.h>
+#define strcasecmp evutil_ascii_strcasecmp
+#define strncasecmp evutil_ascii_strncasecmp
+#define gettimeofday evutil_gettimeofday
+
+// renaming both declaration and definition of {gm,local}time_r
+#define gmtime_r ldns_gmtime_r
+#define localtime_r ldns_localtime_r
+#endif
+
 #ifndef HAVE_TIMEGM
 #include <time.h>
 time_t timegm (struct tm *tm);
@@ -729,13 +742,6 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif
 #ifndef HAVE_STRTOUL
 #define strtoul (unsigned long)strtol
-#endif
-
-#ifdef _WIN32
-int strcasecmp(const char *s1, const char *s2);
-int strncasecmp(const char *s1, const char *s2, size_t n);
-int gettimeofday(struct timeval *tp, void *tzp);
-unsigned int sleep(unsigned int);
 #endif
 
 #ifdef _WIN32

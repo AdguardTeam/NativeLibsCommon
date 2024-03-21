@@ -44,7 +44,6 @@ if (MSVC)
     target_link_libraries(ldns wsock32 ws2_32)
     target_sources(ldns PRIVATE ldns/compat/gmtime_r.c)
     target_sources(ldns PRIVATE ldns/compat/localtime_r.c)
-    target_sources(ldns PRIVATE windows/windows.cpp)
     target_include_directories(ldns PRIVATE windows)
 endif()
 
