@@ -240,7 +240,6 @@ else ()
 
     if (HAVE_MMINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_MMINTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -mmmx)
     endif ()
 
     check_c_source_compiles(
@@ -261,7 +260,6 @@ else ()
 
     if (HAVE_EMMINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_EMMINTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -msse2)
     endif ()
 
     check_c_source_compiles(
@@ -277,7 +275,6 @@ else ()
 
     if (HAVE_PMMINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_PMMINTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -msse3)
     endif ()
 
     check_c_source_compiles(
@@ -293,7 +290,6 @@ else ()
 
     if (HAVE_TMMINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_TMMINTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -mssse3)
     endif ()
 
     check_c_source_compiles(
@@ -309,7 +305,6 @@ else ()
 
     if (HAVE_SMMINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_SMMINTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -msse4.1)
     endif ()
 
     check_c_source_compiles(
@@ -328,7 +323,6 @@ else ()
 
     if (HAVE_AVXINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_AVXINTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -mavx)
     endif ()
 
     check_c_source_compiles(
@@ -349,7 +343,6 @@ else ()
 
     if (HAVE_AVX2INTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_AVX2INTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -mavx2)
 
         check_c_source_compiles(
             "
@@ -403,7 +396,6 @@ else ()
 
     if (HAVE_AVX512FINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_AVX512FINTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -mavx512f)
     endif ()
 
     check_c_source_compiles(
@@ -425,7 +417,6 @@ else ()
 
     if (HAVE_WMMINTRIN_H)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_WMMINTRIN_H=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -maes -mpclmul)
     endif ()
 
     check_c_source_compiles(
@@ -446,7 +437,6 @@ else ()
 
     if (HAVE_RDRAND)
         target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_RDRAND=1)
-        target_compile_options(${PROJECT_NAME} PRIVATE -mrdrnd)
     endif ()
 
     check_c_source_compiles(
@@ -635,6 +625,21 @@ else ()
 
     # include/sodium/private/common.h
     target_compile_definitions(${PROJECT_NAME} PRIVATE CONFIGURED=1)
+
+    # Added by AdGuard.
+    # Disabled automatic enabling on -m flags since it breaks generic builds.
+    # Instead, use same flags as in Windows build
+    file(GLOB_RECURSE ssse3_sources ${CMAKE_CURRENT_SOURCE_DIR}/libsodium/src/libsodium/*ssse3.c)
+    set_source_files_properties(${ssse3_sources} PROPERTIES COMPILE_FLAGS "-mssse3")
+
+    file(GLOB_RECURSE aesni_sources ${CMAKE_CURRENT_SOURCE_DIR}/libsodium/src/libsodium/*aesni.c)
+    set_source_files_properties(${aesni_sources} PROPERTIES COMPILE_FLAGS "-maes -mssse3 -mpclmul")
+
+    file(GLOB_RECURSE sse41_sources ${CMAKE_CURRENT_SOURCE_DIR}/libsodium/src/libsodium/*sse41.c)
+    set_source_files_properties(${sse41_sources} PROPERTIES COMPILE_FLAGS "-msse4.1")
+
+    file(GLOB_RECURSE avx2_sources ${CMAKE_CURRENT_SOURCE_DIR}/libsodium/src/libsodium/*avx2.c)
+    set_source_files_properties(${avx2_sources} PROPERTIES COMPILE_FLAGS "-mavx2")
 endif ()
 
 if (BUILD_SHARED_LIBS)
