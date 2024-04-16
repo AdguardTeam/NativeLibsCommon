@@ -626,20 +626,8 @@ else ()
     # include/sodium/private/common.h
     target_compile_definitions(${PROJECT_NAME} PRIVATE CONFIGURED=1)
 
-    # Added by AdGuard.
-    # Disabled automatic enabling on -m flags since it breaks generic builds.
-    # Instead, use same flags as in Windows build
-    file(GLOB_RECURSE ssse3_sources ${CMAKE_CURRENT_SOURCE_DIR}/libsodium/src/libsodium/*ssse3.c)
-    set_source_files_properties(${ssse3_sources} PROPERTIES COMPILE_FLAGS "-mssse3")
-
-    file(GLOB_RECURSE aesni_sources ${CMAKE_CURRENT_SOURCE_DIR}/libsodium/src/libsodium/*aesni.c)
-    set_source_files_properties(${aesni_sources} PROPERTIES COMPILE_FLAGS "-maes -mssse3 -mpclmul")
-
-    file(GLOB_RECURSE sse41_sources ${CMAKE_CURRENT_SOURCE_DIR}/libsodium/src/libsodium/*sse41.c)
-    set_source_files_properties(${sse41_sources} PROPERTIES COMPILE_FLAGS "-msse4.1")
-
-    file(GLOB_RECURSE avx2_sources ${CMAKE_CURRENT_SOURCE_DIR}/libsodium/src/libsodium/*avx2.c)
-    set_source_files_properties(${avx2_sources} PROPERTIES COMPILE_FLAGS "-mavx2")
+    # Added by AdGuard:
+    # In previous we disabled automatic enabling of -m flags since it breaks generic builds.
 endif ()
 
 if (BUILD_SHARED_LIBS)
