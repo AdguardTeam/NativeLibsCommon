@@ -238,6 +238,22 @@ bool SocketAddress::is_loopback() const {
     }
 }
 
+bool SocketAddress::is_any() const {
+    switch (m_ss.ss_family) {
+    case AF_INET: {
+        return INADDR_ANY == ntohl(((sockaddr_in *) &m_ss)->sin_addr.s_addr);
+    }
+    case AF_INET6:
+        if (!is_ipv4_mapped()) {
+            return 0 == memcmp(&((sockaddr_in6 *) &m_ss)->sin6_addr, &in6addr_any, sizeof(in6addr_any));
+        } else {
+            return to_ipv4_unmapped().is_any();
+        }
+    default:
+        return false;
+    }
+}
+
 bool SocketAddress::is_ipv4() const {
     return m_ss.ss_family == AF_INET || is_ipv4_mapped();
 }

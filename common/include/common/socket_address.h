@@ -118,6 +118,11 @@ public:
     [[nodiscard]] bool is_loopback() const;
 
     /**
+     * @return True if address is "any address" (all zeroes)
+     */
+    [[nodiscard]] bool is_any() const;
+
+    /**
      * Cast address to target address family.
      * IPv4 addresses are mapped/unmapped automatically.
      * If address cannot be cast, return invalid address

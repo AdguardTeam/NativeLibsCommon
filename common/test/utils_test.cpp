@@ -76,10 +76,18 @@ TEST(utils, GenerallyWork) {
     ASSERT_TRUE(ag::SocketAddress(addr, 53).is_ipv6());
     ASSERT_FALSE(ag::SocketAddress(addr, 53).is_loopback());
 
+    ASSERT_TRUE(!ag::SocketAddress("128.0.0.1:53").is_loopback());
     ASSERT_TRUE(ag::SocketAddress("127.0.0.1:53").is_loopback());
     ASSERT_TRUE(ag::SocketAddress("[::1]:53").is_loopback());
     ASSERT_TRUE(ag::SocketAddress("[::ffff:127.0.0.1]:53").is_loopback());
     ASSERT_TRUE(ag::SocketAddress("[::ffff:127.0.0.1]:53").is_ipv4_mapped());
+
+    ASSERT_TRUE(!ag::SocketAddress("0.0.0.1:53").is_any());
+    ASSERT_TRUE(!ag::SocketAddress("[::2]:53").is_any());
+    ASSERT_TRUE(ag::SocketAddress("0.0.0.0:53").is_any());
+    ASSERT_TRUE(ag::SocketAddress("[::]:53").is_any());
+    ASSERT_TRUE(ag::SocketAddress("[::ffff:0.0.0.0]:53").is_any());
+    ASSERT_TRUE(ag::SocketAddress("[::ffff:0.0.0.0]:53").is_ipv4_mapped());
 
     const char *str_array[] = {"aaa", "bbb", "ccc", "ddd"};
     ASSERT_EQ(ag::utils::join(std::begin(str_array), std::end(str_array), "::"), "aaa::bbb::ccc::ddd");
