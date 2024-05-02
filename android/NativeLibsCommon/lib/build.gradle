@@ -16,7 +16,6 @@ android {
         externalNativeBuild {
             cmake {
                 targets "ag_common", "ag_common_http"
-                arguments "-DCONAN_HOST_PROFILE=${project.rootDir}/../../conan/profiles/android.jinja;auto-cmake"
             }
         }
     }

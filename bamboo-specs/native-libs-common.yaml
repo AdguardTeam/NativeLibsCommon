@@ -39,7 +39,6 @@ Win build:
             cmake -DCMAKE_BUILD_TYPE=Debug ^
                 -DCMAKE_C_FLAGS_DEBUG=/MT ^
                 -DCMAKE_CXX_FLAGS_DEBUG=/MT ^
-                -DCONAN_HOST_PROFILE="../../conan/profiles/windows-msvc.jinja;auto-cmake" ^
                 -G Ninja ^
                 ..
 
@@ -102,7 +101,6 @@ Linux build:
             cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
                 -DCMAKE_C_COMPILER=clang \
                 -DCMAKE_CXX_COMPILER=clang++ \
-                -DCONAN_HOST_PROFILE="default;auto-cmake" \
                 -DCMAKE_CXX_FLAGS="-stdlib=libc++"  \
                 -DSANITIZE=yes \
                 ..
@@ -159,7 +157,6 @@ Mac build:
             cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
                 -DCMAKE_C_COMPILER=clang \
                 -DCMAKE_CXX_COMPILER=clang++ \
-                -DCONAN_HOST_PROFILE="${PROJECT_PATH}/conan/profiles/apple.jinja;auto-cmake" \
                 -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
                 -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
                 ..
