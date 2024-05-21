@@ -3,6 +3,7 @@
 #include "common/cesu8.h"
 #include "common/socket_address.h"
 #include "common/utils.h"
+#include "common/url.h"
 
 #include <span>
 #include <vector>
@@ -214,4 +215,11 @@ TEST(Uint8ViewTest, StringTest) {
     for (size_t i = 0; i < str.size(); ++i) {
         ASSERT_EQ(str_view[i], static_cast<uint8_t>(str[i]));
     }
+}
+
+TEST(url, NormalizePath) {
+    ASSERT_EQ("/a/c/d.html", ag::url::normalize_path("../a/b/../c/./d.html"));
+    ASSERT_EQ("/a/c/d.html", ag::url::normalize_path("../a/b/../../a/./c/./d.html"));
+    ASSERT_EQ("", ag::url::normalize_path(""));
+    ASSERT_EQ("/a/b/c.d", ag::url::normalize_path("/a/b/c.d"));
 }

@@ -45,18 +45,16 @@ class QuicheConan(ConanFile):
             if "ANDROID_HOME" in environ and "ANDROID_NDK_HOME" not in environ:
                 environ["ANDROID_NDK_HOME"] = "%s/ndk-bundle" % environ["ANDROID_HOME"]
 
+            platform = "21"
+
             if arch == "armv7":
                 target = "armv7-linux-androideabi"
-                platform = "19"
             elif arch == "armv8":
                 target = "aarch64-linux-android"
-                platform = "21"
             elif arch == "x86":
                 target = "i686-linux-android"
-                platform = "19"
             elif arch == "x86_64":
                 target = "x86_64-linux-android"
-                platform = "21"
             else:
                 raise ConanInvalidConfiguration("Unsupported Android architecture: %s" % arch)
 
