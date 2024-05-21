@@ -7,6 +7,8 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include "common/format.h"
+
 namespace ag {
 
 enum LogLevel {
@@ -52,7 +54,7 @@ public:
 #else
     template <typename... Ts>
     [[clang::optnone]]
-    inline void log(LogLevel level, fmt::format_string<Ts...> fmt, Ts&&... args) const {
+    inline void log(LogLevel level, ag::StrictFormatString<Ts...> fmt, Ts&&... args) const {
         vlog(level, fmt::string_view(fmt), fmt::make_format_args(args...));
     }
 #endif

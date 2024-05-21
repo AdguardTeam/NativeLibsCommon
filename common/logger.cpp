@@ -63,7 +63,7 @@ static void log_to_file(FILE *file, LogLevel level, std::string_view message) {
     std::string_view level_str = (level >= 0 && level < ENUM_NAMES_NUMBER) ? ENUM_NAMES[level] : "UNKNOWN";
     SystemTime now = std::chrono::system_clock::now();
     std::string ts = format_localtime(now, TIME_FORMAT);
-    fmt::print(file, "{} {:5} [{}] {}\n", ts, level_str, utils::gettid(), message);
+    ag::print(file, "{} {:5} [{}] {}\n", ts, level_str, utils::gettid(), message);
 };
 
 void Logger::LogToFile::operator()(LogLevel level, std::string_view message) {

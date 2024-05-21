@@ -13,11 +13,11 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
-#include <fmt/format.h>
 #include <cctype>
 #include <charconv>
 
 #include "common/defs.h"
+#include "common/format.h"
 
 /**
  * Macros to create constexpr value and type to check expression
@@ -80,7 +80,7 @@ inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T, N>::value;
 /**
  * Macros for fmt::format with compile-time checked FMT_STRING
  */
-#define AG_FMT(FORMAT, ...) fmt::format(FMT_STRING(FORMAT), __VA_ARGS__)
+#define AG_FMT(FORMAT, ...) ag::format((FORMAT), __VA_ARGS__)
 
 namespace ag {
 namespace utils {
