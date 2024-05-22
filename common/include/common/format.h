@@ -8,6 +8,9 @@ namespace ag {
  * This header implements stricter format string checking than fmt does.
  * fmt only checks that the number of arguments passed is sufficient for the format string
  * but does not fail if there are extra arguments passed.
+ * This is intended behaviour in fmt: https://github.com/fmtlib/fmt/issues/2413
+ * However, this extra check is necessary for us in cases when switching from printf to fmt.
+ * Otherwise, there may be leftovers with unconverted format strings.
  *
  * Therefore, we implement `StrictFormatString`, which checks that the number of arguments passed
  * equals the number of arguments in the format string.
