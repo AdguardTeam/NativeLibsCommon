@@ -4,6 +4,24 @@
 
 namespace ag {
 
+/*
+ * This header implements stricter format string checking than fmt does.
+ * fmt only checks that the number of arguments passed is sufficient for the format string
+ * but does not fail if there are extra arguments passed.
+ *
+ * Therefore, we implement `StrictFormatString`, which checks that the number of arguments passed
+ * equals the number of arguments in the format string.
+ * The number of arguments in the format string matches the "next argument id",
+ * assuming that argument ids are counted from 0.
+ *
+ * The main problem with the implementation is that the `basic_format_parse_context::next_arg_id_` field
+ * is private, so we create a class `CountingCompileParseContext`, that predicts this field's value
+ * at the constant evaluation phase.
+ */
+
+/**
+ * This class predicts value of basic_format_parse_context::next_arg_id_ field which is private.
+ */
 template <typename Char> class CountingCompileParseContext : public fmt::detail::compile_parse_context<Char> {
 public:
     using CompileParseCtx = fmt::detail::compile_parse_context<Char>;
@@ -11,19 +29,31 @@ public:
             fmt::basic_string_view<Char> format_str, int num_args, const fmt::detail::type* types, int next_arg_id = 0)
             : CompileParseCtx(format_str, num_args, types, next_arg_id) {}
 
-    int last_next_arg_id_ = 0;
+    int next_arg_id_prediction_ = 0;
     FMT_CONSTEXPR auto next_arg_id() -> int {
         int ret = CompileParseCtx::next_arg_id();
-        last_next_arg_id_ = ret + 1;
+        next_arg_id_prediction_ = ret + 1;
         return ret;
     }
 
     FMT_CONSTEXPR void check_arg_id(int id) {
-        last_next_arg_id_ = -1;
+        next_arg_id_prediction_ = -1; // Disabling check if indexed args are used
         CompileParseCtx::check_arg_id(id);
     }
 };
 
+/**
+ * This class is a copy of fmt::detail::format_strict_checker with additions:
+ * 1. `parse_context_type` is `CountingCompileParseContext`.
+ * 2. New method `check_num_args()` which performs the actual check.
+ *    It verifies if the next argument id matches the number of args and fails if it does not.
+ * 3. New method `on_finishing_arg()` which is added to handle the case of
+ *    `ag::format("{:{}s}", "", 10);`. For nested braces,
+ *    `basic_format_parse_context::next_arg_id()` is called instead of
+ *    `CountingCompileParseContext::next_arg_id()`, causing the count to fail.
+ *    To solve this issue, we add an additional argument type to `StrictFormatString`
+ *    and call `on_finishing_arg()` to synchronize `CountingCompileParseContext` state.
+ */
 template <typename Char, typename... Args> class StrictFormatStringChecker {
 private:
     using parse_context_type = CountingCompileParseContext<Char>;
@@ -47,6 +77,13 @@ public:
 
     FMT_CONSTEXPR void on_text(const Char*, const Char*) {}
 
+    FMT_CONSTEXPR void on_finishing_arg() {
+        if (context_.next_arg_id_prediction_ == -1) {
+            // Checking is disabled in format string with manual indexing
+            return;
+        }
+        context_.next_arg_id();
+    }
     FMT_CONSTEXPR auto on_arg_id() -> int { return context_.next_arg_id(); }
     FMT_CONSTEXPR auto on_arg_id(int id) -> int {
         return context_.check_arg_id(id), id;
@@ -79,13 +116,17 @@ public:
     }
 
     FMT_CONSTEXPR void check_num_args() {
-        if (context_.last_next_arg_id_ != -1 && context_.last_next_arg_id_ != context_.num_args()) {
+        if (context_.next_arg_id_prediction_ != -1
+                && context_.next_arg_id_prediction_ != context_.num_args()) {
             on_error("Number of arguments does not match");
         }
     }
 };
 
-/** A compile-time format string. */
+/**
+ * This class is copy of `basic_format_string` but uses `StrictFormatStringChecker`
+ * and its extended interface.
+ */
 template <typename Char, typename... Args> class BasicStrictFormatString {
 private:
     fmt::basic_string_view<Char> str_;
@@ -107,6 +148,11 @@ public:
                     StrictFormatStringChecker<Char, fmt::remove_cvref_t<Args>...>;
             checker check(s);
             fmt::detail::parse_format_string<true>(str_, check);
+
+            // Eat extra argument passed by us to synchronize state.
+            // See StrictFormatStringChecker doc for more details.
+            check.on_finishing_arg();
+            // Finally, do number of arguments check.
             check.check_num_args();
         }
 #else
@@ -119,8 +165,10 @@ public:
     FMT_INLINE auto get() const -> fmt::basic_string_view<Char> { return str_; }
 };
 
+// Additional arg is handled by calling `StrictFormatStringChecker::on_finishing_arg()`
+// inside `BasicStringFormatString` constructor.
 template <typename... Args>
-using StrictFormatString = BasicStrictFormatString<char, fmt::type_identity_t<Args>...>;
+using StrictFormatString = BasicStrictFormatString<char, fmt::type_identity_t<Args>..., int>;
 
 template <typename... T>
 FMT_INLINE void print(StrictFormatString<T...> fmt, T&&... args) {
