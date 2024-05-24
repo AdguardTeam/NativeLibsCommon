@@ -30,3 +30,11 @@ add_subdirectory(common)
 add_subdirectory(http)
 
 enable_testing()
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_custom_target(
+        conan_export_local
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/conan_local_export.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Exporting local Conan package"
+)

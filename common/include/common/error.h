@@ -32,6 +32,7 @@ struct ErrorCodeToString {
 class ErrorBase { // NOLINT(*-special-member-functions)
 public:
     virtual std::string str() = 0;
+    virtual std::string pretty_str() = 0;
     virtual ~ErrorBase() = default;
 };
 
@@ -80,6 +81,26 @@ public:
 
         if (m_next_error) {
             fmt::format_to(std::back_inserter(buffer), "\nCaused by: {}", m_next_error->str());
+        }
+        return fmt::to_string(buffer);
+    }
+
+    /**
+     * @return String representation of error and its parents without internal details
+     */
+    [[nodiscard]] std::string pretty_str() override {
+        fmt::basic_memory_buffer<char> buffer;
+
+        if (std::string error_str = ErrorCodeToString<Enum>()(m_value); !error_str.empty()) {
+            fmt::format_to(std::back_inserter(buffer), "{}", error_str);
+        }
+
+        if (!m_message.empty()) {
+            fmt::format_to(std::back_inserter(buffer), ": {}", m_message);
+        }
+
+        if (m_next_error) {
+            fmt::format_to(std::back_inserter(buffer), ". {}", m_next_error->pretty_str());
         }
         return fmt::to_string(buffer);
     }
