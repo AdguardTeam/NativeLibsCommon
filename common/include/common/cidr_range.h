@@ -193,7 +193,7 @@ public:
      * Splits this range into two with prefixLen increased by one
      * @return Pair of CIDR ranges or null if this range is single IP
      */
-    std::optional<std::pair<CidrRange, CidrRange>> split() {
+    std::optional<std::pair<CidrRange, CidrRange>> split() const {
         if (m_prefix_len == m_address.size() * 8) {
             // Can't split single IP
             return std::nullopt;
