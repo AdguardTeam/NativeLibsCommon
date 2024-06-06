@@ -1,5 +1,6 @@
+#include <fmt/chrono.h>
+
 #include "common/logger.h"
-#include "common/time_utils.h"
 #include "common/utils.h"
 
 namespace ag {
@@ -18,8 +19,6 @@ const LoggerCallback Logger::LOG_TO_STDERR = LogToFile(stderr);
 
 static std::atomic<LogLevel> g_log_level{LOG_LEVEL_INFO};
 static std::shared_ptr<LoggerCallback> g_log_callback = std::make_shared<LoggerCallback>(Logger::LOG_TO_STDERR);
-
-static constexpr const char *TIME_FORMAT = "%d.%m.%Y %H:%M:%S.%f";
 
 void Logger::set_log_level(LogLevel level) {
     g_log_level = level;
@@ -61,9 +60,11 @@ void Logger::vlog(LogLevel level, fmt::string_view format, fmt::format_args args
 
 static void log_to_file(FILE *file, LogLevel level, std::string_view message) {
     std::string_view level_str = (level >= 0 && level < ENUM_NAMES_NUMBER) ? ENUM_NAMES[level] : "UNKNOWN";
-    SystemTime now = std::chrono::system_clock::now();
-    std::string ts = format_localtime(now, TIME_FORMAT);
-    ag::print(file, "{} {:5} [{}] {}\n", ts, level_str, utils::gettid(), message);
+    auto now = floor<Micros>(std::chrono::system_clock::now().time_since_epoch());
+    auto secs = now.count() / 1000000;
+    auto us = now.count() % 1000000;
+    auto tm = fmt::localtime(secs);
+    ag::print(file, "{:%d.%m.%Y %H:%M:%S}.{:06} {:5} [{}] {}\n", tm, us, level_str, utils::gettid(), message);
 };
 
 void Logger::LogToFile::operator()(LogLevel level, std::string_view message) {
