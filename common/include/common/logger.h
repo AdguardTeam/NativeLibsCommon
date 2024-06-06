@@ -28,9 +28,13 @@ class Logger {
 public:
     /**
      * Create logger with specified name
-     * @param name
+     * @param name Logger name
+     * @param log_level_override Log level which will be used in is_enabled instead of global log level
      */
-    explicit Logger(std::string_view name) : m_name(name) {}
+    explicit Logger(std::string_view name, std::optional<LogLevel> log_level_override = std::nullopt)
+            : m_name(name)
+            , m_log_level_override(log_level_override)
+    {}
 
     /**
      * Log message
@@ -80,7 +84,7 @@ public:
     /**
      * @return Current logger log level
      */
-     static LogLevel get_log_level();
+    static LogLevel get_log_level();
 
     /**
      * Set common logger callback
@@ -112,6 +116,7 @@ private:
     void log_impl(LogLevel level, std::string_view message) const;
 
     std::string m_name;
+    std::optional<LogLevel> m_log_level_override;
 };
 
 #define errlog(l, fmt_, ...) (l).log(::ag::LOG_LEVEL_ERROR, FMT_STRING("{}: " fmt_), ::fmt::string_view{__func__}, ##__VA_ARGS__)

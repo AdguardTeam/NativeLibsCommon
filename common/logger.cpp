@@ -38,7 +38,8 @@ void Logger::log_impl(LogLevel level, std::string_view message) const {
 }
 
 bool Logger::is_enabled(LogLevel level) const {
-    return level <= g_log_level;
+    return m_log_level_override ? level <= *m_log_level_override
+                                : level <= g_log_level;
 }
 
 LogLevel Logger::get_log_level() {

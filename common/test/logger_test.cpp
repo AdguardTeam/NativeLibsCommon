@@ -63,6 +63,16 @@ TEST(Logger, Works) {
     errlog(logger, "{}", "Hello, world!");
     ASSERT_EQ(counter, 5);
 
+    counter = 0;
+    Logger::set_log_level(LOG_LEVEL_TRACE);
+    Logger trace_logger{"trace_logger", LOG_LEVEL_INFO};
+    tracelog(trace_logger, "{}", "Hello, world!");
+    dbglog(trace_logger, "{}", "Hello, world!");
+    infolog(trace_logger, "{}", "Hello, world!");
+    warnlog(trace_logger, "{}", "Hello, world!");
+    errlog(trace_logger, "{}", "Hello, world!");
+    ASSERT_EQ(counter, 3);
+
     Logger::set_log_level(LOG_LEVEL_DEBUG);
     FileHandler logfile{"logfile.txt"};
     Logger::LogToFile logtofile{logfile.get_file()};
