@@ -31,8 +31,14 @@ class BoringsslConan(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
-        if (self.settings.os == "Windows" and (self.settings.arch == "armv8" or self.settings.arch == "armv7")) or self.settings.arch == "mips":
+        if (self.settings.os == "Windows" and self.settings.arch == "armv7") or self.settings.arch == "mips":
             tc.cache_variables["OPENSSL_NO_ASM"] = "ON"
+
+        if (self.settings.os == "Windows" and self.settings.arch == "armv8"):
+            tc.cache_variables["CMAKE_SYSTEM_NAME"] = "Windows"
+            tc.cache_variables["CMAKE_SYSTEM_PROCESSOR"] = "ARM64"
+            tc.cache_variables["CMAKE_ASM_COMPILER"] = "C:/Program Files/LLVM/bin/clang.exe"
+
         tc.generate()
 
     def layout(self):
@@ -41,7 +47,7 @@ class BoringsslConan(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-        cmake.build()
+        cmake.build(target=["ssl", "crypto", "bssl"])
 
     def package(self):
         copy(self, "*.h", src=join(self.source_folder, "source_subfolder/include"), dst=join(self.package_folder, "include"), keep_path = True)
