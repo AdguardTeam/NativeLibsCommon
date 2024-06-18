@@ -1,0 +1,29 @@
+diff --git a/cmake/CheckFunctionExistsEx.c b/cmake/CheckFunctionExistsEx.c
+index 224e3404..218686a1 100644
+--- a/cmake/CheckFunctionExistsEx.c
++++ b/cmake/CheckFunctionExistsEx.c
+@@ -1,10 +1,12 @@
+ #ifdef CHECK_FUNCTION_EXISTS
+ 
++#ifndef _MSC_VER
+ #ifdef __cplusplus
+ extern "C"
+ #endif
+   char
+   CHECK_FUNCTION_EXISTS(void);
++#endif // _MSC_VER
+ #ifdef __CLASSIC_C__
+ int main()
+ {
+@@ -14,7 +16,11 @@ int main()
+ int main(int ac, char* av[])
+ {
+ #endif
++#ifndef _MSC_VER
+   CHECK_FUNCTION_EXISTS();
++#else // _MSC_VER
++  void *f = &CHECK_FUNCTION_EXISTS;
++#endif // _MSC_VER
+   if (ac > 1000) {
+     return *av[0];
+   }
