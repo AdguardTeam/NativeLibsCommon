@@ -1,0 +1,221 @@
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+index 7fa26b02f..37f94b51d 100644
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -2378,6 +2378,8 @@ OPENSSL_EXPORT int SSL_set1_curves_list(SSL *ssl, const char *curves);
+ #define SSL_CURVE_SECP521R1 25
+ #define SSL_CURVE_X25519 29
+ #define SSL_CURVE_X25519_KYBER768_DRAFT00 0x6399
++#define SSL_CURVE_FFDHE2048 256
++#define SSL_CURVE_FFDHE3072 257
+ 
+ // SSL_get_curve_id returns the ID of the curve used by |ssl|'s most recently
+ // completed handshake or 0 if not applicable.
+@@ -5545,11 +5547,11 @@ OPENSSL_EXPORT void SSL_set_msg_callback_cl(
+                                          const uint8_t *buf, size_t len,
+                                          SSL *ssl, void *arg));
+ 
+-// SSL_CTX_set_aes_hw_override_for_testing sets |override_value| to
+-// override checking for aes hardware support for testing. If |override_value|
+-// is set to true, the library will behave as if aes hardware support is
+-// present. If it is set to false, the library will behave as if aes hardware
+-// support is not present.
++// SSL_CTX_set_aes_hw_override_for_testing allows to control the order
++// of TLS 1.3 ciphers. If |override_value| is set to false then
++// TLS_CHACHA20_POLY1305 cipher will be placed between TLS_AES_128_GCM_SHA256
++// and TLS_AES_256_GCM_SHA384 ciphers. Overwise the ciphers order will be based
++// on automated AES hardware support detection.
+ OPENSSL_EXPORT void SSL_CTX_set_aes_hw_override_for_testing(
+     SSL_CTX *ctx, bool override_value);
+ 
+diff --git a/ssl/ssl_key_share.cc b/ssl/ssl_key_share.cc
+index 77f16b5bf..9b82a446f 100644
+--- a/ssl/ssl_key_share.cc
++++ b/ssl/ssl_key_share.cc
+@@ -284,6 +284,16 @@ class X25519Kyber768KeyShare : public SSLKeyShare {
+   KYBER_private_key kyber_private_key_;
+ };
+ 
++struct FirefoxPulpNamedGroup {
++  uint16_t group_id;
++  const char name[32];
++};
++
++constexpr FirefoxPulpNamedGroup kFirefoxPulpNamedGroups[] = {
++  {SSL_CURVE_FFDHE2048, "ffdhe2048"},
++  {SSL_CURVE_FFDHE3072, "ffdhe3072"},
++};
++
+ constexpr NamedGroup kNamedGroups[] = {
+     {NID_secp224r1, SSL_CURVE_SECP224R1, "P-224", "secp224r1"},
+     {NID_X9_62_prime256v1, SSL_CURVE_SECP256R1, "P-256", "prime256v1"},
+@@ -342,6 +352,13 @@ bool ssl_name_to_group_id(uint16_t *out_group_id, const char *name, size_t len)
+       return true;
+     }
+   }
++  for (const auto &group : kFirefoxPulpNamedGroups) {
++    if (len == strlen(group.name) &&
++        !strncmp(group.name, name, len)) {
++      *out_group_id = group.group_id;
++      return true;
++    }
++  }
+   return false;
+ }
+ 
+diff --git a/ssl/extensions.cc b/ssl/extensions.cc
+index 5ee280221..97e2e3ca4 100644
+--- a/ssl/extensions.cc
++++ b/ssl/extensions.cc
+@@ -3103,13 +3103,6 @@ static const struct tls_extension kExtensions[] = {
+     ext_sni_parse_clienthello,
+     ext_sni_add_serverhello,
+   },
+-  {
+-    TLSEXT_TYPE_encrypted_client_hello,
+-    ext_ech_add_clienthello,
+-    ext_ech_parse_serverhello,
+-    ext_ech_parse_clienthello,
+-    ext_ech_add_serverhello,
+-  },
+   {
+     TLSEXT_TYPE_extended_master_secret,
+     ext_ems_add_clienthello,
+@@ -3161,6 +3154,20 @@ static const struct tls_extension kExtensions[] = {
+     ext_ocsp_parse_clienthello,
+     ext_ocsp_add_serverhello,
+   },
++  {
++    TLSEXT_TYPE_key_share,
++    ext_key_share_add_clienthello,
++    forbid_parse_serverhello,
++    ignore_parse_clienthello,
++    dont_add_serverhello,
++  },
++  {
++    TLSEXT_TYPE_supported_versions,
++    ext_supported_versions_add_clienthello,
++    forbid_parse_serverhello,
++    ignore_parse_clienthello,
++    dont_add_serverhello,
++  },
+   {
+     TLSEXT_TYPE_signature_algorithms,
+     ext_sigalgs_add_clienthello,
+@@ -3196,13 +3203,6 @@ static const struct tls_extension kExtensions[] = {
+     ext_srtp_parse_clienthello,
+     ext_srtp_add_serverhello,
+   },
+-  {
+-    TLSEXT_TYPE_key_share,
+-    ext_key_share_add_clienthello,
+-    forbid_parse_serverhello,
+-    ignore_parse_clienthello,
+-    dont_add_serverhello,
+-  },
+   {
+     TLSEXT_TYPE_psk_key_exchange_modes,
+     ext_psk_key_exchange_modes_add_clienthello,
+@@ -3217,13 +3217,6 @@ static const struct tls_extension kExtensions[] = {
+     ext_early_data_parse_clienthello,
+     ext_early_data_add_serverhello,
+   },
+-  {
+-    TLSEXT_TYPE_supported_versions,
+-    ext_supported_versions_add_clienthello,
+-    forbid_parse_serverhello,
+-    ignore_parse_clienthello,
+-    dont_add_serverhello,
+-  },
+   {
+     TLSEXT_TYPE_cookie,
+     ext_cookie_add_clienthello,
+@@ -3267,6 +3260,13 @@ static const struct tls_extension kExtensions[] = {
+     ignore_parse_clienthello,
+     ext_alps_add_serverhello,
+   },
++  {
++    TLSEXT_TYPE_encrypted_client_hello,
++    ext_ech_add_clienthello,
++    ext_ech_parse_serverhello,
++    ext_ech_parse_clienthello,
++    ext_ech_add_serverhello,
++  },
+ };
+ 
+ #define kNumExtensions (sizeof(kExtensions) / sizeof(struct tls_extension))
+diff --git a/ssl/encrypted_client_hello.cc b/ssl/encrypted_client_hello.cc
+index a5492e9a0..af52f2a85 100644
+--- a/ssl/encrypted_client_hello.cc
++++ b/ssl/encrypted_client_hello.cc
+@@ -660,10 +660,7 @@ bool ssl_select_ech_config(SSL_HANDSHAKE *hs, Span<uint8_t> out_enc,
+       const EVP_HPKE_AEAD *aead;
+       if (supported &&  //
+           ech_config.kem_id == EVP_HPKE_DHKEM_X25519_HKDF_SHA256 &&
+-          select_ech_cipher_suite(&kdf, &aead, ech_config.cipher_suites,
+-                                  hs->ssl->config->aes_hw_override
+-                                      ? hs->ssl->config->aes_hw_override_value
+-                                      : EVP_has_aes_hardware())) {
++          select_ech_cipher_suite(&kdf, &aead, ech_config.cipher_suites, EVP_has_aes_hardware())) {
+         ScopedCBB info;
+         static const uint8_t kInfoLabel[] = "tls ech";  // includes trailing NUL
+         if (!CBB_init(info.get(), sizeof(kInfoLabel) + ech_config.raw.size()) ||
+@@ -717,9 +714,7 @@ static bool setup_ech_grease(SSL_HANDSHAKE *hs) {
+   }
+ 
+   const uint16_t kdf_id = EVP_HPKE_HKDF_SHA256;
+-  const bool has_aes_hw = hs->ssl->config->aes_hw_override
+-                              ? hs->ssl->config->aes_hw_override_value
+-                              : EVP_has_aes_hardware();
++  const bool has_aes_hw = EVP_has_aes_hardware();
+   const EVP_HPKE_AEAD *aead =
+       has_aes_hw ? EVP_hpke_aes_128_gcm() : EVP_hpke_chacha20_poly1305();
+   static_assert(ssl_grease_ech_config_id < sizeof(hs->grease_seed),
+diff --git a/ssl/handshake_client.cc b/ssl/handshake_client.cc
+index 971ebd0b1..f523197f8 100644
+--- a/ssl/handshake_client.cc
++++ b/ssl/handshake_client.cc
+@@ -243,19 +243,22 @@ static bool ssl_write_client_cipher_list(const SSL_HANDSHAKE *hs, CBB *out,
+   // Add TLS 1.3 ciphers. Order ChaCha20-Poly1305 relative to AES-GCM based on
+   // hardware support.
+   if (hs->max_version >= TLS1_3_VERSION) {
+-    const bool has_aes_hw = ssl->config->aes_hw_override
+-                                ? ssl->config->aes_hw_override_value
+-                                : EVP_has_aes_hardware();
++    const bool has_aes_hw = EVP_has_aes_hardware();
++    const bool chacha20_middle = ssl->config->aes_hw_override && !ssl->config->aes_hw_override_value;
+ 
+-    if ((!has_aes_hw &&  //
++
++    if ((!has_aes_hw && !chacha20_middle &&  //
+          !ssl_add_tls13_cipher(&child,
+                                TLS1_3_CK_CHACHA20_POLY1305_SHA256 & 0xffff,
+                                ssl->config->tls13_cipher_policy)) ||
+         !ssl_add_tls13_cipher(&child, TLS1_3_CK_AES_128_GCM_SHA256 & 0xffff,
+                               ssl->config->tls13_cipher_policy) ||
++        (chacha20_middle &&
++         !ssl_add_tls13_cipher(&child, TLS1_3_CK_CHACHA20_POLY1305_SHA256 & 0xffff,
++                              ssl->config->tls13_cipher_policy)) ||
+         !ssl_add_tls13_cipher(&child, TLS1_3_CK_AES_256_GCM_SHA384 & 0xffff,
+                               ssl->config->tls13_cipher_policy) ||
+-        (has_aes_hw &&  //
++        (has_aes_hw && !chacha20_middle &&  //
+          !ssl_add_tls13_cipher(&child,
+                                TLS1_3_CK_CHACHA20_POLY1305_SHA256 & 0xffff,
+                                ssl->config->tls13_cipher_policy))) {
+diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
+index 838761af5..cc1fc8066 100644
+--- a/ssl/ssl_lib.cc
++++ b/ssl/ssl_lib.cc
+@@ -2105,10 +2105,7 @@ int SSL_set_strict_cipher_list(SSL *ssl, const char *str) {
+   if (!ssl->config) {
+     return 0;
+   }
+-  const bool has_aes_hw = ssl->config->aes_hw_override
+-                              ? ssl->config->aes_hw_override_value
+-                              : EVP_has_aes_hardware();
+-  return ssl_create_cipher_list(&ssl->config->cipher_list, has_aes_hw, str,
++  return ssl_create_cipher_list(&ssl->config->cipher_list, EVP_has_aes_hardware(), str,
+                                 true /* strict */);
+ }
+ 
