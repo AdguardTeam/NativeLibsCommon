@@ -6,6 +6,7 @@
 #include <map>
 #include <mutex>
 #include <unordered_map>
+#include <functional>
 
 #include "common/clock.h"
 
