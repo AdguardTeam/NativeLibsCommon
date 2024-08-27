@@ -149,6 +149,20 @@ public:
     }
 
     /**
+     * Iterate over values in cache
+     * @param f Callback to be called with key and value of each element in cache.
+     *          If callback returns false, iteration will be terminated.
+     */
+    void iterate_values(const std::function<bool(const Key &k, const Val &v)> &f) {
+        std::scoped_lock l(m_guard);
+        for (const auto &i : m_key_values) {
+            if (!f(i.first, i.second)) {
+                return;
+            }
+        }
+    }
+
+    /**
      * Delete the value with the given key from the cache
      * @param k the key
      */
