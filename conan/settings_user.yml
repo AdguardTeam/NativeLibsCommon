@@ -1,0 +1,9 @@
+os:
+  Windows:
+    ag_profile_version: &ag_profile_version [ null, "2" ]
+  Linux:
+    ag_profile_version: *ag_profile_version
+  Macos:
+    ag_profile_version: *ag_profile_version
+  Android:
+    ag_profile_version: *ag_profile_version

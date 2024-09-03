@@ -419,6 +419,21 @@ function(conan_install)
 endfunction()
 
 
+function(conan_config_install)
+    # Invoke "conan config install" with the provided arguments
+    message(STATUS "CMake-Conan: conan config install ${ARGN}")
+    execute_process(COMMAND ${CONAN_COMMAND} config install ${ARGN}
+            RESULT_VARIABLE return_code
+            OUTPUT_VARIABLE conan_stdout
+            ERROR_VARIABLE conan_stderr
+            ECHO_ERROR_VARIABLE    # show the text output regardless
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    if(NOT "${return_code}" STREQUAL "0")
+        message(FATAL_ERROR "Conan config install failed='${return_code}'")
+    endif()
+endfunction()
+
+
 function(conan_get_version conan_command conan_current_version)
     execute_process(
         COMMAND ${conan_command} --version
@@ -504,6 +519,7 @@ macro(conan_provide_dependency method package_name)
             set(generator "-g;CMakeDeps")
         endif()
         get_property(_multiconfig_generator GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+        conan_config_install(${CMAKE_CURRENT_LIST_DIR}/../conan/settings_user.yml)
         if(NOT _multiconfig_generator)
             message(STATUS "CMake-Conan: Installing single configuration ${CMAKE_BUILD_TYPE}")
             conan_install(${_host_profile_flags} ${_build_profile_flags} --build=missing ${generator})
