@@ -1,0 +1,7 @@
+set(_CONANFILES_ARCHIVE_NAME conanfiles.tar.gz)
+set(_CONANFILES_ARCHIVE ${CMAKE_CURRENT_LIST_DIR}/../conan/${_CONANFILES_ARCHIVE_NAME})
+file(DOWNLOAD https://github.com/AdguardTeam/NativeLibsCommon/releases/latest/download/${_CONANFILES_ARCHIVE_NAME} ${_CONANFILES_ARCHIVE})
+file(ARCHIVE_EXTRACT INPUT ${_CONANFILES_ARCHIVE} DESTINATION ${CMAKE_CURRENT_LIST_DIR}/../conan)
+file(RENAME ${CMAKE_CURRENT_LIST_DIR}/../conan/conan_provider.cmake ${CMAKE_CURRENT_LIST_DIR}/conan_provider.cmake)
+file(REMOVE ${_CONANFILES_ARCHIVE})
+include(${CMAKE_CURRENT_LIST_DIR}/conan_provider.cmake)
