@@ -1,0 +1,74 @@
+---
+version: 2
+plan:
+  project-key: CL
+  key: NIV
+  name: NativeLibsCommon - Release conanfiles.zip
+stages:
+  - Default Stage:
+      manual: false
+      final: false
+      jobs:
+        - Default Job
+Default Job:
+  key: JOB1
+  docker:
+    image: adguard/core-libs:2.2
+    volumes:
+      ${bamboo.git.cache.directory}: ${bamboo.git.cache.directory}
+      ${system.HOME}/.ssh: /root/.ssh
+    docker-run-arguments: [ ]
+  tasks:
+    - !include docker-clean.yaml
+    - checkout:
+        path: native-libs-common
+        force-clean-build: 'false'
+        description: Checkout
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            set -e -x
+            
+            mkdir conanfiles_build
+            pushd conanfiles_build
+            
+            ARCHIVE_NAME=conanfiles.tar.gz
+            
+            cp -r ../conan/profiles .
+            cp -r ../conan/settings_user.yml .
+            cp -r ../cmake/conan_provider.cmake .
+            tar czf ${ARCHIVE_NAME} *
+            
+            VERSION=$(cat ../conandata.yml | grep "[0-9]*\.[0-9]*." | tail -1 | sed "s/\s*\"//" | sed "s/\"\:\s*//")
+            TAG="v${VERSION}"
+            
+            git tag -d ${TAG} || true
+            git tag ${TAG}
+            git remote remove gh || true
+            git remote add gh https://${bamboo_githubPublicRepoPassword}:@github.com/AdguardTeam/NativeLibsCommon/
+            git push gh ${TAG}
+            gh config set -h github.com oauth_token "${bamboo_githubPublicRepoPassword}" || exit 1
+            gh release create ${TAG} ${ARCHIVE_NAME} -t "Conan files ${TAG}" -n "Make various Conan-related files available for use in other AdGuard projects."
+            
+            popd
+            rm -rf conanfiles_build
+        working-dir: native-libs-common
+        description: Increment version
+  requirements:
+    - adg-privileged-docker
+  artifact-subscriptions: [ ]
+variables:
+  custom.version: 'none'
+repositories:
+  - core-libs/native-libs-common:
+      scope: global
+branches:
+  create: manually
+  delete: never
+  link-to-jira: true
+triggers: [ ]
+notifications: [ ]
+labels: [ ]
+other:
+  concurrent-build-plugin: system-default
