@@ -420,6 +420,7 @@ endfunction()
 
 
 function(conan_config_install)
+    find_program(CONAN_COMMAND "conan" REQUIRED)
     # Invoke "conan config install" with the provided arguments
     message(STATUS "CMake-Conan: conan config install ${ARGN}")
     execute_process(COMMAND ${CONAN_COMMAND} config install ${ARGN}
@@ -519,7 +520,6 @@ macro(conan_provide_dependency method package_name)
             set(generator "-g;CMakeDeps")
         endif()
         get_property(_multiconfig_generator GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
-        conan_config_install(${CMAKE_CURRENT_LIST_DIR}/../conan/settings_user.yml)
         if(NOT _multiconfig_generator)
             message(STATUS "CMake-Conan: Installing single configuration ${CMAKE_BUILD_TYPE}")
             conan_install(${_host_profile_flags} ${_build_profile_flags} --build=missing ${generator})
@@ -609,6 +609,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 else()
     set(_SELECTED_PROFILE "default")
 endif()
+# Install custom config
+conan_config_install(${CMAKE_CURRENT_LIST_DIR}/../conan/settings_user.yml)
 
 # Configurable variables for Conan profiles
 set(CONAN_HOST_PROFILE "${_SELECTED_PROFILE};auto-cmake" CACHE STRING "Conan host profile")
