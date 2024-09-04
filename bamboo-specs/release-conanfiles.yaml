@@ -2,7 +2,7 @@
 version: 2
 plan:
   project-key: CL
-  key: NIV
+  key: NRC
   name: NativeLibsCommon - Release conanfiles.zip
 stages:
   - Default Stage:
