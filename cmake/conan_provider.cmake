@@ -419,6 +419,22 @@ function(conan_install)
 endfunction()
 
 
+function(conan_config_install)
+    find_program(CONAN_COMMAND "conan" REQUIRED)
+    # Invoke "conan config install" with the provided arguments
+    message(STATUS "CMake-Conan: conan config install ${ARGN}")
+    execute_process(COMMAND ${CONAN_COMMAND} config install ${ARGN}
+            RESULT_VARIABLE return_code
+            OUTPUT_VARIABLE conan_stdout
+            ERROR_VARIABLE conan_stderr
+            ECHO_ERROR_VARIABLE    # show the text output regardless
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    if(NOT "${return_code}" STREQUAL "0")
+        message(FATAL_ERROR "Conan config install failed='${return_code}'")
+    endif()
+endfunction()
+
+
 function(conan_get_version conan_command conan_current_version)
     execute_process(
         COMMAND ${conan_command} --version
@@ -593,6 +609,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 else()
     set(_SELECTED_PROFILE "default")
 endif()
+# Install custom config
+conan_config_install(${CMAKE_CURRENT_LIST_DIR}/../conan/settings_user.yml)
 
 # Configurable variables for Conan profiles
 set(CONAN_HOST_PROFILE "${_SELECTED_PROFILE};auto-cmake" CACHE STRING "Conan host profile")

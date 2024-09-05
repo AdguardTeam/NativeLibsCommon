@@ -4,3 +4,5 @@
 !include 'upload-conan-recipes.yaml'
 ---
 !include 'increment-version.yaml'
+---
+!include 'release-conanfiles.yaml'
