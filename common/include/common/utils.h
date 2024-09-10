@@ -85,6 +85,15 @@ inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T, N>::value;
 namespace ag {
 namespace utils {
 /**
+ * Transform string to uppercase
+ */
+static inline std::string to_upper(std::string_view str) {
+    std::string lwr;
+    lwr.reserve(str.length());
+    std::transform(str.cbegin(), str.cend(), std::back_inserter(lwr), (int (*)(int)) std::toupper);
+    return lwr;
+}
+/**
  * Transform string to lowercase
  */
 static inline std::string to_lower(std::string_view str) {
@@ -622,5 +631,72 @@ Uint8View as_u8v(T &&source) {
     auto byte_span = std::as_bytes(sp);
     return Uint8View(reinterpret_cast<const uint8_t *>(byte_span.data()), byte_span.size());
 }
+
+/**
+ * Class for automatic management of POD (Plain Old Data) objects with a custom deleter.
+ * @tparam T The type of data this class manages.
+ * @tparam DELETER The deleter function that is called when memory is freed.
+ * @tparam std::enable_if_t<std::is_standard_layout_v<T> && std::is_trivial_v<T>, bool>
+ * = true Constraint for types to be trivial and have a standard layout.
+ */
+template <typename T, auto DELETER, std::enable_if_t<std::is_standard_layout_v<T> && std::is_trivial_v<T>, bool> = true>
+struct AutoPod {
+    T data{};
+
+    explicit AutoPod(const T &data)
+            : data{data} {
+    }
+
+    AutoPod() = default;
+    ~AutoPod() {
+        reset();
+    }
+
+    AutoPod(const AutoPod &) = delete;
+    AutoPod &operator=(const AutoPod &) = delete;
+
+    AutoPod(AutoPod &&o) noexcept {
+        *this = std::move(o);
+    }
+    AutoPod &operator=(AutoPod &&rhs) noexcept {
+        std::swap(this->data, rhs.data);
+        return *this;
+    }
+
+    const T *get() const {
+        return &data;
+    }
+    T *get() {
+        return &data;
+    }
+
+    T *operator->() {
+        return get();
+    }
+    const T *operator->() const {
+        return get();
+    }
+
+    T &operator*() {
+        return data;
+    }
+    const T &operator*() const {
+        return data;
+    }
+
+    void reset() {
+        DELETER(get());
+        release();
+    }
+
+    void reset(const T &d) {
+        reset();
+        data = d;
+    }
+
+    void release() {
+        data = {};
+    }
+};
 
 } // namespace ag

@@ -181,6 +181,36 @@ TEST(utils, TestSplit2) {
     }
 }
 
+TEST(utils, ToUpper) {
+    EXPECT_EQ(ag::utils::to_upper("hello"), "HELLO");
+    EXPECT_EQ(ag::utils::to_upper("Hello"), "HELLO");
+    EXPECT_EQ(ag::utils::to_upper("HELLO"), "HELLO");
+    EXPECT_EQ(ag::utils::to_upper("HeLlO"), "HELLO");
+
+    EXPECT_EQ(ag::utils::to_upper("hello123"), "HELLO123");
+    EXPECT_EQ(ag::utils::to_upper("123"), "123");
+
+    EXPECT_EQ(ag::utils::to_upper("hello!@#"), "HELLO!@#");
+    EXPECT_EQ(ag::utils::to_upper("HeLlo!@#"), "HELLO!@#");
+
+    EXPECT_EQ(ag::utils::to_upper(""), "");
+}
+
+TEST(utils, ToLower) {
+    EXPECT_EQ(ag::utils::to_lower("HELLO"), "hello");
+    EXPECT_EQ(ag::utils::to_lower("Hello"), "hello");
+    EXPECT_EQ(ag::utils::to_lower("hello"), "hello");
+    EXPECT_EQ(ag::utils::to_lower("HeLlO"), "hello");
+
+    EXPECT_EQ(ag::utils::to_lower("HELLO123"), "hello123");
+    EXPECT_EQ(ag::utils::to_lower("123"), "123");
+
+    EXPECT_EQ(ag::utils::to_lower("HELLO!@#"), "hello!@#");
+    EXPECT_EQ(ag::utils::to_lower("HeLlo!@#"), "hello!@#");
+
+    EXPECT_EQ(ag::utils::to_lower(""), "");
+}
+
 TEST(Uint8SpanTest, VectorTest) {
     std::vector<uint8_t> vec = {1, 2, 3, 4, 42};
     const auto vec_span = ag::as_u8s(vec);
