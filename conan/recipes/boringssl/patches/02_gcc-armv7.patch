@@ -1,0 +1,28 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e5278c42d..ab2d5a606 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -509,6 +509,9 @@ add_subdirectory(util/fipstools)
+ add_subdirectory(util/fipstools/acvp/modulewrapper)
+ 
+ if(OPENSSL_ASM)
++  if(NOT (ANDROID OR CMAKE_SIZEOF_VOID_P EQUAL 8))
++    list(REMOVE CRYPTO_SOURCES_ASM crypto/curve25519/asm/x25519-asm-arm.S)
++  endif()
+   set(CRYPTO_SOURCES_ASM_USED ${CRYPTO_SOURCES_ASM})
+   set(BCM_SOURCES_ASM_USED ${BCM_SOURCES_ASM})
+   set(TEST_SUPPORT_SOURCES_ASM_USED ${TEST_SUPPORT_SOURCES_ASM})
+diff --git a/crypto/curve25519/internal.h b/crypto/curve25519/internal.h
+index a40f109f2..5cf8fb5f3 100644
+--- a/crypto/curve25519/internal.h
++++ b/crypto/curve25519/internal.h
+@@ -23,7 +23,7 @@
+ extern "C" {
+ #endif
+ 
+-#if defined(OPENSSL_ARM) && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_APPLE)
++#if defined(OPENSSL_ARM) && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_APPLE) && defined(__clang__)
+ #define BORINGSSL_X25519_NEON
+ 
+ // x25519_NEON is defined in asm/x25519-arm.S.
+

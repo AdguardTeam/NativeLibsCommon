@@ -1,0 +1,142 @@
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+index f76e0a1b5..a4e35a137 100644
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -5824,6 +5824,8 @@ OPENSSL_EXPORT int SSL_set_compliance_policy(
+ 
+ extern "C++" {
+ 
++#include <vector>
++
+ BSSL_NAMESPACE_BEGIN
+ 
+ BORINGSSL_MAKE_DELETER(SSL, SSL_free)
+@@ -5901,6 +5903,13 @@ OPENSSL_EXPORT bool SSL_get_traffic_secrets(
+     const SSL *ssl, Span<const uint8_t> *out_read_traffic_secret,
+     Span<const uint8_t> *out_write_traffic_secret);
+ 
++// SSL_set_msg_callback_cl installs |cb| as the extended message
++// callback of |ssl|. This function is added by CoreLibs.
++OPENSSL_EXPORT void SSL_set_msg_callback_cl(
++    SSL *ssl, std::vector<uint8_t> (*cb)(int version, int content_type,
++                                         const uint8_t *buf, size_t len,
++                                         SSL *ssl, void *arg));
++
+ // SSL_CTX_set_aes_hw_override_for_testing sets |override_value| to
+ // override checking for aes hardware support for testing. If |override_value|
+ // is set to true, the library will behave as if aes hardware support is
+diff --git a/ssl/internal.h b/ssl/internal.h
+index e6518286f..5051182bf 100644
+--- a/ssl/internal.h
++++ b/ssl/internal.h
+@@ -1313,6 +1313,11 @@ void ssl_do_info_callback(const SSL *ssl, int type, int value);
+ void ssl_do_msg_callback(const SSL *ssl, int is_write, int content_type,
+                          Span<const uint8_t> in);
+ 
++// ssl_do_msg_callback calls |ssl|'s extended message callback, if set.
++// This function is added by CoreLibs. The last argument is a reference
++// to an array to allow the message callback to modify the message.
++void ssl_do_msg_callback_cl(const SSL *ssl, int is_write, int content_type,
++                            Array<uint8_t> &msg);
+ 
+ // Transport buffers.
+ 
+@@ -3962,6 +3967,12 @@ struct ssl_st {
+   void (*msg_callback)(int write_p, int version, int content_type,
+                        const void *buf, size_t len, SSL *ssl,
+                        void *arg) = nullptr;
++  // Callback that allows applications to peek, and, by returning
++  // a non-empty vector, possibly replace a protocol message.
++  // This callback is added by CoreLibs. It is only called on TLS message write.
++  std::vector<uint8_t> (*msg_callback_cl)(int version, int content_type,
++                                          const uint8_t *buf, size_t len,
++                                          SSL *ssl, void *arg) = nullptr;
+   void *msg_callback_arg = nullptr;
+ 
+   // session info
+diff --git a/ssl/s3_both.cc b/ssl/s3_both.cc
+index b0e298cc0..76d46738b 100644
+--- a/ssl/s3_both.cc
++++ b/ssl/s3_both.cc
+@@ -186,6 +186,10 @@ bool tls_finish_message(const SSL *ssl, CBB *cbb, Array<uint8_t> *out_msg) {
+ }
+ 
+ bool tls_add_message(SSL *ssl, Array<uint8_t> msg) {
++  // This call is moved here by CoreLibs to allow `msg`
++  // to be modified before writing.
++  ssl_do_msg_callback_cl(ssl, 1 /* write */, SSL3_RT_HANDSHAKE, msg);
++
+   // Pack handshake data into the minimal number of records. This avoids
+   // unnecessary encryption overhead, notably in TLS 1.3 where we send several
+   // encrypted messages in a row. For now, we do not do this for the null
+@@ -231,7 +235,6 @@ bool tls_add_message(SSL *ssl, Array<uint8_t> msg) {
+     }
+   }
+ 
+-  ssl_do_msg_callback(ssl, 1 /* write */, SSL3_RT_HANDSHAKE, msg);
+   // TODO(svaldez): Move this up a layer to fix abstraction for SSLTranscript on
+   // hs.
+   if (ssl->s3->hs != NULL &&
+diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
+index 2e7859994..f2a5a6ebe 100644
+--- a/ssl/ssl_lib.cc
++++ b/ssl/ssl_lib.cc
+@@ -146,6 +146,7 @@
+ #include <limits.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include <vector>
+ 
+ #include <openssl/bytestring.h>
+ #include <openssl/crypto.h>
+@@ -364,6 +365,36 @@ void ssl_do_msg_callback(const SSL *ssl, int is_write, int content_type,
+                     const_cast<SSL *>(ssl), ssl->msg_callback_arg);
+ }
+ 
++void ssl_do_msg_callback_cl(const SSL *ssl, int is_write, int content_type,
++                            Array<uint8_t> &msg) {
++  if (ssl->msg_callback_cl == NULL) {
++    return;
++  }
++
++  // |version| is zero when calling for |SSL3_RT_HEADER| and |SSL2_VERSION| for
++  // a V2ClientHello.
++  int version;
++  switch (content_type) {
++    case 0:
++      // V2ClientHello
++      version = SSL2_VERSION;
++      break;
++    case SSL3_RT_HEADER:
++      version = 0;
++      break;
++    default:
++      version = SSL_version(ssl);
++  }
++
++  std::vector<uint8_t> replacement =
++      ssl->msg_callback_cl(version, content_type, msg.data(), msg.size(),
++                           const_cast<SSL *>(ssl), ssl->msg_callback_arg);
++  if (!replacement.empty()) {
++    msg.CopyFrom(replacement);
++    OPENSSL_cleanse(replacement.data(), replacement.size());
++  }
++}
++
+ void ssl_get_current_time(const SSL *ssl, struct OPENSSL_timeval *out_clock) {
+   // TODO(martinkr): Change callers to |ssl_ctx_get_current_time| and drop the
+   // |ssl| arg from |current_time_cb| if possible.
+@@ -501,6 +532,13 @@ void SSL_set_aes_hw_override_for_testing(SSL *ssl, bool override_value) {
+   ssl->config->aes_hw_override_value = override_value;
+ }
+ 
++void SSL_set_msg_callback_cl(
++    SSL *ssl, std::vector<uint8_t> (*cb)(int version, int content_type,
++                                         const uint8_t *buf, size_t len,
++                                         SSL *ssl, void *arg)) {
++  ssl->msg_callback_cl = cb;
++}
++
+ BSSL_NAMESPACE_END
+ 
+ using namespace bssl;

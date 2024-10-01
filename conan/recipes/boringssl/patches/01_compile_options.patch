@@ -1,0 +1,30 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2308d5721..e5278c42d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -486,6 +486,24 @@ target_include_directories(
+ # themselves as dependencies next to the target definition.
+ add_custom_target(all_tests)
+ 
++# Begin AdGuard compile options
++if(WIN32)
++  # Minimum supported Windows API is 6.3 (Windows 8.1)
++  add_definitions(-D_WIN32_WINNT=0x0603)
++  add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE)
++  if(MSVC)
++    # Force to compile everything with /MT
++    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
++    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Zi /EHs-c-")
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zi /EHs-c-")
++  else()
++    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing -fno-exceptions")
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing -fno-exceptions")
++    link_libraries(-static)
++  endif()
++endif()
++# End AdGuard compile options
++
+ add_subdirectory(ssl/test)
+ add_subdirectory(util/fipstools)
+ add_subdirectory(util/fipstools/acvp/modulewrapper)
+

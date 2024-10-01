@@ -1,0 +1,55 @@
+diff --git a/crypto/x509/internal.h b/crypto/x509/internal.h
+index 8d066dd3c..5ffdc391f 100644
+--- a/crypto/x509/internal.h
++++ b/crypto/x509/internal.h
+@@ -86,10 +86,6 @@ struct X509_pubkey_st {
+   EVP_PKEY *pkey;
+ } /* X509_PUBKEY */;
+ 
+-// X509_PUBKEY is an |ASN1_ITEM| whose ASN.1 type is SubjectPublicKeyInfo and C
+-// type is |X509_PUBKEY*|.
+-DECLARE_ASN1_ITEM(X509_PUBKEY)
+-
+ struct X509_name_entry_st {
+   ASN1_OBJECT *object;
+   ASN1_STRING *value;
+@@ -270,10 +266,6 @@ struct X509_crl_st {
+ // 5280) and C type is |X509_CRL*|.
+ DECLARE_ASN1_ITEM(X509_CRL)
+ 
+-// GENERAL_NAME is an |ASN1_ITEM| whose ASN.1 type is GeneralName and C type is
+-// |GENERAL_NAME*|.
+-DECLARE_ASN1_ITEM(GENERAL_NAME)
+-
+ // GENERAL_NAMES is an |ASN1_ITEM| whose ASN.1 type is SEQUENCE OF GeneralName
+ // and C type is |GENERAL_NAMES*|, aka |STACK_OF(GENERAL_NAME)*|.
+ DECLARE_ASN1_ITEM(GENERAL_NAMES)
+diff --git a/include/openssl/x509.h b/include/openssl/x509.h
+index f5583d01e..5ce0f9d9e 100644
+--- a/include/openssl/x509.h
++++ b/include/openssl/x509.h
+@@ -2337,6 +2337,15 @@ typedef struct ACCESS_DESCRIPTION_st {
+ } ACCESS_DESCRIPTION;
+ 
+ DEFINE_STACK_OF(ACCESS_DESCRIPTION)
++DECLARE_ASN1_ITEM(ACCESS_DESCRIPTION)
++
++// X509_PUBKEY is an |ASN1_ITEM| whose ASN.1 type is SubjectPublicKeyInfo and C
++// type is |X509_PUBKEY*|.
++DECLARE_ASN1_ITEM(X509_PUBKEY)
++
++// GENERAL_NAME is an |ASN1_ITEM| whose ASN.1 type is GeneralName and C type is
++// |GENERAL_NAME*|.
++DECLARE_ASN1_ITEM(GENERAL_NAME)
+ 
+ // ACCESS_DESCRIPTION_new returns a newly-allocated, empty |ACCESS_DESCRIPTION|
+ // object, or NULL on error.
+@@ -3567,6 +3576,8 @@ OPENSSL_EXPORT int X509_VERIFY_PARAM_set_purpose(X509_VERIFY_PARAM *param,
+ // X509_TRUST_OBJECT_SIGN evaluates trust with the |NID_code_sign| OID, for
+ // validating code signing certificates.
+ #define X509_TRUST_OBJECT_SIGN 5
++#define X509_TRUST_OCSP_SIGN 6
++#define X509_TRUST_OCSP_REQUEST 7
+ // X509_TRUST_TSA evaluates trust with the |NID_time_stamp| OID, for validating
+ // Time Stamping Authority (RFC 3161) certificates.
+ #define X509_TRUST_TSA 8

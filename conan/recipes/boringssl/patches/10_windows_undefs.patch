@@ -1,0 +1,20 @@
+diff --git a/include/openssl/target.h b/include/openssl/target.h
+index 2760f52ce..6f0eb4cda 100644
+--- a/include/openssl/target.h
++++ b/include/openssl/target.h
+@@ -80,6 +80,15 @@
+ 
+ #if defined(_WIN32)
+ #define OPENSSL_WINDOWS
++
++// Avoid conflicts with Windows headers
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
++
+ #endif
+ 
+ // Trusty and Android baremetal aren't Linux but currently define __linux__.

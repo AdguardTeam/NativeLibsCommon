@@ -1,0 +1,18 @@
+diff --git a/include/openssl/target.h b/include/openssl/target.h
+index 2760f52ce..f020d3bb2 100644
+--- a/include/openssl/target.h
++++ b/include/openssl/target.h
+@@ -34,10 +34,10 @@
+ #elif defined(__ARMEL__) || defined(_M_ARM)
+ #define OPENSSL_32_BIT
+ #define OPENSSL_ARM
+-#elif defined(__MIPSEL__) && !defined(__LP64__)
++#elif defined(__mips__) && !defined(__LP64__)
+ #define OPENSSL_32_BIT
+ #define OPENSSL_MIPS
+-#elif defined(__MIPSEL__) && defined(__LP64__)
++#elif defined(__mips__) && defined(__LP64__)
+ #define OPENSSL_64_BIT
+ #define OPENSSL_MIPS64
+ #elif defined(__riscv) && __SIZEOF_POINTER__ == 8
+
