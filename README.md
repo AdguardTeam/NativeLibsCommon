@@ -212,3 +212,22 @@ enum class t {
     D, /**< One-line post-identifier comment */
 }
 ```
+### Logging
+* Generally strive to write **useful** log messages instead of narrating each step of the program's execution.
+    * If you can't think of at least one hypothetical situtation in which a log message will be useful in solving a user-reported issue, don't write that log message.
+* Don't log each function call, or each function entry/exit, or each statement in the program. These log messages are useless without context, they degrade performance, and they make the logs huge, which means that they are harder to analyze and harder to get from users.  
+    * Instead, log the points at which control flow branches: this way, it can always be deduced what code was executed by looking at the log. *This does NOT mean that each and every such branching point must be logged*.
+* It's okay to engage in `printf`-debugging, however, please remove your `printf`-debugging statements before commiting. *Do NOT use the logging system for printf-debugging*.
+    * Instead of `printf`-debugging, you might want to look at using other tools, such as profilers.
+* Do NOT write personally identifiable information, cookies, passwords, etc. to the log. Sanitize headers, configs, etc. before logging them.
+* The main log levels to use are `INFO` and `DEBUG`. 
+    * `ERROR` is for fatal errors only (presence of `ERROR`s in the log must definitively indicate that a serious issue exists and provide enough information to identify the cause).
+    * `WARN` is for misconfiguration, API misusage and the like.
+* Try to write log messages to the `INFO` log level by default.
+    * Use the `DEBUG` log level for messages that may occur too frequently (more than once every few seconds).
+* When logging network errors, use common sense. Most of them are the result of normal network operation and should be logged to the `DEBUG` log level. Most network operations can be retried, lost connections can be recovered, etc.
+    * If a failure is final (i.e., the failed operation can not be retried), and the program can not continue to operate normally, it should be logged to the `WARN` or even the `ERROR` log level, depending on severity.
+    * If a failure does not prevent the program from operating normally, but affects the user experience (e.g., we intercepted a connection but failed to connect to the destination), it should be logged to the `INFO` log level with enough details, for example:
+        ```
+        01.01.1970 12:34 INFO Connection to 1.2.3.4 (example.org) from app `Chrome` failed: ECONNREFUSED.
+        ```
