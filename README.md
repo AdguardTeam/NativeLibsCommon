@@ -231,3 +231,4 @@ enum class t {
         ```
         01.01.1970 12:34 INFO Connection to 1.2.3.4 (example.org) from app `Chrome` failed: ECONNREFUSED.
         ```
+* Make the log messages that correspond to the same overarching context (e.g. a proxied connection, an HTTP request, an asynchronous operation, etc.) easily identifiable by giving that context a unique ID and including it in each log message.
