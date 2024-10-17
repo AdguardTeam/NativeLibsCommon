@@ -199,28 +199,53 @@ static inline constexpr bool iends_with(std::string_view str, std::string_view s
 /**
  * Split string by delimiter
  */
-std::vector<std::string_view> split_by(std::string_view str, int delim, bool include_empty = false);
-std::vector<std::string_view> split_by(std::string_view str, std::string_view delim, bool include_empty = false);
+std::vector<std::string_view> split_by(std::string_view str, int delim, bool include_empty = false, bool need_trim = true);
+std::vector<std::string_view> split_by(std::string_view str, std::string_view delim, bool include_empty = false, bool need_trim = true);
 
 /**
  * Split string by any character in delimiters
  */
-std::vector<std::string_view> split_by_any_of(std::string_view str, std::string_view delim, bool include_empty = false);
+std::vector<std::string_view> split_by_any_of(std::string_view str, std::string_view delim, bool include_empty = false, bool need_trim = true);
 
 /**
  * Split string by first found delimiter for 2 parts
  */
-std::array<std::string_view, 2> split2_by(std::string_view str, int delim);
+std::array<std::string_view, 2> split2_by(std::string_view str, int delim, bool need_trim = true);
 
 /**
  * Split string by last found delimiter for 2 parts
  */
-std::array<std::string_view, 2> rsplit2_by(std::string_view str, int delim);
+std::array<std::string_view, 2> rsplit2_by(std::string_view str, int delim, bool need_trim = true);
 
 /**
  * Split string into two parts at the first occurrence of any character in the provided delimiters.
  */
-std::array<std::string_view, 2> split2_by_any_of(std::string_view str, std::string_view delim);
+std::array<std::string_view, 2> split2_by_any_of(std::string_view str, std::string_view delim, bool need_trim = true);
+
+/**
+ * Splits string into pieces by chars which match the predicate
+ * @param str String
+ * @param p Predicate function
+ * @param need_trim Whether need to trim whitespaces
+ * @return List of strings
+ */
+template<class Predicate>
+std::vector<std::string_view> split_if(std::string_view str, Predicate p, bool need_trim = true) {
+    std::vector<std::string_view> strings;
+    while (!str.empty()) {
+        auto next = std::find_if(str.begin(), str.end(), p);
+        size_t pos = (next != str.end()) ? std::distance(str.begin(), next) : str.length();
+        std::string_view part = str.substr(0, pos);
+        if (need_trim) {
+            part = trim(part);
+        }
+        if (!part.empty()) {
+            strings.push_back(part);
+        }
+        str.remove_prefix(std::min(pos + 1, str.length()));
+    }
+    return strings;
+}
 
 /**
  * Check is T has `reserve(size_t{...})` member function or not

@@ -12,7 +12,7 @@
 
 namespace ag {
 
-std::vector<std::string_view> utils::split_by(std::string_view str, std::string_view delim, bool include_empty) {
+std::vector<std::string_view> utils::split_by(std::string_view str, std::string_view delim, bool include_empty, bool need_trim) {
     if (str.empty()) {
         return include_empty ? std::vector{str} : std::vector<std::string_view>{};
     }
@@ -40,7 +40,10 @@ std::vector<std::string_view> utils::split_by(std::string_view str, std::string_
         }
         size_t length = end - start;
         if (length != 0) {
-            std::string_view s = utils::trim(str.substr(seek, length));
+            std::string_view s = str.substr(seek, length);
+            if (need_trim) {
+                s = utils::trim(s);
+            }
             if (include_empty || !s.empty()) {
                 out.push_back(s);
             }
@@ -52,12 +55,12 @@ std::vector<std::string_view> utils::split_by(std::string_view str, std::string_
     return out;
 }
 
-std::vector<std::string_view> utils::split_by(std::string_view str, int delim, bool include_empty) {
+std::vector<std::string_view> utils::split_by(std::string_view str, int delim, bool include_empty, bool need_trim) {
     auto ch = (char) delim;
-    return split_by_any_of(str, {&ch, 1}, include_empty);
+    return split_by_any_of(str, {&ch, 1}, include_empty, need_trim);
 }
 
-std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::string_view delim, bool include_empty) {
+std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::string_view delim, bool include_empty, bool need_trim) {
     if (str.empty()) {
         return include_empty ? std::vector{str} : std::vector<std::string_view>{};
     }
@@ -76,7 +79,10 @@ std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::
         }
         size_t length = end - start;
         if (length != 0) {
-            std::string_view s = utils::trim(str.substr(seek, length));
+            std::string_view s = str.substr(seek, length);
+            if (need_trim) {
+                s = utils::trim(s);
+            }
             if (include_empty || !s.empty()) {
                 out.push_back(s);
             }
@@ -88,7 +94,7 @@ std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::
     return out;
 }
 
-static std::array<std::string_view, 2> split2(std::string_view str, std::string_view delim, bool reverse) {
+static std::array<std::string_view, 2> split2(std::string_view str, std::string_view delim, bool reverse, bool need_trim) {
     std::string_view first;
     std::string_view second;
 
@@ -101,21 +107,26 @@ static std::array<std::string_view, 2> split2(std::string_view str, std::string_
         second = {};
     }
 
+    if (need_trim) {
+        first = utils::trim(first);
+        second = utils::trim(second);
+    }
+
     return {first, second};
 }
 
-std::array<std::string_view, 2> utils::split2_by(std::string_view str, int delim) {
+std::array<std::string_view, 2> utils::split2_by(std::string_view str, int delim, bool need_trim) {
     auto ch = (char) delim;
-    return split2(str, {&ch, 1}, false);
+    return split2(str, {&ch, 1}, false, need_trim);
 }
 
-std::array<std::string_view, 2> utils::rsplit2_by(std::string_view str, int delim) {
+std::array<std::string_view, 2> utils::rsplit2_by(std::string_view str, int delim, bool need_trim) {
     auto ch = (char) delim;
-    return split2(str, {&ch, 1}, true);
+    return split2(str, {&ch, 1}, true, need_trim);
 }
 
-std::array<std::string_view, 2> utils::split2_by_any_of(std::string_view str, std::string_view delim) {
-    return split2(str, delim, false);
+std::array<std::string_view, 2> utils::split2_by_any_of(std::string_view str, std::string_view delim, bool need_trim) {
+    return split2(str, delim, false, need_trim);
 }
 
 bool utils::is_valid_ip4(std::string_view str) {
