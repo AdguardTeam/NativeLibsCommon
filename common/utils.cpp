@@ -223,6 +223,41 @@ std::string utils::encode_to_hex(Uint8View data) {
     return out;
 }
 
+static int parse_hex_char(char c) {
+    static constexpr int ASCII_NUMBER_OFFSET = 0x30;
+    static constexpr int ASCII_LOWERCASE_LETTER_OFFSET = 0x57;
+    static constexpr int ASCII_CAPITALCASE_LETTER_OFFSET = 0x37;
+    if (c >= '0' && c <= '9') {
+        return c - ASCII_NUMBER_OFFSET;
+    }
+    if (c >= 'a' && c <= 'f') {
+        return c - ASCII_LOWERCASE_LETTER_OFFSET;
+    }
+    if (c >= 'A' && c <= 'F') {
+        return c - ASCII_CAPITALCASE_LETTER_OFFSET;
+    }
+    return -1;
+}
+
+Uint8Vector utils::decode_hex(std::string_view hex) {
+    static constexpr size_t NIBBLE_BITS = 4;
+    static constexpr size_t UNSIGNED_MASK = 1;
+    if (hex.size() & UNSIGNED_MASK) {
+        return {};
+    }
+    Uint8Vector result;
+    result.reserve(hex.size() / 2);
+    for (size_t i = 0; i < hex.size(); i += 2) {
+        int hi = parse_hex_char(hex[i]);
+        int lo = parse_hex_char(hex[i + 1]);
+        if (hi < 0 || lo < 0) {
+            return {};
+        }
+        result.push_back((uint8_t) (hi << NIBBLE_BITS | lo));
+    }
+    return result;
+}
+
 std::string_view utils::safe_string_view(const char *cstr) {
     return (cstr != nullptr) ? std::string_view{cstr} : std::string_view{};
 }

@@ -595,6 +595,13 @@ uint32_t gettid(void);
 std::string encode_to_hex(Uint8View data);
 
 /**
+ * Parse hex-encoded bytes
+ * @param hex Input string, size must be a multiple of 2
+ * @return Parsed bytes vector, empty in case of an invalid or empty string
+ */
+Uint8Vector decode_hex(std::string_view hex);
+
+/**
  * Make pointer to C-string into string_view. If the pointer is null, returns empty string.
  */
 std::string_view safe_string_view(const char *cstr);
