@@ -17,9 +17,9 @@
 
 ag::RotatingLogToFile::RotatingLogToFile(
         std::string log_file_path, size_t file_max_size_bytes, size_t files_count)
-        : m_file_max_size_bytes(file_max_size_bytes),
-        m_files_count(files_count),
-        m_log_file_path(std::move(log_file_path)) {
+        : m_file_max_size_bytes(file_max_size_bytes)
+        , m_files_count(files_count)
+        , m_log_file_path(std::move(log_file_path)) {
     open_log_file();
 }
 
@@ -56,32 +56,32 @@ void ag::RotatingLogToFile::open_log_file() {
 
 bool ag::RotatingLogToFile::rotate_files() {
     std::error_code error;
-    const auto FIRST_INDEX = 1;
-    const auto LAST_INDEX = m_files_count - 1;
+    const auto first_index = 1;
+    const auto last_index = m_files_count - 1;
 
-    for (auto index = LAST_INDEX; index >= FIRST_INDEX; --index) {
-        std::string old_file_name = fmt::format("{}.{}", m_log_file_path, index);
-        std::filesystem::path old_file = old_file_name;
-        if (!std::filesystem::exists(old_file, error)) {
-            continue;
-        }
+    m_file_handle.close();
 
-        if (index == LAST_INDEX) {
-            if (std::filesystem::remove(old_file, error); error) {
-                fmt::print("Error removing log file '{}'\n", old_file_name);
-                return false;
-            }
-            continue;
-        }
-
-        std::string new_file_name = fmt::format("{}.{}", m_log_file_path, index + 1);
-        if (std::filesystem::rename(old_file, new_file_name, error); error) {
-            fmt::print("Error rotating log file '{}'\n", old_file_name);
+    std::string oldest_file_name = AG_FMT("{}.{}", m_log_file_path, last_index);
+    if (std::filesystem::exists(oldest_file_name, error)) {
+        if (std::filesystem::remove(oldest_file_name, error); error) {
+            fmt::print("Error removing log file '{}'\n", oldest_file_name);
             return false;
         }
     }
 
-    std::string first_rotated_file_name = fmt::format("{}.1", m_log_file_path);
+    for (auto index = last_index - 1; index >= first_index; --index) {
+        std::string old_file_name = AG_FMT("{}.{}", m_log_file_path, index);
+        std::string new_file_name = AG_FMT("{}.{}", m_log_file_path, index + 1);
+
+        if (std::filesystem::exists(old_file_name, error)) {
+            if (std::filesystem::rename(old_file_name, new_file_name, error); error) {
+                fmt::print("Error rotating log file '{}'\n", old_file_name);
+                return false;
+            }
+        }
+    }
+
+    std::string first_rotated_file_name = AG_FMT("{}.1", m_log_file_path);
     if (std::filesystem::rename(m_log_file_path, first_rotated_file_name, error); error) {
         fmt::print("Error rotating log file '{}'\n", m_log_file_path);
         return false;
