@@ -126,6 +126,7 @@ TEST(utils, iequals) {
 }
 
 TEST(utils, ifind) {
+    ASSERT_EQ(ag::utils::ifind("", ""), 0);
     ASSERT_EQ(ag::utils::ifind("AaAaB", "aaaab"), 0);
     ASSERT_EQ(ag::utils::ifind("aaaab", "AaAaB"), 0);
     ASSERT_EQ(ag::utils::ifind("", "aaaaa"), std::string_view::npos);
