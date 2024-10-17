@@ -237,3 +237,42 @@ TEST(LruTimeoutCache, DoesNotLeak) {
     ASSERT_EQ(cache.size(), cache.m_timeout_keys.size());
     ASSERT_EQ(cache.m_timeout_keys.size(), cache.m_keys_timeout_iters.size());
 }
+
+TEST(ConstantTimeoutCache, Works) {
+    ag::TimeoutCache<std::string, std::string> c(std::chrono::milliseconds(100));
+    c.insert("a", "va");
+    ag::SteadyClock::add_time_shift(std::chrono::milliseconds(50));
+    c.insert("b", "vb");
+    ASSERT_EQ("va", *c.get("a"));
+    ASSERT_EQ("vb", *c.get("b"));
+    ag::SteadyClock::add_time_shift(std::chrono::milliseconds(51));
+    ASSERT_FALSE(c.get("a"));
+    ASSERT_EQ("vb", *c.get("b"));
+    c.insert("c", "vc");
+    ag::SteadyClock::add_time_shift(std::chrono::milliseconds(50));
+    ASSERT_FALSE(c.get("a"));
+    ASSERT_FALSE(c.get("b"));
+    ASSERT_EQ("vc", *c.get("c"));
+    c.erase("c");
+    ASSERT_FALSE(c.get("c"));
+    c.insert("a", "va");
+    c.insert("a", "vaa");
+    ASSERT_EQ("vaa", *c.get("a"));
+    ASSERT_EQ(1u, c.size());
+    ASSERT_FALSE(c.empty());
+    c.clear();
+    ASSERT_TRUE(c.empty());
+    ASSERT_EQ(0u, c.size());
+}
+
+TEST(ConstantTimeoutCache, SizeBound) {
+    static constexpr size_t size = 2;
+    ag::TimeoutCache<std::string, std::string> c(std::chrono::milliseconds(100), size);
+    c.insert("a", "va");
+    c.insert("b", "vb");
+    c.insert("c", "vc");
+    ASSERT_FALSE(c.get("a")); // Oldest entry is pushed out
+    ASSERT_EQ("vb", *c.get("b"));
+    ASSERT_EQ("vc", *c.get("c"));
+    ASSERT_EQ(size, c.size());
+}
