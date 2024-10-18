@@ -1,5 +1,9 @@
 #include <gtest/gtest.h>
 
+#ifdef _WIN32
+#define NOMINMAX
+#endif // _WIN32
+
 #include "common/cesu8.h"
 #include "common/socket_address.h"
 #include "common/utils.h"
