@@ -36,6 +36,7 @@ public:
     RotatingLogToFile(RotatingLogToFile &&) = delete;
     RotatingLogToFile &operator=(const RotatingLogToFile &) = delete;
     RotatingLogToFile &operator=(RotatingLogToFile &&) = delete;
+    ~RotatingLogToFile();
 
 private:
     const size_t m_file_max_size_bytes;

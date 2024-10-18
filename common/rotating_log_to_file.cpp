@@ -23,6 +23,12 @@ ag::RotatingLogToFile::RotatingLogToFile(
     open_log_file();
 }
 
+ag::RotatingLogToFile::~RotatingLogToFile() {
+    if (m_file_handle.is_open()) {
+        m_file_handle.close();
+    }
+}
+
 void ag::RotatingLogToFile::operator()(LogLevel level, std::string_view message) {
     if (m_files_count == 0) {
         return;
@@ -56,18 +62,10 @@ void ag::RotatingLogToFile::open_log_file() {
 
 bool ag::RotatingLogToFile::rotate_files() {
     std::error_code error;
-    const auto first_index = 1;
-    const auto last_index = m_files_count - 1;
+    const size_t first_index = 1;
+    const size_t last_index = m_files_count - 1;
 
     m_file_handle.close();
-
-    std::string oldest_file_name = AG_FMT("{}.{}", m_log_file_path, last_index);
-    if (std::filesystem::exists(oldest_file_name, error)) {
-        if (std::filesystem::remove(oldest_file_name, error); error) {
-            fmt::print("Error removing log file '{}'\n", oldest_file_name);
-            return false;
-        }
-    }
 
     for (auto index = last_index - 1; index >= first_index; --index) {
         std::string old_file_name = AG_FMT("{}.{}", m_log_file_path, index);
