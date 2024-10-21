@@ -38,15 +38,12 @@ void ag::RotatingLogToFile::operator()(LogLevel level, std::string_view message)
         return;
     }
 
-    m_file_handle.close();
     if (!rotate_files()) {
         fmt::print("Failed to rotate log files\n");
-        open_log_file();
         log_to_ofstream(level, message);
         return;
     }
 
-    open_log_file();
     log_to_ofstream(level, message);
 }
 
@@ -74,12 +71,15 @@ bool ag::RotatingLogToFile::rotate_files() {
         }
     }
 
+    m_file_handle.close();
     std::string first_rotated_file_name = AG_FMT("{}.1", m_log_file_path);
     if (std::filesystem::rename(m_log_file_path, first_rotated_file_name, error); error) {
         fmt::print("Error rotating log file '{}'\n", m_log_file_path);
+        open_log_file();
         return false;
     }
 
+    open_log_file();
     return true;
 }
 
