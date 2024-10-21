@@ -63,7 +63,6 @@ TEST_F(RotatingLogToFileTest, TestFileRotation) {
     }
 
     for (auto i = 1; i < m_max_files; i++) {
-        fmt::print("Debug: {}.{}\n", m_log_file, i);
         ASSERT_TRUE(std::filesystem::exists(AG_FMT("{}.{}", m_log_file, i)));
     }
 }
