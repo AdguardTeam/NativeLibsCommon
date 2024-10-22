@@ -15,6 +15,7 @@
 #include <vector>
 #include <cctype>
 #include <charconv>
+#include <istream>
 
 #include "common/defs.h"
 #include "common/format.h"
@@ -729,6 +730,53 @@ struct AutoPod {
     void release() {
         data = {};
     }
+};
+
+/** String view input stream */
+class StringViewStream : public std::basic_istream<char, std::char_traits<char>> {
+public:
+    explicit StringViewStream(std::string_view v) : basic_istream(&m_buf), m_buf(v) {}
+
+private:
+    class StringViewBuf : public std::streambuf {
+    public:
+        explicit StringViewBuf(std::string_view v) {
+            setg((char *) v.data(), (char *) v.data(), (char *) v.data() + v.size());
+        }
+
+    protected:
+        pos_type seekoff(off_type off, std::ios_base::seekdir way, std::ios_base::openmode) override {
+            char_type *p;
+            switch (way) {
+            case beg:
+                p = eback();
+                break;
+            case cur:
+                p = gptr();
+                break;
+            case end:
+                p = egptr();
+                break;
+            default:
+                return -1;
+            }
+            if (char_type *np = p + off; np >= eback() && np <= egptr()) {
+                setg(eback(), np, egptr());
+                return np - eback();
+            }
+            return -1;
+        }
+
+        pos_type seekpos(pos_type pos, std::ios_base::openmode) override {
+            if (char_type *np = eback() + pos; np >= eback() && np <= egptr()) {
+                setg(eback(), np, egptr());
+                return np - eback();
+            }
+            return -1;
+        }
+    };
+
+    StringViewBuf m_buf;
 };
 
 } // namespace ag
