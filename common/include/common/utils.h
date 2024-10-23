@@ -243,7 +243,7 @@ std::vector<std::string_view> split_if(std::string_view str, Predicate p, bool n
         if (!part.empty()) {
             strings.push_back(part);
         }
-        str.remove_prefix(std::min(pos + 1, str.length()));
+        str.remove_prefix((std::min)(pos + 1, str.length()));
     }
     return strings;
 }
