@@ -19,7 +19,7 @@ bool Regex::match(std::string_view str) const {
 }
 
 std::string Regex::replace(std::string_view subject, std::string_view replacement) const {
-    uint32_t options = PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_UNSET_EMPTY | PCRE2_SUBSTITUTE_EXTENDED;
+    uint32_t options = PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_UNSET_EMPTY | PCRE2_SUBSTITUTE_EXTENDED | PCRE2_SUBSTITUTE_OVERFLOW_LENGTH;
 
     std::string result;
     size_t result_length = subject.length() + 1;
