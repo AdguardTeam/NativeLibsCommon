@@ -18,6 +18,7 @@ set(SOURCE_FILES
         net_utils.cpp
         error.cpp
         url.cpp
+        rotating_log_to_file.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
@@ -54,3 +55,4 @@ add_unit_test(error_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(cidr_range_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(coro_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(net_utils_test ${TEST_DIR} "" TRUE TRUE)
+add_unit_test(rotating_log_to_file_test ${TEST_DIR} "" TRUE TRUE)
