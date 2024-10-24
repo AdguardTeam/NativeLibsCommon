@@ -33,13 +33,12 @@ void ag::RotatingLogToFile::operator()(LogLevel level, std::string_view message)
         return;
     }
 
-    if (auto pos = m_file_handle.tellp(); pos > 0 && (size_t(pos) + message.size()) < m_file_max_size_bytes) {
+    if (auto pos = m_file_handle.tellp(); pos >= 0 && (size_t(pos) + message.size()) < m_file_max_size_bytes) {
         log_to_ofstream(level, message);
         return;
     }
 
     if (!rotate_files()) {
-        fmt::print("Failed to rotate log files\n");
         log_to_ofstream(level, message);
         return;
     }
@@ -51,7 +50,7 @@ void ag::RotatingLogToFile::open_log_file() {
     m_file_handle = std::ofstream{};
     m_file_handle.open(m_log_file_path, std::ios_base::app);
     if (m_file_handle.fail()) {
-        fmt::print("Error opening log file: {}\n", strerror(errno));
+        log_to_ofstream(LOG_LEVEL_ERROR, AG_FMT("Error opening log file: {}", strerror(errno)));
     }
 }
 
@@ -66,7 +65,7 @@ bool ag::RotatingLogToFile::rotate_files() {
 
         std::filesystem::rename(old_file_name, new_file_name, error);
         if (error && error != std::errc::no_such_file_or_directory) {
-            fmt::print("Error rotating log file '{}'\n", old_file_name);
+            log_to_ofstream(LOG_LEVEL_ERROR, AG_FMT("Error rotating log file: {}", old_file_name));
             return false;
         }
     }
@@ -74,8 +73,8 @@ bool ag::RotatingLogToFile::rotate_files() {
     m_file_handle.close();
     std::string first_rotated_file_name = AG_FMT("{}.1", m_log_file_path);
     if (std::filesystem::rename(m_log_file_path, first_rotated_file_name, error); error) {
-        fmt::print("Error rotating log file '{}'\n", m_log_file_path);
         open_log_file();
+        log_to_ofstream(LOG_LEVEL_ERROR, AG_FMT("Error rotating log file: {}", m_log_file_path));
         return false;
     }
 
