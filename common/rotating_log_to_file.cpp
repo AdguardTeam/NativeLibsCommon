@@ -104,4 +104,9 @@ void ag::RotatingLogToFile::log_to_ofstream(LogLevel level, std::string_view mes
 
     m_file_handle.write(message_to_log.data(), message_to_log.size());
     m_file_handle.flush();
+    
+    if (m_file_handle.fail()) {
+        std::clog.write(message_to_log.data(), message_to_log.size());
+        std::clog.flush();
+    }
 }
