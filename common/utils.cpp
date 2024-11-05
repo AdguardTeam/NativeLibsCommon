@@ -6,13 +6,40 @@
 #include <cstring>
 #include <locale>
 #include <numeric>
+#include <random>
 
 #include "common/socket_address.h"
 #include "common/utils.h"
 
 namespace ag {
 
-std::vector<std::string_view> utils::split_by(std::string_view str, std::string_view delim, bool include_empty) {
+std::string utils::generate_uuid() {
+    static std::mt19937 rng = std::mt19937(std::random_device{}());
+
+    union {
+        uint32_t int_parts[4];
+        uint16_t short_parts[8];
+    } uuid_parts{};
+
+    for (size_t i = 0; i < sizeof(uuid_parts)/sizeof(uint32_t); i++) {
+        uuid_parts.int_parts[i] = (uint32_t)rng();
+    }
+
+    // set version to 4
+    uuid_parts.short_parts[3] &= 0x0fff;
+    uuid_parts.short_parts[3] |= 0x4000;
+
+    // set variant according to section 4.1.1 of RFC 4122
+    uuid_parts.short_parts[4] &= 0x3fff;
+    uuid_parts.short_parts[4] |= 0x8000;
+
+    return AG_FMT("{:04x}{:04x}-{:04x}-{:04x}-{:04x}-{:04x}{:04x}{:04x}",
+            uuid_parts.short_parts[0], uuid_parts.short_parts[1],
+            uuid_parts.short_parts[2], uuid_parts.short_parts[3], uuid_parts.short_parts[4],
+            uuid_parts.short_parts[5], uuid_parts.short_parts[6], uuid_parts.short_parts[7]);
+}
+
+std::vector<std::string_view> utils::split_by(std::string_view str, std::string_view delim, bool include_empty, bool need_trim) {
     if (str.empty()) {
         return include_empty ? std::vector{str} : std::vector<std::string_view>{};
     }
@@ -40,7 +67,10 @@ std::vector<std::string_view> utils::split_by(std::string_view str, std::string_
         }
         size_t length = end - start;
         if (length != 0) {
-            std::string_view s = utils::trim(str.substr(seek, length));
+            std::string_view s = str.substr(seek, length);
+            if (need_trim) {
+                s = utils::trim(s);
+            }
             if (include_empty || !s.empty()) {
                 out.push_back(s);
             }
@@ -52,12 +82,12 @@ std::vector<std::string_view> utils::split_by(std::string_view str, std::string_
     return out;
 }
 
-std::vector<std::string_view> utils::split_by(std::string_view str, int delim, bool include_empty) {
+std::vector<std::string_view> utils::split_by(std::string_view str, int delim, bool include_empty, bool need_trim) {
     auto ch = (char) delim;
-    return split_by_any_of(str, {&ch, 1}, include_empty);
+    return split_by_any_of(str, {&ch, 1}, include_empty, need_trim);
 }
 
-std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::string_view delim, bool include_empty) {
+std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::string_view delim, bool include_empty, bool need_trim) {
     if (str.empty()) {
         return include_empty ? std::vector{str} : std::vector<std::string_view>{};
     }
@@ -76,7 +106,10 @@ std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::
         }
         size_t length = end - start;
         if (length != 0) {
-            std::string_view s = utils::trim(str.substr(seek, length));
+            std::string_view s = str.substr(seek, length);
+            if (need_trim) {
+                s = utils::trim(s);
+            }
             if (include_empty || !s.empty()) {
                 out.push_back(s);
             }
@@ -88,7 +121,7 @@ std::vector<std::string_view> utils::split_by_any_of(std::string_view str, std::
     return out;
 }
 
-static std::array<std::string_view, 2> split2(std::string_view str, std::string_view delim, bool reverse) {
+static std::array<std::string_view, 2> split2(std::string_view str, std::string_view delim, bool reverse, bool need_trim) {
     std::string_view first;
     std::string_view second;
 
@@ -101,21 +134,26 @@ static std::array<std::string_view, 2> split2(std::string_view str, std::string_
         second = {};
     }
 
+    if (need_trim) {
+        first = utils::trim(first);
+        second = utils::trim(second);
+    }
+
     return {first, second};
 }
 
-std::array<std::string_view, 2> utils::split2_by(std::string_view str, int delim) {
+std::array<std::string_view, 2> utils::split2_by(std::string_view str, int delim, bool need_trim) {
     auto ch = (char) delim;
-    return split2(str, {&ch, 1}, false);
+    return split2(str, {&ch, 1}, false, need_trim);
 }
 
-std::array<std::string_view, 2> utils::rsplit2_by(std::string_view str, int delim) {
+std::array<std::string_view, 2> utils::rsplit2_by(std::string_view str, int delim, bool need_trim) {
     auto ch = (char) delim;
-    return split2(str, {&ch, 1}, true);
+    return split2(str, {&ch, 1}, true, need_trim);
 }
 
-std::array<std::string_view, 2> utils::split2_by_any_of(std::string_view str, std::string_view delim) {
-    return split2(str, delim, false);
+std::array<std::string_view, 2> utils::split2_by_any_of(std::string_view str, std::string_view delim, bool need_trim) {
+    return split2(str, delim, false, need_trim);
 }
 
 bool utils::is_valid_ip4(std::string_view str) {
@@ -221,6 +259,41 @@ std::string utils::encode_to_hex(Uint8View data) {
     }
 
     return out;
+}
+
+static int parse_hex_char(char c) {
+    static constexpr int ASCII_NUMBER_OFFSET = 0x30;
+    static constexpr int ASCII_LOWERCASE_LETTER_OFFSET = 0x57;
+    static constexpr int ASCII_CAPITALCASE_LETTER_OFFSET = 0x37;
+    if (c >= '0' && c <= '9') {
+        return c - ASCII_NUMBER_OFFSET;
+    }
+    if (c >= 'a' && c <= 'f') {
+        return c - ASCII_LOWERCASE_LETTER_OFFSET;
+    }
+    if (c >= 'A' && c <= 'F') {
+        return c - ASCII_CAPITALCASE_LETTER_OFFSET;
+    }
+    return -1;
+}
+
+Uint8Vector utils::decode_hex(std::string_view hex) {
+    static constexpr size_t NIBBLE_BITS = 4;
+    static constexpr size_t UNSIGNED_MASK = 1;
+    if (hex.size() & UNSIGNED_MASK) {
+        return {};
+    }
+    Uint8Vector result;
+    result.reserve(hex.size() / 2);
+    for (size_t i = 0; i < hex.size(); i += 2) {
+        int hi = parse_hex_char(hex[i]);
+        int lo = parse_hex_char(hex[i + 1]);
+        if (hi < 0 || lo < 0) {
+            return {};
+        }
+        result.push_back((uint8_t) (hi << NIBBLE_BITS | lo));
+    }
+    return result;
 }
 
 std::string_view utils::safe_string_view(const char *cstr) {

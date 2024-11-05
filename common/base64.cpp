@@ -105,7 +105,7 @@ std::string encode_to_base64(Uint8View data, bool url_safe) {
     return result;
 }
 
-std::optional<std::vector<uint8_t>> decode_base64(const std::string_view &data, bool url_safe) {
+std::optional<std::vector<uint8_t>> decode_base64(std::string_view data, bool url_safe) {
     const auto &basis = url_safe ? BASIS_URL_SAFE : BASIS_DEFAULT;
     auto src = data.data();
     auto src_len = data.size();

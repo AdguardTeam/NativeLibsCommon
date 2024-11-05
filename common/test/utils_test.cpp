@@ -126,6 +126,7 @@ TEST(utils, iequals) {
 }
 
 TEST(utils, ifind) {
+    ASSERT_EQ(ag::utils::ifind("", ""), 0);
     ASSERT_EQ(ag::utils::ifind("AaAaB", "aaaab"), 0);
     ASSERT_EQ(ag::utils::ifind("aaaab", "AaAaB"), 0);
     ASSERT_EQ(ag::utils::ifind("", "aaaaa"), std::string_view::npos);
@@ -137,10 +138,17 @@ TEST(utils, ifind) {
     ASSERT_EQ(ag::utils::ifind("AaAaB", "aaaabb"), std::string_view::npos);
 }
 
-TEST(utils, encode_to_hex) {
+TEST(utils, EncodeDecodeToHex) {
     constexpr uint8_t DATA_0[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x42};
     ASSERT_EQ("000102030442", ag::utils::encode_to_hex({DATA_0, std::size(DATA_0)}));
     ASSERT_EQ("", ag::utils::encode_to_hex({}));
+    std::string hex = "cafebabe";
+    const std::vector<uint8_t> BIN{0xca, 0xfe, 0xba, 0xbe};
+    ASSERT_EQ(hex, ag::utils::encode_to_hex({BIN.data(), BIN.size()}));
+    ASSERT_EQ(BIN, ag::utils::decode_hex(hex));
+    ASSERT_EQ(std::vector<uint8_t>{}, ag::utils::decode_hex(""));
+    ASSERT_EQ(std::vector<uint8_t>{}, ag::utils::decode_hex("zxcv"));
+    ASSERT_EQ(std::vector<uint8_t>{}, ag::utils::decode_hex("12345"));
 }
 
 TEST(utils, TestSplit2) {

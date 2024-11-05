@@ -15,6 +15,7 @@
 #include <vector>
 #include <cctype>
 #include <charconv>
+#include <istream>
 
 #include "common/defs.h"
 #include "common/format.h"
@@ -84,6 +85,36 @@ inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T, N>::value;
 
 namespace ag {
 namespace utils {
+
+/**
+ * Generates version 4 random uuid (according to RFC 4122)
+ */
+std::string generate_uuid();
+
+/**
+ * Check if the `rhs` is a subset of the `lhs`
+ */
+template<size_t N>
+bool bitwise_includes(std::bitset<N> lhs, std::bitset<N> rhs) {
+    return (lhs & rhs) == rhs;
+}
+
+/**
+ * Just like `std::remove_if()`, but swaps elements to the tail instead of moving them
+ */
+template<typename Iterator, typename Predicate>
+Iterator swap_remove_if(Iterator begin, Iterator end, Predicate p) {
+    begin = std::find_if(begin, end, p);
+    if (begin != end) {
+        for (Iterator i = begin; ++i != end;) {
+            if (!p(*i)) {
+                std::swap(*begin++, *i);
+            }
+        }
+    }
+    return begin;
+}
+
 /**
  * Transform string to uppercase
  */
@@ -199,28 +230,53 @@ static inline constexpr bool iends_with(std::string_view str, std::string_view s
 /**
  * Split string by delimiter
  */
-std::vector<std::string_view> split_by(std::string_view str, int delim, bool include_empty = false);
-std::vector<std::string_view> split_by(std::string_view str, std::string_view delim, bool include_empty = false);
+std::vector<std::string_view> split_by(std::string_view str, int delim, bool include_empty = false, bool need_trim = true);
+std::vector<std::string_view> split_by(std::string_view str, std::string_view delim, bool include_empty = false, bool need_trim = true);
 
 /**
  * Split string by any character in delimiters
  */
-std::vector<std::string_view> split_by_any_of(std::string_view str, std::string_view delim, bool include_empty = false);
+std::vector<std::string_view> split_by_any_of(std::string_view str, std::string_view delim, bool include_empty = false, bool need_trim = true);
 
 /**
  * Split string by first found delimiter for 2 parts
  */
-std::array<std::string_view, 2> split2_by(std::string_view str, int delim);
+std::array<std::string_view, 2> split2_by(std::string_view str, int delim, bool need_trim = true);
 
 /**
  * Split string by last found delimiter for 2 parts
  */
-std::array<std::string_view, 2> rsplit2_by(std::string_view str, int delim);
+std::array<std::string_view, 2> rsplit2_by(std::string_view str, int delim, bool need_trim = true);
 
 /**
  * Split string into two parts at the first occurrence of any character in the provided delimiters.
  */
-std::array<std::string_view, 2> split2_by_any_of(std::string_view str, std::string_view delim);
+std::array<std::string_view, 2> split2_by_any_of(std::string_view str, std::string_view delim, bool need_trim = true);
+
+/**
+ * Splits string into pieces by chars which match the predicate
+ * @param str String
+ * @param p Predicate function
+ * @param need_trim Whether need to trim whitespaces
+ * @return List of strings
+ */
+template<class Predicate>
+std::vector<std::string_view> split_if(std::string_view str, Predicate p, bool need_trim = true) {
+    std::vector<std::string_view> strings;
+    while (!str.empty()) {
+        auto next = std::find_if(str.begin(), str.end(), p);
+        size_t pos = (next != str.end()) ? std::distance(str.begin(), next) : str.length();
+        std::string_view part = str.substr(0, pos);
+        if (need_trim) {
+            part = trim(part);
+        }
+        if (!part.empty()) {
+            strings.push_back(part);
+        }
+        str.remove_prefix((std::min)(pos + 1, str.length()));
+    }
+    return strings;
+}
 
 /**
  * Check is T has `reserve(size_t{...})` member function or not
@@ -595,6 +651,13 @@ uint32_t gettid(void);
 std::string encode_to_hex(Uint8View data);
 
 /**
+ * Parse hex-encoded bytes
+ * @param hex Input string, size must be a multiple of 2
+ * @return Parsed bytes vector, empty in case of an invalid or empty string
+ */
+Uint8Vector decode_hex(std::string_view hex);
+
+/**
  * Make pointer to C-string into string_view. If the pointer is null, returns empty string.
  */
 std::string_view safe_string_view(const char *cstr);
@@ -697,6 +760,53 @@ struct AutoPod {
     void release() {
         data = {};
     }
+};
+
+/** String view input stream */
+class StringViewStream : public std::basic_istream<char, std::char_traits<char>> {
+public:
+    explicit StringViewStream(std::string_view v) : basic_istream(&m_buf), m_buf(v) {}
+
+private:
+    class StringViewBuf : public std::streambuf {
+    public:
+        explicit StringViewBuf(std::string_view v) {
+            setg((char *) v.data(), (char *) v.data(), (char *) v.data() + v.size());
+        }
+
+    protected:
+        pos_type seekoff(off_type off, std::ios_base::seekdir way, std::ios_base::openmode) override {
+            char_type *p;
+            switch (way) {
+            case beg:
+                p = eback();
+                break;
+            case cur:
+                p = gptr();
+                break;
+            case end:
+                p = egptr();
+                break;
+            default:
+                return -1;
+            }
+            if (char_type *np = p + off; np >= eback() && np <= egptr()) {
+                setg(eback(), np, egptr());
+                return np - eback();
+            }
+            return -1;
+        }
+
+        pos_type seekpos(pos_type pos, std::ios_base::openmode) override {
+            if (char_type *np = eback() + pos; np >= eback() && np <= egptr()) {
+                setg(eback(), np, egptr());
+                return np - eback();
+            }
+            return -1;
+        }
+    };
+
+    StringViewBuf m_buf;
 };
 
 } // namespace ag

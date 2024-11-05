@@ -22,6 +22,6 @@ std::string encode_to_base64(Uint8View data, bool url_safe);
  * @param url_safe is string url safe or not
  * @return optional with bytes or null optional if string is not valid Base64-encoded
  */
-std::optional<std::vector<uint8_t>> decode_base64(const std::string_view &data, bool url_safe);
+std::optional<std::vector<uint8_t>> decode_base64(std::string_view data, bool url_safe);
 
 } // namespace ag

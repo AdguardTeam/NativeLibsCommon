@@ -53,7 +53,7 @@ std::chrono::seconds to_secs(std::chrono::nanoseconds duration);
  *         conversions in format, or `npos` if parsing failed
  *         second: Valid tm structure if first is not `npos`
  */
-std::pair<size_t, tm> parse_time(const std::string &s, const char *format);
+std::pair<size_t, tm> parse_time(std::string_view s, const char *format);
 
 /**
  * Check if timezone is one of the following "GMT", "UTC", "+0000" or "-0000"

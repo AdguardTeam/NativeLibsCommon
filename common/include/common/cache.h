@@ -333,4 +333,93 @@ private:
     }
 };
 
+/**
+ * A cache where each entry has a constant TTL,
+ * starting from the time it was added to the cache.
+ * Complexity of adding and erasing a single element is O(1).
+ */
+template<typename Key, typename Val>
+class TimeoutCache {
+private:
+    struct Entry {
+        Key key;
+        Val value;
+        SteadyClock::time_point expires;
+
+        Entry(Key key, Val value, SteadyClock::time_point expires)
+                : key(std::move(key)), value(std::move(value)), expires(expires) {}
+    };
+
+    std::list<Entry> m_entries; // Newer entries go to the front
+    std::unordered_map<Key, typename decltype(m_entries)::iterator> m_entry_iter_by_key;
+
+    const std::chrono::nanoseconds TIMEOUT;
+    const size_t CAPACITY;
+
+public:
+    /**
+     * @param timeout entry timeout
+     * @param maxSize maximum number of entries, 0 means unlimited
+     */
+    explicit TimeoutCache(std::chrono::nanoseconds timeout, size_t maxSize = 0)
+            : TIMEOUT{timeout}, CAPACITY{maxSize} {
+    }
+
+    void insert(Key key, Val value) {
+        if (CAPACITY != 0 && m_entry_iter_by_key.size() == CAPACITY) {
+            auto oldest_it = --m_entries.end();
+            m_entry_iter_by_key.erase(oldest_it->key);
+            m_entries.erase(oldest_it);
+        }
+        auto it = m_entry_iter_by_key.find(key);
+        auto expires = SteadyClock::now() + TIMEOUT;
+        if (it != m_entry_iter_by_key.end()) {
+            auto &entry_it = it->second;
+            entry_it->value = std::move(value);
+            entry_it->expires = expires;
+            m_entries.splice(m_entries.begin(), m_entries, entry_it);
+        } else {
+            m_entries.emplace_front(std::move(key), std::move(value), expires);
+            m_entry_iter_by_key.emplace(m_entries.front().key, m_entries.begin());
+        }
+    }
+
+    const Val *get(const Key &key) {
+        auto it = m_entry_iter_by_key.find(key);
+        if (it == m_entry_iter_by_key.end()) {
+            return nullptr;
+        }
+        auto expires = it->second->expires;
+        auto now = SteadyClock::now();
+        if (now >= expires) {
+            m_entries.erase(it->second);
+            m_entry_iter_by_key.erase(it);
+            return nullptr;
+        }
+        return &it->second->value;
+    }
+
+    void erase(const Key &key) {
+        auto it = m_entry_iter_by_key.find(key);
+        if (it == m_entry_iter_by_key.end()) {
+            return;
+        }
+        m_entries.erase(it->second);
+        m_entry_iter_by_key.erase(it);
+    }
+
+    void clear() {
+        m_entries.clear();
+        m_entry_iter_by_key.clear();
+    }
+
+    size_t size() const {
+        return m_entries.size();
+    }
+
+    bool empty() const {
+        return m_entries.empty();
+    }
+};
+
 } // namespace ag

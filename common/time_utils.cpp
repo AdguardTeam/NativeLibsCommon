@@ -77,9 +77,9 @@ std::chrono::seconds to_secs(std::chrono::nanoseconds duration) {
     return std::chrono::duration_cast<std::chrono::seconds>(duration);
 }
 
-std::pair<size_t, tm> parse_time(const std::string &s, const char *format) {
+std::pair<size_t, tm> parse_time(std::string_view s, const char *format) {
     tm tm_info{};
-    std::istringstream input(s);
+    StringViewStream input(s);
     input.imbue(std::locale::classic());
     input >> std::get_time(&tm_info, format);
     if (input.fail()) {
