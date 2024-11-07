@@ -1,9 +1,13 @@
 os:
   Windows:
     ag_profile_version: &ag_profile_version [ null, "2" ]
+    ag_sanitizer: &ag_sanitizer [ null, "address" ]
   Linux:
     ag_profile_version: *ag_profile_version
+    ag_sanitizer: *ag_sanitizer
   Macos:
     ag_profile_version: *ag_profile_version
+    ag_sanitizer: *ag_sanitizer
   Android:
     ag_profile_version: *ag_profile_version
+    ag_sanitizer: *ag_sanitizer
