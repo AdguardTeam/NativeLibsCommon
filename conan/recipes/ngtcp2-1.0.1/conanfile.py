@@ -11,7 +11,7 @@ class Ngtcp2Conan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    requires = ["openssl/boring-2023-05-17@adguard_team/native_libs_common"]
+    requires = ["openssl/boring-2024-09-13@adguard_team/native_libs_common"]
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def config_options(self):
