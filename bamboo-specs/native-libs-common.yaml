@@ -30,6 +30,9 @@ Android build:
             set -x
             set -e
 
+            env
+            exit 1
+
             python3 -m pip install conan --upgrade
 
             # Clean up local cache
