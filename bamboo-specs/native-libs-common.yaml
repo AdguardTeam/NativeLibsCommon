@@ -55,7 +55,7 @@ Android build:
             # Clean up local cache
             conan remove -c "*"
   requirements:
-    - adg-privileged-docker
+    - android-docker
   artifact-subscriptions: []
 repositories:
   - core-libs/native-libs-common:
