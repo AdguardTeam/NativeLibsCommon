@@ -17,7 +17,7 @@ Android build:
     volumes:
       ${bamboo.working.directory}: ${bamboo.working.directory}
       ${bamboo.tmp.directory}: ${bamboo.tmp.directory}
-    docker-run-arguments: ['-e', 'xuj=${bamboo.planName}']
+    docker-run-arguments: ['-e', 'AGENT_ID=${bamboo.agentId}']
   tasks:
     - !include docker-clean.yaml
     - checkout:
