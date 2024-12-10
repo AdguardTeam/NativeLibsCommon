@@ -1,0 +1,15 @@
+diff --git a/tool/CMakeLists.txt b/tool/CMakeLists.txt
+index 5047108..185c001 100644
+--- a/tool/CMakeLists.txt
++++ b/tool/CMakeLists.txt
+@@ -19,5 +19,9 @@ add_executable(
+   tool.cc
+   transport_common.cc
+ )
+-install_if_enabled(TARGETS bssl DESTINATION ${INSTALL_DESTINATION_DEFAULT})
++if (APPLE)
++    install_if_enabled(TARGETS bssl DESTINATION ${INSTALL_DESTINATION_DEFAULT} BUNDLE DESTINATION .)
++else ()
++    install_if_enabled(TARGETS bssl DESTINATION ${INSTALL_DESTINATION_DEFAULT})
++endif ()
+ target_link_libraries(bssl ssl crypto)
