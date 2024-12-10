@@ -17,7 +17,7 @@ Android build:
     volumes:
       ${bamboo.working.directory}: ${bamboo.working.directory}
       ${bamboo.tmp.directory}: ${bamboo.tmp.directory}
-    docker-run-arguments: []
+    docker-run-arguments: ['-e', 'xuj=pizda']
   tasks:
     - !include docker-clean.yaml
     - checkout:
