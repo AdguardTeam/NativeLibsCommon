@@ -17,11 +17,11 @@ Android build:
     volumes:
       ${bamboo.working.directory}: ${bamboo.working.directory}
       ${bamboo.tmp.directory}: ${bamboo.tmp.directory}
-    docker-run-arguments: ['-e', 'AGENT_ID=${bamboo.agentId}']
+    docker-run-arguments: ["-e", "DEBUG=true"]
   tasks:
     - !include docker-clean.yaml
     - checkout:
-        force-clean-build: 'true'
+        force-clean-build: "true"
         description: Checkout Default Repository
     - script:
         interpreter: SHELL
