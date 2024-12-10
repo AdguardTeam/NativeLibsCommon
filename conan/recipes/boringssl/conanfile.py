@@ -50,7 +50,7 @@ class BoringsslConan(ConanFile):
         cmake.configure()
         if self.settings.os == "iOS":
             cmake.build(target=["ssl", "crypto"])
-        else
+        else:
             cmake.build(target=["ssl", "crypto", "bssl"])
 
     def package(self):
