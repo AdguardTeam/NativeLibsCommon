@@ -188,7 +188,8 @@ Mac build:
             deactivate
             rm -rf venv
   requirements:
-    - macOS 11.0 or later
+    - ephemeral
+    - image: registry.int.agrd.dev/macos/sequoia-build-agent-xcode16.1:latest
   artifact-subscriptions: []
 Android build:
   key: AB
