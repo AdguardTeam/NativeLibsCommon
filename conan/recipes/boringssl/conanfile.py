@@ -48,15 +48,11 @@ class BoringsslConan(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-        if self.settings.os == "iOS":
-            cmake.build(target=["ssl", "crypto"])
-        else:
-            cmake.build(target=["ssl", "crypto", "bssl"])
+        cmake.build(target=["ssl", "crypto", "bssl"])
 
     def package(self):
         copy(self, "*.h", src=join(self.source_folder, "source_subfolder/include"), dst=join(self.package_folder, "include"), keep_path = True)
-        if self.settings.os != "iOS":
-            copy(self, "bin/bssl", src=self.build_folder, dst=join(self.package_folder, "bin"), keep_path=False)
+        copy(self, "source_subfolder/bssl*", src=self.build_folder, dst=join(self.package_folder, "bin"), keep_path=False)
         copy(self, "*.dll", src=self.build_folder, dst=join(self.package_folder, "bin"), keep_path=False)
         copy(self, "*.lib", src=self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
         copy(self, "*.so", src=self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)

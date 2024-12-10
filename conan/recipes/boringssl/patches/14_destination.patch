@@ -1,0 +1,17 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 75d750e..3ef6525 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -803,7 +803,11 @@ endif()
+ 
+ if(INSTALL_ENABLED)
+   install(TARGETS crypto ssl EXPORT OpenSSLTargets)
+-  install(TARGETS bssl)
++  if (APPLE)
++    install(TARGETS bssl BUNDLE DESTINATION .)
++  else ()
++    install(TARGETS bssl)
++  endif()
+   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+   install(EXPORT OpenSSLTargets
+           FILE OpenSSLTargets.cmake
