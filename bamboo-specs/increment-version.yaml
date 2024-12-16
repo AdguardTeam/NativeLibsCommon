@@ -47,7 +47,7 @@ Default Job:
             ## Unlink local repo
             git remote remove origin
             rm -f .git/objects/info/alternates
-            rm -f .git/refs
+            rm -rf .git/refs
             ## Add remote repo
             git remote add origin ${bamboo_planRepository_repositoryUrl}
             git fetch origin ${bamboo_planRepository_branchName}
