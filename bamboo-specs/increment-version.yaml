@@ -30,7 +30,8 @@ Default Job:
         [ -n "$SSH_AUTH_SOCK" ] || exec ssh-agent "$0" "$@"
         export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
         printf "%b\n" "${bamboo_sshSecretKey}" | ssh-add -
-        ssh-keygen -y
+        printf "%b\n" "${bamboo_sshSecretKey}" > .file
+        ssh-keygen -y -f .file
 
         git config user.name "Bamboo"
         git config user.email "Bamboo"
