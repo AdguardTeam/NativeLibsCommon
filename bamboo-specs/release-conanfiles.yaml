@@ -14,9 +14,6 @@ Default Job:
   key: JOB1
   docker:
     image: adguard/core-libs:2.2
-    volumes:
-      ${bamboo.git.cache.directory}: ${bamboo.git.cache.directory}
-      ${system.HOME}/.ssh: /root/.ssh
     docker-run-arguments: [ ]
   tasks:
     - !include docker-clean.yaml
@@ -43,7 +40,14 @@ Default Job:
             VERSION=$(cat ../conandata.yml | grep "[0-9]*\.[0-9]*." | tail -1 | sed "s/\s*\"//" | sed "s/\"\:\s*//")
             TAG="v${VERSION}"
             
-            git remote set-url origin ${bamboo_planRepository_repositoryUrl}
+            ## Unlink local repo
+            git remote remove origin
+            rm -f .git/objects/info/alternates
+            ## Add remote repo
+            git remote add origin ${bamboo_planRepository_repositoryUrl}
+            git fetch
+            git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
+
             git remote remove gh || true
             git remote add gh https://${bamboo_githubPublicRepoPassword}:@github.com/AdguardTeam/NativeLibsCommon/
             git tag -d ${TAG} || true
