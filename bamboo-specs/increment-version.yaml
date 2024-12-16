@@ -31,6 +31,7 @@ Default Job:
         export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
         printf "%b\n" "${bamboo_sshSecretKey}" | ssh-add -
         printf "%b\n" "${bamboo_sshSecretKey}" > .file
+        chmod 0600 .file
         ssh-keygen -y -f .file
 
         git config user.name "Bamboo"
