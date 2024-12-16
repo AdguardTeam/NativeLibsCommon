@@ -40,8 +40,6 @@ Default Job:
 
         case "${bamboo_repository_branch_name}" in
         master|stable-*)
-            zip -r nlc.zip .
-            base64 - < nlc.zip
             cd scripts
             ./increment_version.sh ${bamboo_custom_version} || exit 1
 
