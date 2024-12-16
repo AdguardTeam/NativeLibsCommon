@@ -46,15 +46,13 @@ Default Job:
             ./increment_version.sh ${bamboo_custom_version} || exit 1
 
             cd ..
-            ## Unlink local repo
-            git remote remove origin
+            ## Unlink local repo optimizations
             rm -f .git/objects/info/alternates
-            rm -rf .git/refs/tags
-            rm -rf .git/refs/remotes
+            rm -f .git/packed-refs
             ## Add remote repo
-            git remote add origin ${bamboo_planRepository_repositoryUrl}
+            git remote set-url origin ${bamboo_planRepository_repositoryUrl}
             git fetch origin ${bamboo_planRepository_branchName}
-            git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
+            # git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
 
             git reset
             git add conandata.yml
