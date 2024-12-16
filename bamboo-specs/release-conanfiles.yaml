@@ -26,6 +26,10 @@ Default Job:
         scripts:
           - |-
             set -e -x
+
+            [ -n "$SSH_AUTH_SOCK" ] || exec ssh-agent "$0" "$@"
+            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
+            printf "%b\n" "${bamboo_sshSecretKey}" | ssh-add -
             
             mkdir conanfiles_build
             pushd conanfiles_build
