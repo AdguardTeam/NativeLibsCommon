@@ -47,10 +47,11 @@ Default Job:
             ## Unlink local repo optimizations
             rm -f .git/objects/info/alternates
             rm -f .git/packed-refs
+            rm -rf .git/refs/remotes
             ## Add remote repo
             git remote set-url origin ${bamboo_planRepository_repositoryUrl}
             grep -l -r f4ea68d7d99acd9dd0ab7d9ce257412ac57e4e08 .git
-            git fetch --all --prune --prune-tags
+            git fetch
             # git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
 
             git reset
