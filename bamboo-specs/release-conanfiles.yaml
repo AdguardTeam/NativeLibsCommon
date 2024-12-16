@@ -49,7 +49,7 @@ Default Job:
             rm -f .git/objects/info/alternates
             ## Add remote repo
             git remote add origin ${bamboo_planRepository_repositoryUrl}
-            git fetch
+            git fetch --all
             git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
 
             git remote remove gh || true
