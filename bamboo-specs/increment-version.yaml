@@ -50,7 +50,7 @@ Default Job:
             ## Add remote repo
             git remote set-url origin ${bamboo_planRepository_repositoryUrl}
             grep -l -r f4ea68d7d99acd9dd0ab7d9ce257412ac57e4e08 .git
-            git fetch
+            git fetch --all --prune --prune-tags
             # git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
 
             git reset
