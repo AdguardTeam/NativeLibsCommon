@@ -13,7 +13,7 @@ stages:
 Default Job:
   key: JOB1
   docker:
-    image: adguard/core-libs:2.1
+    image: adguard/core-libs:2.4
     docker-run-arguments: [ ]
   tasks:
   - !include docker-clean.yaml
@@ -21,15 +21,14 @@ Default Job:
       path: native-libs-common
       force-clean-build: 'false'
       description: Checkout
+  - checkout:
+      repository: git-scripts
+      path: git-scripts
   - script:
       interpreter: SHELL
       scripts:
       - |-
         set -x
-
-        [ -n "$SSH_AUTH_SOCK" ] || exec ssh-agent "$0" "$@"
-        export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
-        printf "%b\n" "${bamboo_sshSecretKey}" | ssh-add -
 
         git config user.name "Bamboo"
         git config user.email "Bamboo"
@@ -44,15 +43,7 @@ Default Job:
             ./increment_version.sh ${bamboo_custom_version} || exit 1
 
             cd ..
-            ## Unlink local repo optimizations
-            rm -f .git/objects/info/alternates
-            rm -f .git/packed-refs
-            rm -rf .git/refs/remotes
-            ## Add remote repo
-            git remote set-url origin ${bamboo_planRepository_repositoryUrl}
-            git fetch
-            git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
-
+            ../git-scripts/git_kit.sh pull ${bamboo_planRepository_repositoryUrl}
             git reset
             git add conandata.yml
             git commit -m "skipci: Automatic version increment by Bamboo"
@@ -73,6 +64,8 @@ variables:
   custom.version: 'none'
 repositories:
 - core-libs/native-libs-common:
+    scope: global
+- git-scripts:
     scope: global
 branches:
   create: manually
