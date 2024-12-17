@@ -44,6 +44,7 @@ Default Job:
 
             cd ..
             ../git-scripts/git_kit.sh pull ${bamboo_planRepository_repositoryUrl}
+            git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
             git reset
             git add conandata.yml
             git commit -m "skipci: Automatic version increment by Bamboo"
