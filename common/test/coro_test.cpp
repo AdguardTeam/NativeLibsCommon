@@ -182,4 +182,41 @@ TEST_F(CoroTest, ToFuture) {
     co_return;
 }
 
+TEST_F(CoroTest, Leak) {
+    static std::atomic_bool g_web_request_deleted = false;
+
+    struct WebRequest {
+        WebRequest() = default;
+        ~WebRequest() {
+            g_web_request_deleted = true;
+        }
+    };
+
+    struct SendRequestImplAwaitable {
+        std::unique_ptr<WebRequest> m_web_request;
+        auto await_ready() {
+            return false;
+        }
+        auto await_suspend(std::coroutine_handle<> h) {
+            return h;
+        }
+        auto await_resume() {
+            return int(42);
+        }
+    };
+
+    struct WebRequestManager {
+        coro::Task<int> send_request() {
+            SendRequestImplAwaitable awaitable{};
+            awaitable.m_web_request = std::make_unique<WebRequest>();
+            co_return co_await awaitable;
+        }
+    };
+
+    WebRequestManager manager;
+    int ret = manager.send_request().to_future().get();
+    ASSERT_EQ(42, ret);
+    ASSERT_TRUE(g_web_request_deleted);
+}
+
 } // namespace ag::test
