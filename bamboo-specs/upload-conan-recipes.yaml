@@ -17,15 +17,18 @@ Default Job:
     docker-run-arguments: [ ]
   tasks:
     - !include docker-clean.yaml
+    - checkout
     - checkout:
-        force-clean-build: 'true'
-        description: Checkout
+        repository: git-scripts
+        path: git-scripts
     - script:
         interpreter: SHELL
         scripts:
           - |-
             set -x
             set -e
+
+            ./git-scripts/git_kit.sh pull ${bamboo_planRepository_repositoryUrl}
 
             python3 -m pip install conan --upgrade
 
@@ -64,6 +67,8 @@ Default Job:
   artifact-subscriptions: []
 repositories:
   - core-libs/native-libs-common:
+      scope: global
+  - git-scripts:
       scope: global
 branches:
   create: manually
