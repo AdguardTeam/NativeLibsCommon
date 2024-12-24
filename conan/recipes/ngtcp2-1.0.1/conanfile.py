@@ -59,7 +59,7 @@ class Ngtcp2Conan(ConanFile):
 
     def package_info(self):
         if "boring" in str(self.dependencies["openssl"].ref.version):
-            self.cpp_info.libs = ["ngtcp2", "ngtcp2_crypto_boringssl"]
+            self.cpp_info.libs = ["ngtcp2_crypto_boringssl", "ngtcp2"]
         else:
-            self.cpp_info.libs = ["ngtcp2", "ngtcp2_crypto_quictls"]
+            self.cpp_info.libs = ["ngtcp2_crypto_quictls", "ngtcp2"]
         self.cpp_info.defines.append("NGTCP2_STATICLIB=1")
