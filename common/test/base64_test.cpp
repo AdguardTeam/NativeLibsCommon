@@ -39,3 +39,18 @@ TEST(base64, decodeurl) {
     ASSERT_EQ(std::vector<uint8_t>({0xfa}), ag::decode_base64("-g", true));
     ASSERT_EQ(std::vector<uint8_t>({0xfe}), ag::decode_base64("_g", true));
 }
+
+TEST(base64, encode_outputiter_version) {
+    std::string_view origin = "Hello, world!";
+    const auto *data = reinterpret_cast<const uint8_t*>(origin.data());
+    std::string_view expect = "SGVsbG8sIHdvcmxkIQ==";
+
+    std::string encoded;
+    encoded.resize(ag::encode_base64_size(origin.size()));
+    ag::encode_to_base64(data, false, encoded.begin());
+    ASSERT_EQ(encoded, expect);
+
+    encoded.clear();
+    ag::encode_to_base64(data, false, std::back_inserter(encoded));
+    ASSERT_EQ(encoded, expect);
+}

@@ -10,6 +10,22 @@
 namespace ag {
 
 /**
+ * Get the size of encoded data
+ * @param data_size size of the original binary data
+ */
+constexpr size_t encode_base64_size(size_t data_size) noexcept {
+    return (data_size + 2) / 3 * 4;
+}
+
+/**
+ * Creates Base64-encoded string from data
+ * @param dest where to store the output
+ * @note Caller should check that dest can be incremented encode_base64_size() times
+ */
+template <typename OutputIterator>
+void encode_to_base64(Uint8View data, bool url_safe, OutputIterator dest);
+
+/**
  * Creates Base64-encoded string from data
  * @param data data to encode
  * @param url_safe is string should be url safe or not

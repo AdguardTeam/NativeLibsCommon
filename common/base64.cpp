@@ -40,10 +40,6 @@ static constexpr Basis url_safe_basis(const Basis &xs) noexcept {
     return result;
 }
 
-static constexpr size_t encode_base64_size(size_t len) noexcept {
-    return (len + 2) / 3 * 4;
-}
-
 static constexpr size_t decode_base64_size(size_t len) noexcept {
     return (len + 3) / 4 * 3;
 }
@@ -74,34 +70,42 @@ static constexpr Basis BASIS_DEFAULT{
 static constexpr Basis BASIS_URL_SAFE = url_safe_basis(BASIS_DEFAULT);
 static constexpr auto PADDING = '=';
 
-std::string encode_to_base64(Uint8View data, bool url_safe) {
+template <typename OutputIterator>
+void encode_to_base64(Uint8View data, bool url_safe, OutputIterator dest) {
     const auto &base64_table = url_safe ? BASE64_TABLE_URL_SAFE : BASE64_TABLE_DEFAULT;
     auto in_pos = data.data();
     auto end = data.data() + data.size();
-    std::string result;
-    result.reserve(encode_base64_size(data.size()));
+
     while (in_pos + 2 < end) {
-        result.push_back(base64_table[in_pos[0] >> 2]);
-        result.push_back(base64_table[((in_pos[0] & 0x03) << 4) | (in_pos[1] >> 4)]);
-        result.push_back(base64_table[((in_pos[1] & 0x0f) << 2) | (in_pos[2] >> 6)]);
-        result.push_back(base64_table[in_pos[2] & 0x3f]);
+        *dest++ = base64_table[in_pos[0] >> 2];
+        *dest++ = base64_table[((in_pos[0] & 0x03) << 4) | (in_pos[1] >> 4)];
+        *dest++ = base64_table[((in_pos[1] & 0x0f) << 2) | (in_pos[2] >> 6)];
+        *dest++ = base64_table[in_pos[2] & 0x3f];
         in_pos += 3;
     }
+
     if (in_pos < end) {
-        result.push_back(base64_table[in_pos[0] >> 2]);
+        *dest++ = base64_table[in_pos[0] >> 2];
         if (end - in_pos == 1) {
-            result.push_back(base64_table[(in_pos[0] & 0x03) << 4]);
+            *dest++ = base64_table[(in_pos[0] & 0x03) << 4];
             if (!url_safe) {
-                result.push_back(PADDING);
+                *dest++ = PADDING;
             }
         } else {
-            result.push_back(base64_table[((in_pos[0] & 0x03) << 4) | (in_pos[1] >> 4)]);
-            result.push_back(base64_table[(in_pos[1] & 0x0f) << 2]);
+            *dest++ = base64_table[((in_pos[0] & 0x03) << 4) | (in_pos[1] >> 4)];
+            *dest++ = base64_table[(in_pos[1] & 0x0f) << 2];
         }
         if (!url_safe) {
-            result.push_back(PADDING);
+            *dest++ = PADDING;
         }
     }
+}
+
+std::string encode_to_base64(Uint8View data, bool url_safe) {
+    std::string result;
+    result.resize(encode_base64_size(data.size()));
+    encode_to_base64(data, url_safe, result.begin());
+
     return result;
 }
 
@@ -139,5 +143,8 @@ std::optional<std::vector<uint8_t>> decode_base64(std::string_view data, bool ur
     }
     return result;
 }
+
+template void encode_to_base64(Uint8View data, bool url_safe, std::string::iterator dest);
+template void encode_to_base64(Uint8View data, bool url_safe, std::back_insert_iterator<std::string> dest);
 
 } // namespace ag
