@@ -12,9 +12,11 @@ namespace ag {
 /**
  * Get the size of encoded data
  * @param data_size size of the original binary data
+ * @param url_safe when using the URL-safe alphabet, we also don't write padding
  */
-constexpr size_t encode_base64_size(size_t data_size) noexcept {
-    return (data_size + 2) / 3 * 4;
+constexpr size_t encode_base64_size(size_t data_size, bool url_safe) noexcept {
+    return url_safe ? (data_size * 4 + 2) / 3 // ceil(data_size * 4 / 3)
+                    : (data_size + 2) / 3 * 4; // ceil(data_size / 3) * 4
 }
 
 /**

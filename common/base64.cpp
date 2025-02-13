@@ -40,7 +40,7 @@ static constexpr Basis url_safe_basis(const Basis &xs) noexcept {
     return result;
 }
 
-static constexpr size_t decode_base64_size(size_t len) noexcept {
+static constexpr size_t decode_base64_max_size(size_t len) noexcept {
     return (len + 3) / 4 * 3;
 }
 
@@ -103,7 +103,7 @@ void encode_to_base64(Uint8View data, bool url_safe, OutputIterator dest) {
 
 std::string encode_to_base64(Uint8View data, bool url_safe) {
     std::string result;
-    result.resize(encode_base64_size(data.size()));
+    result.resize(encode_base64_size(data.size(), url_safe));
     encode_to_base64(data, url_safe, result.begin());
 
     return result;
@@ -126,7 +126,7 @@ std::optional<std::vector<uint8_t>> decode_base64(std::string_view data, bool ur
         return std::nullopt;
     }
     std::vector<uint8_t> result;
-    result.reserve(decode_base64_size(src_len));
+    result.reserve(decode_base64_max_size(src_len));
     auto s = src;
     while (len > 3) {
         result.emplace_back(basis[s[0]] << 2 | basis[s[1]] >> 4);
