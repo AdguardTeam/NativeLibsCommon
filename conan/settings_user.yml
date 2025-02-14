@@ -1,3 +1,11 @@
+# Extra architecture for CLI
+arch: [ mipsel ]
+
+# These flags are in the os section because it is always a part of a conan package hash.
+# When package hash is changed, the package will be rebuilt.
+#
+# ag_profile_version is for changes outside profile file, e.g. in toolchain.cmake.
+# ag_sanitizer is for Address sanitizer
 os:
   Windows:
     ag_profile_version: &ag_profile_version [ null, "2" ]
