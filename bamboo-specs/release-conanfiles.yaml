@@ -21,7 +21,7 @@ Default Job:
     - !include docker-clean.yaml
     - checkout:
         path: native-libs-common
-        force-clean-build: 'false'
+        force-clean-build: 'true'
         description: Checkout
     - checkout:
         repository: git-scripts
