@@ -21,6 +21,9 @@ Default Job:
         path: native-libs-common
         force-clean-build: 'false'
         description: Checkout
+    - checkout:
+        repository: git-scripts
+        path: git-scripts
     - script:
         interpreter: SHELL
         scripts:
@@ -30,6 +33,8 @@ Default Job:
             [ -n "$SSH_AUTH_SOCK" ] || exec ssh-agent "$0" "$@"
             export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
             printf "%b\n" "${bamboo_sshSecretKey}" | ssh-add -
+
+            ./git-scripts/git_kit.sh pull ${bamboo_planRepository_repositoryUrl}
             
             mkdir conanfiles_build
             cd conanfiles_build
@@ -44,14 +49,6 @@ Default Job:
             VERSION=$(cat ../conandata.yml | grep "[0-9]*\.[0-9]*." | tail -1 | sed "s/\s*\"//" | sed "s/\"\:\s*//")
             TAG="v${VERSION}"
             
-            ## Unlink local repo
-            git remote remove origin
-            rm -f .git/objects/info/alternates
-            ## Add remote repo
-            git remote add origin ${bamboo_planRepository_repositoryUrl}
-            git fetch --prune-tags
-            git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
-
             git remote remove gh || true
             git remote add gh https://${bamboo_githubPublicRepoPassword}:@github.com/AdguardTeam/NativeLibsCommon/
             git tag -d ${TAG} || true
@@ -73,6 +70,8 @@ variables:
   custom.version: 'none'
 repositories:
   - core-libs/native-libs-common:
+      scope: global
+  - git-scripts:
       scope: global
 branches:
   create: manually
