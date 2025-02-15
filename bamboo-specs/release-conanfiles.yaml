@@ -34,7 +34,7 @@ Default Job:
             export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
             printf "%b\n" "${bamboo_sshSecretKey}" | ssh-add -
 
-            ./git-scripts/git_kit.sh pull ${bamboo_planRepository_repositoryUrl}
+            ../git-scripts/git_kit.sh pull ${bamboo_planRepository_repositoryUrl}
             
             mkdir conanfiles_build
             cd conanfiles_build
