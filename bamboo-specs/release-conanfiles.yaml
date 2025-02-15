@@ -13,7 +13,7 @@ stages:
 Default Job:
   key: JOB1
   docker:
-    image: adguard/core-libs:2.2
+    image: adguard/core-libs:2.4
     docker-run-arguments: [ ]
   tasks:
     - !include docker-clean.yaml
@@ -32,7 +32,7 @@ Default Job:
             printf "%b\n" "${bamboo_sshSecretKey}" | ssh-add -
             
             mkdir conanfiles_build
-            pushd conanfiles_build
+            cd conanfiles_build
             
             ARCHIVE_NAME=conanfiles.tar.gz
             
@@ -62,7 +62,7 @@ Default Job:
             gh config set -h github.com oauth_token "${bamboo_githubPublicRepoPassword}" || exit 1
             gh release create ${TAG} ${ARCHIVE_NAME} -t "Conan files ${TAG}" -n "Make various Conan-related files available for use in other AdGuard projects."
             
-            popd
+            cd ..
             rm -rf conanfiles_build
         working-dir: native-libs-common
         description: Increment version
