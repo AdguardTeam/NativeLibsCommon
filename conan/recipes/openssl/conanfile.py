@@ -165,7 +165,6 @@ class OpenSSLConan(ConanFile):
         get(self, "https://github.com/quictls/openssl/archive/refs/tags/openssl-3.1.5-quic1.tar.gz", strip_root=True)
 
         # Apply all patches from the `patches` directory
-        # ../ is used because our base is `src` directory
         patches_path = os.path.join(self.export_sources_folder, "patches")
         if not os.path.isdir(patches_path) or len(os.listdir(patches_path)) == 0:
             # Return if there are no patches
