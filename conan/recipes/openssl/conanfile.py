@@ -166,12 +166,10 @@ class OpenSSLConan(ConanFile):
 
         # Apply all patches from the `patches` directory
         patches_path = os.path.join(self.export_sources_folder, "patches")
-        if not os.path.isdir(patches_path) or len(os.listdir(patches_path)) == 0:
-            # Return if there are no patches
-            return
-        patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
-        for patch_name in patches:
-            patch(self, patch_file=os.path.abspath(os.path.join(patches_path, patch_name)))
+        if os.path.isdir(patches_path) and len(os.listdir(patches_path)) > 0:
+            patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
+            for patch_name in patches:
+                patch(self, patch_file=os.path.abspath(os.path.join(patches_path, patch_name)))
 
     @property
     def _target(self):
