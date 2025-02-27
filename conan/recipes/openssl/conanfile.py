@@ -2,7 +2,7 @@ from conan import ConanFile
 from conan.errors import ConanInvalidConfiguration
 from conan.tools.apple import fix_apple_shared_install_name, is_apple_os, XCRun
 from conan.tools.build import build_jobs
-from conan.tools.files import apply_conandata_patches, chdir, copy, export_conandata_patches, get, rename, replace_in_file, rmdir, save
+from conan.tools.files import apply_conandata_patches, chdir, copy, export_conandata_patches, get, rename, replace_in_file, rmdir, save, patch
 from conan.tools.gnu import AutotoolsToolchain
 from conan.tools.layout import basic_layout
 from conan.tools.microsoft import is_msvc, msvc_runtime_flag, unix_path
@@ -96,6 +96,7 @@ class OpenSSLConan(ConanFile):
     default_options["no_md2"] = True
     default_options["openssldir"] = None
     default_options["tls_security_level"] = 1
+    exports_sources = ["patches/*"]
 
     @property
     def _is_clang_cl(self):
@@ -162,6 +163,13 @@ class OpenSSLConan(ConanFile):
 
     def source(self):
         get(self, "https://github.com/quictls/openssl/archive/refs/tags/openssl-3.1.5-quic1.tar.gz", strip_root=True)
+
+        # Apply all patches from the `patches` directory
+        patches_path = os.path.join(self.export_sources_folder, "patches")
+        if os.path.isdir(patches_path) and len(os.listdir(patches_path)) > 0:
+            patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
+            for patch_name in patches:
+                patch(self, patch_file=os.path.abspath(os.path.join(patches_path, patch_name)))
 
     @property
     def _target(self):
