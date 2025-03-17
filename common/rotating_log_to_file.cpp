@@ -28,6 +28,8 @@ void ag::RotatingLogToFile::operator()(LogLevel level, std::string_view message)
         return;
     }
 
+    std::scoped_lock l{m_mutex};
+
     if (m_files_count == 1) {
         log_to_ofstream(level, message);
         return;
@@ -38,10 +40,8 @@ void ag::RotatingLogToFile::operator()(LogLevel level, std::string_view message)
         return;
     }
 
-    if (!rotate_files()) {
-        log_to_ofstream(level, message);
-        return;
-    }
+    int success = rotate_files();
+    (void) success;
 
     log_to_ofstream(level, message);
 }

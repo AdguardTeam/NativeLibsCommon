@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <fstream>
@@ -44,6 +45,7 @@ private:
     const size_t m_files_count;
     std::string m_log_file_path;
     std::ofstream m_file_handle;
+    std::mutex m_mutex;
 
     void open_log_file();
     bool rotate_files();
