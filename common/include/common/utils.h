@@ -16,8 +16,15 @@
 #include <cctype>
 #include <charconv>
 #include <istream>
+#include <cstdio>
+#include <utility>
+
+#ifndef _WIN32
+#include <sys/wait.h>
+#endif
 
 #include "common/defs.h"
+#include "common/error.h"
 #include "common/format.h"
 
 /**
@@ -808,5 +815,64 @@ private:
 
     StringViewBuf m_buf;
 };
+
+#if !defined(_WIN32)
+
+enum ExecError : uint8_t {
+    EE_POPEN,
+    EE_PCLOSE,
+};
+
+template <>
+struct ErrorCodeToString<ExecError> {
+    std::string operator()(ExecError code) {
+        // clang-format off
+        switch (code) {
+            case EE_POPEN: return "popen()";
+            case EE_PCLOSE: return "pclose()";
+        }
+        // clang-format on
+    }
+};
+
+struct ExecResult {
+    std::string output;
+    int status;
+};
+
+static inline ag::Result<ExecResult, ExecError> exec_with_output(std::string cmd) {
+    cmd += " 2>&1";
+    FILE *pipe = popen(cmd.c_str(), "r");
+    if (!pipe) {
+        return make_error(ExecError::EE_POPEN);
+    }
+
+    std::string output;
+    char buf[128]{};
+    size_t nread = 0;
+    while ((nread = fread(buf, 1, sizeof(buf), pipe)) > 0) {
+        output.append(buf, nread);
+    }
+
+    int ret = pclose(pipe);
+    if (-1 == ret) {
+        return make_error(ExecError::EE_PCLOSE);
+    }
+
+    return ExecResult{.output = std::move(output), .status = WEXITSTATUS(ret)};
+}
+
+/**
+ * Format a command line using format string `fmt` and args `args`,
+ * execute it with `sh`, and return the command output and exit status.
+ *
+ * Output redirection `2>&1` is automatically appended to the command line.
+ */
+template <typename... Ts>
+Result<ExecResult, ExecError> fsystem(std::string_view fmt, Ts &&...args) {
+    return exec_with_output(fmt::vformat(fmt, fmt::make_format_args(std::forward<Ts>(args)...)));
+}
+
+#endif // !defined(_WIN32)
 
 } // namespace ag

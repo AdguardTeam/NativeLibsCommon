@@ -261,3 +261,31 @@ TEST(url, NormalizePath) {
     ASSERT_EQ("", ag::url::normalize_path(""));
     ASSERT_EQ("/a/b/c.d", ag::url::normalize_path("/a/b/c.d"));
 }
+
+#ifndef _WIN32
+
+TEST(fsystem, FsystemWorks) {
+    static constexpr std::string_view A_POEM = "Nothing Gold Can Stay\\n"
+                                               "Robert Frost\\n"
+                                               "\\n"
+                                               "Nature's first green is gold,\\n"
+                                               "Her hardest hue to hold.\\n"
+                                               "Her early leaf's a flower;\\n"
+                                               "But only so an hour.\\n"
+                                               "Then leaf subsides to leaf,\\n"
+                                               "So Eden sank to grief,\\n"
+                                               "So dawn goes down to day\\n"
+                                               "Nothing gold can stay.";
+
+    auto ret = ag::fsystem("echo '{}' | grep Eden", A_POEM);
+    ASSERT_FALSE(ret.has_error());
+    ASSERT_EQ(0, ret->status);
+    ASSERT_EQ("So Eden sank to grief,\n", ret->output) << ret->output;
+
+    ret = ag::fsystem("exit 42");
+    ASSERT_FALSE(ret.has_error());
+    ASSERT_EQ(42, ret->status);
+    ASSERT_TRUE(ret->output.empty());
+}
+
+#endif // !defined(_WIN32)
