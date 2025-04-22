@@ -3,6 +3,8 @@
 #include <string>
 #include <string_view>
 #include <functional>
+#include <optional>
+
 #include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
