@@ -51,6 +51,9 @@ class libuvConan(ConanFile):
         deps.generate()
         tc = CMakeToolchain(self)
         tc.cache_variables["LIBUV_BUILD_TESTS"] = False
+
+        # TODO: remove this after updating to version newer than 1.41.0
+        tc.cache_variables["CMAKE_POLICY_VERSION_MINIMUM"] = "3.24"
         tc.generate()
 
     def layout(self):

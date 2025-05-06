@@ -39,6 +39,8 @@ class BoringsslConan(ConanFile):
             tc.cache_variables["CMAKE_SYSTEM_PROCESSOR"] = "ARM64"
             tc.cache_variables["CMAKE_ASM_COMPILER"] = "C:/Program Files/LLVM/bin/clang.exe"
 
+        # TODO: remove this after updating to version newer than 2023-05-17
+        tc.cache_variables["CMAKE_POLICY_VERSION_MINIMUM"] = "3.24"
         tc.generate()
 
     def layout(self):

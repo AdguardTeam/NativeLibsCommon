@@ -34,6 +34,9 @@ class NGHttp2Conan(ConanFile):
             tc.cache_variables["ENABLE_SHARED_LIB"] = "OFF"
         if tc.cache_variables.get("BUILD_TYPE") == "Debug":
             tc.cache_variables["DEBUGBUILD"] = "1"
+
+        # TODO: remove this after updating to version newer than 1.44.0
+        tc.cache_variables["CMAKE_POLICY_VERSION_MINIMUM"] = "3.24"
         tc.generate()
 
     def layout(self):

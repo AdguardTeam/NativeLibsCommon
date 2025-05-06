@@ -45,6 +45,9 @@ class LibeventConan(ConanFile):
         tc.cache_variables["EVENT__DISABLE_REGRESS"] = "ON"
         tc.cache_variables["EVENT__DISABLE_BENCHMARK"] = "ON"
         tc.cache_variables["EVENT__DISABLE_SAMPLES"] = "ON"
+
+        # TODO: remove this after updating to version newer than 2.1.11
+        tc.cache_variables["CMAKE_POLICY_VERSION_MINIMUM"] = "3.24"
         tc.generate()
 
     def layout(self):
