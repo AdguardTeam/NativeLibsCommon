@@ -103,6 +103,9 @@ class PCRE2Conan(ConanFile):
         tc.cache_variables["PCRE2_BUILD_PCRE2_16"] = self.options.build_pcre2_16
         tc.cache_variables["PCRE2_BUILD_PCRE2_32"] = self.options.build_pcre2_32
         tc.cache_variables["PCRE2_SUPPORT_JIT"] = self.options.support_jit
+
+        # TODO: remove this after updating to version newer than 10.37
+        tc.cache_variables["CMAKE_POLICY_VERSION_MINIMUM"] = "3.24"
         tc.generate()
 
     def layout(self):
