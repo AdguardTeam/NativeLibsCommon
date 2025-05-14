@@ -69,7 +69,7 @@ Win build:
 Linux build:
   key: LB
   docker:
-    image: adguard/core-libs:2.4
+    image: adguard/core-libs:2.6
     docker-run-arguments: [ ]
   tasks:
     - checkout:
@@ -189,12 +189,12 @@ Mac build:
             rm -rf venv
   requirements:
     - ephemeral
-    - image: registry.int.agrd.dev/macos/sequoia-build-agent-xcode16.1:latest
+    - image: registry.int.agrd.dev/macos/sequoia-build-agent-xcode16.3:latest
   artifact-subscriptions: []
 Android build:
   key: AB
   docker:
-    image: adguard/core-libs:2.4
+    image: adguard/core-libs:2.6
     volumes:
       ${bamboo.working.directory}: ${bamboo.working.directory}
       ${bamboo.tmp.directory}: ${bamboo.tmp.directory}

@@ -433,6 +433,7 @@ class OpenSSLConan(ConanFile):
         env.define_path("PERL", self._perl)
         if self.settings.compiler == "apple-clang":
             xcrun = XCRun(self)
+            env.define_path("CC", "/usr/bin/cc")
             env.define_path("CROSS_SDK", os.path.basename(xcrun.sdk_path))
             env.define_path("CROSS_TOP", os.path.dirname(os.path.dirname(xcrun.sdk_path)))
 
