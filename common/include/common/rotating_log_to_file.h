@@ -33,6 +33,13 @@ public:
      */
     void operator()(LogLevel level, std::string_view message);
 
+    /**
+     * Lite log a message to the current log file (without log level and tid)
+     * If the current log file size exceeds the maximum limit, rotates to the next file
+     * @param message The log message to be written
+     */
+    void operator()(std::string_view message);
+
     RotatingLogToFile(const RotatingLogToFile &) = delete;
     RotatingLogToFile(RotatingLogToFile &&) = delete;
     RotatingLogToFile &operator=(const RotatingLogToFile &) = delete;
@@ -49,7 +56,36 @@ private:
 
     void open_log_file();
     bool rotate_files();
-    void log_to_ofstream(LogLevel level, std::string_view message);
+    void log_to_ofstream(std::string_view formatted_message);
+    void full_log(LogLevel level, std::string_view message);
+    void lite_log(std::string_view message);
+
+    template<typename LogFunc>
+    void log_message(size_t message_size, LogFunc &&func);
 };
+
+template<typename LogFunc>
+void ag::RotatingLogToFile::log_message(size_t message_size, LogFunc &&func) {
+    if (m_files_count == 0) {
+        return;
+    }
+
+    std::scoped_lock l{m_mutex};
+
+    if (m_files_count == 1) {
+        func();
+        return;
+    }
+
+    if (auto pos = m_file_handle.tellp(); pos >= 0 && (size_t(pos) + message_size) < m_file_max_size_bytes) {
+        func();
+        return;
+    }
+
+    int success = rotate_files();
+    (void) success;
+
+    func();
+}
 
 } // namespace ag
