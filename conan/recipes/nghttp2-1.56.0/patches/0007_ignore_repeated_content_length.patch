@@ -1,0 +1,16 @@
+diff --git a/lib/nghttp2_http.c b/lib/nghttp2_http.c
+index 52d528bb..15a680f1 100644
+--- a/lib/nghttp2_http.c
++++ b/lib/nghttp2_http.c
+@@ -283,6 +283,11 @@ static int http_response_on_header(nghttp2_stream *stream, nghttp2_hd_nv *nv,
+       return NGHTTP2_ERR_REMOVE_HTTP_HEADER;
+     }
+     if (stream->content_length != -1) {
++      // AdGuard: ignore repeated Content-Length headers with the same value.
++      int64_t content_length = parse_uint(nv->value->base, nv->value->len);
++      if (content_length == stream->content_length) {
++        return NGHTTP2_ERR_REMOVE_HTTP_HEADER;
++      }
+       return NGHTTP2_ERR_HTTP_HEADER;
+     }
+     stream->content_length = parse_uint(nv->value->base, nv->value->len);
