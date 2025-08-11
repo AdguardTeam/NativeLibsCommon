@@ -669,6 +669,11 @@ Uint8Vector decode_hex(std::string_view hex);
  */
 std::string_view safe_string_view(const char *cstr);
 
+/**
+ * Escape a string for use as a shell argument.
+ */
+std::string escape_argument_for_shell(std::string_view arg);
+
 } // namespace utils
 
 template <class R>

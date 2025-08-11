@@ -300,4 +300,19 @@ std::string_view utils::safe_string_view(const char *cstr) {
     return (cstr != nullptr) ? std::string_view{cstr} : std::string_view{};
 }
 
+std::string utils::escape_argument_for_shell(std::string_view arg) {
+    std::string out;
+    out.reserve(arg.size() + 10);
+    out += '\'';
+    for (char ch : arg) {
+        if (ch != '\'') {
+            out += ch;
+        } else {
+            out += "'\\''";
+        }
+    }
+    out += '\'';
+    return out;
+}
+
 } // namespace ag
