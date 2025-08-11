@@ -239,6 +239,38 @@ TEST_F(Http1Client, IntermediateResponse) {
     ASSERT_EQ(MAIN_RESPONSE, stream.response->str());
 }
 
+TEST_F(Http1Client, PostBodyDoesNotFinishStreamPrematurely) {
+    static constexpr std::string_view BODY = R"({"key":"value123"})";
+
+    ag::http::Request request(ag::http::HTTP_1_1, "POST", "/");
+    request.headers().put("Content-Type", "application/json");
+    request.headers().put("Content-Length", "18");
+
+    ag::Result result = m_client.send_request(request);
+    ASSERT_TRUE(result.has_value()) << result.error()->str();
+    uint32_t stream_id = result.value();
+
+    ASSERT_NO_FATAL_FAILURE(check_no_error(
+         m_client.send_body(stream_id, {(uint8_t*)BODY.data(), BODY.size()}, true)));
+
+    ASSERT_EQ(m_streams.size(), 0) << "Client stream must not finish after sending request body";
+
+    static constexpr std::string_view RESP =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Length: 18\r\n\r\n"
+        R"({"key":"value123"})";
+    ASSERT_NO_FATAL_FAILURE(check_result(
+        m_client.input({(uint8_t*)RESP.data(), RESP.size()}), ag::http::Http1Client::InputOk{}));
+
+    ASSERT_EQ(m_streams.size(), 1);
+    const auto &stream = m_streams.begin()->second;
+    ASSERT_TRUE(stream.response.has_value());
+    ASSERT_EQ(stream.body, BODY);
+    ASSERT_TRUE(stream.body_finished);
+    ASSERT_TRUE(stream.stream_finished);
+    ASSERT_EQ(stream.error, 0);
+}
+
 struct DecodingSample {
     std::string_view data;
     size_t content_length;

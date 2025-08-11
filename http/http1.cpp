@@ -446,9 +446,13 @@ Error<Http1Error> Http1Session<T>::send_body_impl(uint64_t stream_id, ag::Uint8V
     }
 
     if (eof) {
-        m_streams.pop_front();
-        if (handler.on_stream_finished != nullptr) {
-            handler.on_stream_finished(handler.arg, stream_id, 0);
+        if constexpr (std::is_same_v<Http1Server, T>) {
+            m_streams.pop_front();
+            if (handler.on_stream_finished != nullptr) {
+                handler.on_stream_finished(handler.arg, stream_id, 0);
+            }
+        } else {
+            stream.flags.set(Stream::REQ_SENT);
         }
     }
 
