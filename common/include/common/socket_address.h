@@ -145,7 +145,7 @@ private:
     Storage m_ss{};
 
     static Storage make_sockaddr_storage(Uint8View addr, uint16_t port);
-    static SocketAddress::Storage make_sockaddr_storage(std::string_view numeric_host, uint16_t port);
+    static Storage make_sockaddr_storage(std::string_view numeric_host, uint16_t port);
 
     [[nodiscard]] ag::SocketAddress to_ipv4_unmapped() const;
     [[nodiscard]] ag::SocketAddress to_ipv4_mapped() const;
