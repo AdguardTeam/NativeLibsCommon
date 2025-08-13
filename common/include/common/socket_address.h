@@ -19,12 +19,6 @@ namespace ag {
  */
 class SocketAddress {
 public:
-    /** Compact socket address storage */
-    struct Storage : public sockaddr {
-        /** Padding to make the structure as large as sockaddr_in6 */
-        uint8_t padding[sizeof(sockaddr_in6)-sizeof(sockaddr)];
-    };
-
     SocketAddress();
 
     /**
@@ -143,7 +137,15 @@ public:
     void set_port(uint16_t port);
 
 private:
+    /** Compact socket address storage */
+    struct Storage : public sockaddr {
+        /** Padding to make the structure as large as sockaddr_in6 */
+        uint8_t padding[sizeof(sockaddr_in6)-sizeof(sockaddr)];
+    };
     Storage m_ss{};
+
+    static Storage make_sockaddr_storage(Uint8View addr, uint16_t port);
+    static SocketAddress::Storage make_sockaddr_storage(std::string_view numeric_host, uint16_t port);
 
     [[nodiscard]] ag::SocketAddress to_ipv4_unmapped() const;
     [[nodiscard]] ag::SocketAddress to_ipv4_mapped() const;

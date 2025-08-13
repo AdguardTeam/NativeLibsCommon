@@ -47,7 +47,7 @@ SocketAddress::SocketAddress(const sockaddr *addr) {
     }
 }
 
-static SocketAddress::Storage make_sockaddr_storage(Uint8View addr, uint16_t port) {
+SocketAddress::Storage SocketAddress::make_sockaddr_storage(Uint8View addr, uint16_t port) {
     SocketAddress::Storage ss{};
     if (addr.size() == IPV6_ADDRESS_SIZE) {
         auto *sin6 = (sockaddr_in6 *) &ss;
@@ -69,7 +69,7 @@ static SocketAddress::Storage make_sockaddr_storage(Uint8View addr, uint16_t por
     return ss;
 }
 
-static SocketAddress::Storage make_sockaddr_storage(std::string_view numeric_host, uint16_t port) {
+SocketAddress::Storage SocketAddress::make_sockaddr_storage(std::string_view numeric_host, uint16_t port) {
     char p[INET6_ADDRSTRLEN];
     if (numeric_host.size() > sizeof(p) - 1) {
         return {};
