@@ -35,6 +35,10 @@ const sockaddr *SocketAddress::c_sockaddr() const {
     return reinterpret_cast<const sockaddr *>(&m_ss); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
+const SocketAddressStorage *SocketAddress::с_storage() const {
+    return &m_ss;
+}
+
 ev_socklen_t SocketAddress::c_socklen() const {
     return ::ag::c_socklen((const sockaddr *) &m_ss);
 }
@@ -47,8 +51,11 @@ SocketAddress::SocketAddress(const sockaddr *addr) {
     }
 }
 
-SocketAddress::Storage SocketAddress::make_sockaddr_storage(Uint8View addr, uint16_t port) {
-    SocketAddress::Storage ss{};
+SocketAddress::SocketAddress(const SocketAddressStorage &storage)
+        : m_ss(storage) {}
+
+static SocketAddressStorage make_sockaddr_storage(Uint8View addr, uint16_t port) {
+    SocketAddressStorage ss{};
     if (addr.size() == IPV6_ADDRESS_SIZE) {
         auto *sin6 = (sockaddr_in6 *) &ss;
 #ifdef SIN6_LEN // Platform with sin*_lens should have this macro
@@ -69,7 +76,7 @@ SocketAddress::Storage SocketAddress::make_sockaddr_storage(Uint8View addr, uint
     return ss;
 }
 
-SocketAddress::Storage SocketAddress::make_sockaddr_storage(std::string_view numeric_host, uint16_t port) {
+static SocketAddressStorage make_sockaddr_storage(std::string_view numeric_host, uint16_t port) {
     char p[INET6_ADDRSTRLEN];
     if (numeric_host.size() > sizeof(p) - 1) {
         return {};
@@ -94,7 +101,7 @@ SocketAddress::Storage SocketAddress::make_sockaddr_storage(std::string_view num
         ai_hints.ai_family = AF_INET6;
         ai_hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
         if (0 == getaddrinfo(p, nullptr, &ai_hints, &ai)) {
-            SocketAddress::Storage ss{};
+            SocketAddressStorage ss{};
             std::memcpy(&ss, ai->ai_addr, ai->ai_addrlen);
             freeaddrinfo(ai);
             ((sockaddr_in6 *) &ss)->sin6_port = htons(port);
