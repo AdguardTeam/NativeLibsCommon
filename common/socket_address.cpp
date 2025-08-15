@@ -35,7 +35,7 @@ const sockaddr *SocketAddress::c_sockaddr() const {
     return reinterpret_cast<const sockaddr *>(&m_ss); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
-const SocketAddressStorage *SocketAddress::с_storage() const {
+const SocketAddressStorage *SocketAddress::c_storage() const {
     return &m_ss;
 }
 

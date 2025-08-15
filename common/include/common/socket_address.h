@@ -19,8 +19,10 @@ namespace ag {
 struct SocketAddressStorage{
 #ifdef __APPLE__
     uint8_t sa_len;
+    uint8_t sa_family;
+#else
+    uint16_t sa_family;
 #endif
-    sa_family_t sa_family;
     /** Padding to make the structure as large as sockaddr_in6 */
     uint8_t padding[sizeof(sockaddr_in6) - sizeof(uint16_t)];
 };
@@ -75,7 +77,7 @@ public:
     /**
      * @return Pointer to compact socket address storage structure
      */
-    [[nodiscard]] const SocketAddressStorage *с_storage() const;
+    [[nodiscard]] const SocketAddressStorage *c_storage() const;
 
     /**
      * @return sizeof(sockaddr_in) for IPv4 and sizeof(sockaddr_in6) for IPv6
