@@ -524,7 +524,6 @@ Error<Http3Error> Http3Session<T>::initialize_session(
             .client_initial = ngtcp2_crypto_client_initial_cb,
             .recv_client_initial = ngtcp2_crypto_recv_client_initial_cb,
             .recv_crypto_data = ngtcp2_crypto_recv_crypto_data_cb,
-            .handshake_completed = on_handshake_completed,
             .encrypt = ngtcp2_crypto_encrypt_cb,
             .decrypt = ngtcp2_crypto_decrypt_cb,
             .hp_mask = ngtcp2_crypto_hp_mask_cb,
@@ -588,6 +587,15 @@ Error<Http3Error> Http3Session<T>::initialize_session(
             .stream_stop_sending = on_quic_stream_stop_sending,
             .version_negotiation = ngtcp2_crypto_version_negotiation_cb,
     };
+    // Client and server have different callbacks for handshake completion.
+    // Server uses `handshake_completed`, and after that immediately ready to process requests.
+    // When clients confirms handshake, server may not be ready yet, so there is additional callback `handshake_confirmed`
+    // which fired when server's confirmation is received.
+    if constexpr (std::is_same_v<T, Http3Server>) {
+        quic_callbacks.handshake_completed = on_handshake_completed;
+    } else {
+        quic_callbacks.handshake_confirmed = on_handshake_completed;
+    }
 
     ngtcp2_settings quic_settings;
     ngtcp2_settings_default(&quic_settings);
