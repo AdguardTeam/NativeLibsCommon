@@ -120,6 +120,7 @@ struct ErrorCodeToString<utils::NetUtilsError> {
         case decltype(e)::AE_IPV6_MISSING_RIGHT_BRACKET: return "IPv6 address contains `[` but not contains `]`";
         case decltype(e)::AE_IPV6_MISSING_BRACKETS: return "IPv6 address not in square brackets";
         case decltype(e)::AE_IPV4_PORT_EMPTY: return "Port after colon is empty in IPv4 address";
+        default: return "Unknown error";
         }
     }
 };
