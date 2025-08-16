@@ -40,7 +40,6 @@ Win build:
             & {
               $vcvars32 | foreach { setvar $_ }
               mkdir build
-              Copy-Item msvc-cmake-cache.txt build\CMakeCache.txt
               pushd build
               & cmake -DCMAKE_BUILD_TYPE=Debug `
                 -DCMAKE_C_COMPILER="cl.exe" `
