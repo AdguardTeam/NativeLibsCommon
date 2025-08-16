@@ -20,32 +20,41 @@ Win build:
         force-clean-build: 'true'
         description: Checkout Default Repository
     - script:
-        interpreter: BINSH_OR_CMDEXE
+        interpreter: WINDOWS_POWER_SHELL
         scripts:
           - |-
-            python -m venv venv --clear
-            call .\venv\Scripts\activate
-            pip install conan --upgrade
+            $ErrorActionPreference = 'Stop'
 
-            conan remove -c "*"
-            conan remote add --index 0 art ${bamboo.conanRepoUrl} || true
+            # Save vcvars to switch between them
+            $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
+            $vcvars64 = cmd /c "vcvars64 & set"
+            $vcvarsarm64 = cmd /c "vcvarsamd64_arm64 & set"
+            $vcvarsarm = cmd /c "vcvarsamd64_arm & set"
+            function setvar($_) {
+              if ($_ -match "=") {
+                $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+              }
+            }
 
-            call vcvars32
-
-            if exist build\ rmdir /s /q build || exit /b 1
-            mkdir build || exit /b 1
-            cd build || exit /b 1
-
-            cmake -DCMAKE_BUILD_TYPE=Debug ^
-                -DCMAKE_C_FLAGS_DEBUG=/MT ^
-                -DCMAKE_CXX_FLAGS_DEBUG=/MT ^
-                -G Ninja ^
-                ..
-
-            cmake --build . --target tests || exit /b 1
-            ctest -D ExperimentalTest --no-compress-output || exit /b 1
-            deactivate
-        description: build 32
+            # Build 32-bit and 64-bit versions
+            & {
+              $vcvars32 | foreach { setvar $_ }
+              mkdir build
+              Copy-Item msvc-cmake-cache.txt build\CMakeCache.txt
+              pushd build
+              & cmake -DCMAKE_BUILD_TYPE=Debug `
+                -DCMAKE_C_COMPILER="cl.exe" `
+                -DCMAKE_CXX_COMPILER="cl.exe" `
+                -DCMAKE_C_FLAGS_DEBUG=/MT `
+                -DCMAKE_CXX_FLAGS_DEBUG=/MT `
+                -G Ninja ..
+              if (!$?) { exit 1 }
+              & ninja tests
+              if (!$?) { exit 1 }
+              & ctest -D ExperimentalTest --no-compress-output
+              if (!$?) { exit 1 }
+              popd
+            }
   final-tasks:
     - any-task:
         plugin-key: fr.cstb.bamboo.plugins.ctest.bamboo-ctest-plugin:test
@@ -53,16 +62,14 @@ Win build:
           testFilePathPattern: '**/Testing/*/*.xml'
         description: Parse tests result
     - script:
-        interpreter: SHELL
+        interpreter: WINDOWS_POWER_SHELL
         scripts:
           - |-
-            call .\venv\Scripts\activate
-            REM Upload built binaries
-            conan remote login art "%bamboo_artifactoryUser%" --password "%bamboo_artifactoryPassword%"
-            conan upload -r art -c "*" > upload.txt 2>&1
-            REM Clean up local cache
-            conan remove -c "*"
-            deactivate
+            conan remote login art $Env:bamboo_artifactoryUser --password $Env:bamboo_artifactoryPassword
+            conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
+            Write-Host "conan upload finished with status $LASTEXITCODE"
+            conan remove -c "*" *> $null
+            conan cache clean *> $null
   requirements:
     - system.builder.msbuild.MSBuild v15.0 (32bit)
   artifact-subscriptions: []
@@ -84,17 +91,10 @@ Linux build:
             python3 -m pip install conan --upgrade
 
             conan remote add --index 0 art ${bamboo.conanRepoUrl} || true
-        description: Add remote conan
-    - script:
-        interpreter: SHELL
-        scripts:
-          - |-
-            set -x -e
 
-            # Clean up local cache
-            conan remove -c "*"
+            export NLC_ROOT=${PWD}
+            trap "git clean -d -x -f ${NLC_ROOT} --exclude '**/Testing/*/*.xml'" EXIT
 
-            PROJECT_PATH=$(pwd)
             # Build tests
             mkdir -p build
             cd build
@@ -116,14 +116,7 @@ Linux build:
           testFilePathPattern: '**/Testing/*/*.xml'
         description: Parse tests result
     - script:
-        interpreter: SHELL
-        scripts:
-          - |-
-            # Upload built
-            conan remote login art "${bamboo_artifactoryUser}" --password "${bamboo_artifactoryPassword}"
-            conan upload -r art -c "*" 1>&2
-            # Clean up local cache
-            conan remove -c "*"
+        file: ./bamboo-specs/scripts/conan_upload_and_cleanup.sh
   requirements:
     - adg-privileged-docker
   artifact-subscriptions: []
@@ -176,17 +169,8 @@ Mac build:
         interpreter: SHELL
         scripts:
           - |-
-            set -x -e
-
             source ./venv/bin/activate
-
-            conan remote login art "${bamboo_artifactoryUser}" --password "${bamboo_artifactoryPassword}"
-            # Upload built
-            conan upload -r art -c "*" 1>&2
-            # Clean up local cache
-            conan remove -c "*"
-            deactivate
-            rm -rf venv
+            ./bamboo-specs/scripts/conan_upload_and_cleanup.sh
   requirements:
     - ephemeral
     - image: registry.int.agrd.dev/macos/sequoia-build-agent-xcode16.3:latest
@@ -213,6 +197,9 @@ Android build:
 
             python3 -m pip install conan --upgrade
 
+            export NLC_ROOT=${PWD}
+            trap "git clean -d -x -f ${NLC_ROOT} --exclude '**/Testing/*/*.xml'" EXIT
+
             # Clean up local cache
             conan remove -c "*"
             conan remote add --index 0 art ${bamboo.conanRepoUrl} || true
@@ -227,14 +214,7 @@ Android build:
         description: Assembles libraries
   final-tasks:
     - script:
-        interpreter: SHELL
-        scripts:
-          - |-
-            # Upload built
-            conan remote login art "${bamboo_artifactoryUser}" --password "${bamboo_artifactoryPassword}"
-            conan upload -r art -c "*" 1>&2
-            # Clean up local cache
-            conan remove -c "*"
+        file: ./bamboo-specs/scripts/conan_upload_and_cleanup.sh
   requirements:
     - adg-privileged-docker
   artifact-subscriptions: []
