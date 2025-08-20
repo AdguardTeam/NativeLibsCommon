@@ -35,6 +35,10 @@ const sockaddr *SocketAddress::c_sockaddr() const {
     return reinterpret_cast<const sockaddr *>(&m_ss); // NOLINT(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
+const SocketAddressStorage *SocketAddress::c_storage() const {
+    return &m_ss;
+}
+
 ev_socklen_t SocketAddress::c_socklen() const {
     return ::ag::c_socklen((const sockaddr *) &m_ss);
 }
@@ -47,8 +51,11 @@ SocketAddress::SocketAddress(const sockaddr *addr) {
     }
 }
 
-static sockaddr_storage make_sockaddr_storage(Uint8View addr, uint16_t port) {
-    sockaddr_storage ss{};
+SocketAddress::SocketAddress(const SocketAddressStorage &storage)
+        : m_ss(storage) {}
+
+static SocketAddressStorage make_sockaddr_storage(Uint8View addr, uint16_t port) {
+    SocketAddressStorage ss{};
     if (addr.size() == IPV6_ADDRESS_SIZE) {
         auto *sin6 = (sockaddr_in6 *) &ss;
 #ifdef SIN6_LEN // Platform with sin*_lens should have this macro
@@ -69,7 +76,7 @@ static sockaddr_storage make_sockaddr_storage(Uint8View addr, uint16_t port) {
     return ss;
 }
 
-static sockaddr_storage make_sockaddr_storage(std::string_view numeric_host, uint16_t port) {
+static SocketAddressStorage make_sockaddr_storage(std::string_view numeric_host, uint16_t port) {
     char p[INET6_ADDRSTRLEN];
     if (numeric_host.size() > sizeof(p) - 1) {
         return {};
@@ -94,14 +101,14 @@ static sockaddr_storage make_sockaddr_storage(std::string_view numeric_host, uin
         ai_hints.ai_family = AF_INET6;
         ai_hints.ai_flags = AI_NUMERICHOST | AI_NUMERICSERV;
         if (0 == getaddrinfo(p, nullptr, &ai_hints, &ai)) {
-            sockaddr_storage ss{};
+            SocketAddressStorage ss{};
             std::memcpy(&ss, ai->ai_addr, ai->ai_addrlen);
             freeaddrinfo(ai);
             ((sockaddr_in6 *) &ss)->sin6_port = htons(port);
             return ss;
         }
 #else  // _WIN32
-        sockaddr_storage ss{};
+        SocketAddressStorage ss{};
         USHORT unused;
         if (0
                 == RtlIpv6StringToAddressEx(
@@ -149,7 +156,7 @@ SocketAddress::SocketAddress(const IpAddress &addr, uint16_t port) {
 }
 
 Uint8View SocketAddress::addr() const {
-    switch (m_ss.ss_family) {
+    switch (m_ss.sa_family) {
     case AF_INET: {
         const auto &sin = (const sockaddr_in &) m_ss;
         return {(uint8_t *) &sin.sin_addr, IPV4_ADDRESS_SIZE};
@@ -172,7 +179,7 @@ Uint8View SocketAddress::addr_unmapped() const {
 }
 
 IpAddress SocketAddress::addr_variant() const {
-    switch (m_ss.ss_family) {
+    switch (m_ss.sa_family) {
     case AF_INET: {
         const auto &sin = (const sockaddr_in &) m_ss;
         return utils::to_array<IPV4_ADDRESS_SIZE>((const uint8_t *) &sin.sin_addr);
@@ -187,7 +194,7 @@ IpAddress SocketAddress::addr_variant() const {
 }
 
 uint16_t SocketAddress::port() const {
-    switch (m_ss.ss_family) {
+    switch (m_ss.sa_family) {
     case AF_INET6:
         return ntohs(((const sockaddr_in6 &) m_ss).sin6_port);
     case AF_INET:
@@ -200,7 +207,7 @@ uint16_t SocketAddress::port() const {
 std::string SocketAddress::host_str(bool ipv6_brackets) const {
     char host[INET6_ADDRSTRLEN] = "";
     getnameinfo(c_sockaddr(), c_socklen(), host, sizeof(host), nullptr, 0, NI_NUMERICHOST);
-    if (m_ss.ss_family == AF_INET6 && ipv6_brackets) {
+    if (m_ss.sa_family == AF_INET6 && ipv6_brackets) {
         return AG_FMT("[{}]", host);
     }
     return host;
@@ -213,15 +220,15 @@ std::string SocketAddress::str() const {
 }
 
 bool SocketAddress::valid() const {
-    return m_ss.ss_family != AF_UNSPEC;
+    return m_ss.sa_family != AF_UNSPEC;
 }
 
 bool SocketAddress::is_ipv6() const {
-    return m_ss.ss_family == AF_INET6;
+    return m_ss.sa_family == AF_INET6;
 }
 
 bool SocketAddress::is_loopback() const {
-    switch (m_ss.ss_family) {
+    switch (m_ss.sa_family) {
     case AF_INET: {
         constexpr uint32_t LOOPBACK_MASK = 0xff000000;
         return (INADDR_LOOPBACK & LOOPBACK_MASK) == (ntohl(((sockaddr_in *) &m_ss)->sin_addr.s_addr) & LOOPBACK_MASK);
@@ -239,7 +246,7 @@ bool SocketAddress::is_loopback() const {
 }
 
 bool SocketAddress::is_any() const {
-    switch (m_ss.ss_family) {
+    switch (m_ss.sa_family) {
     case AF_INET: {
         return INADDR_ANY == ntohl(((sockaddr_in *) &m_ss)->sin_addr.s_addr);
     }
@@ -255,16 +262,16 @@ bool SocketAddress::is_any() const {
 }
 
 bool SocketAddress::is_ipv4() const {
-    return m_ss.ss_family == AF_INET || is_ipv4_mapped();
+    return m_ss.sa_family == AF_INET || is_ipv4_mapped();
 }
 
 bool SocketAddress::is_ipv4_mapped() const {
-    return m_ss.ss_family == AF_INET6
+    return m_ss.sa_family == AF_INET6
             && !memcmp(&((sockaddr_in6 *) &m_ss)->sin6_addr, IPV4_MAPPED_PREFIX, sizeof(IPV4_MAPPED_PREFIX));
 }
 
 SocketAddress SocketAddress::to_ipv4_unmapped() const {
-    if (m_ss.ss_family == AF_INET) {
+    if (m_ss.sa_family == AF_INET) {
         return *this;
     }
     if (!is_ipv4_mapped()) {
@@ -276,10 +283,10 @@ SocketAddress SocketAddress::to_ipv4_unmapped() const {
 }
 
 SocketAddress SocketAddress::to_ipv4_mapped() const {
-    if (m_ss.ss_family == AF_INET6) {
+    if (m_ss.sa_family == AF_INET6) {
         return *this;
     }
-    if (m_ss.ss_family != AF_INET) {
+    if (m_ss.sa_family != AF_INET) {
         return {};
     }
     uint8_t mapped[sizeof(in6_addr)];
@@ -300,7 +307,7 @@ SocketAddress SocketAddress::socket_family_cast(int family) const {
 }
 
 void SocketAddress::set_port(uint16_t port) {
-    switch (m_ss.ss_family) {
+    switch (m_ss.sa_family) {
     case AF_INET:
         ((sockaddr_in *) &m_ss)->sin_port = htons(port);
         break;

@@ -11,8 +11,22 @@
 #include <event2/util.h> // for sockaddr, sockaddr_storage, getaddrinfo, getnameinfo
 
 #include "common/defs.h"
+#include "utils.h"
 
 namespace ag {
+
+/** Compact socket address storage */
+struct SocketAddressStorage{
+#ifdef __APPLE__
+    uint8_t sa_len;
+    uint8_t sa_family;
+#else
+    uint16_t sa_family;
+#endif
+    /** Padding to make the structure as large as sockaddr_in6 */
+    uint8_t padding[sizeof(sockaddr_in6) - sizeof(uint16_t)];
+};
+static_assert(sizeof(SocketAddressStorage) == sizeof(sockaddr_in6));
 
 /**
  * Socket address (IP address and port)
@@ -46,6 +60,10 @@ public:
      * @param addr C sockaddr struct
      */
     explicit SocketAddress(const sockaddr *addr);
+    /**
+     * @param storage Compact socket address struct
+     */
+    explicit SocketAddress(const SocketAddressStorage &storage);
 
     bool operator<(const SocketAddress &other) const;
     bool operator==(const SocketAddress &other) const;
@@ -55,6 +73,11 @@ public:
      * @return Pointer to sockaddr_storage structure
      */
     [[nodiscard]] const sockaddr *c_sockaddr() const;
+
+    /**
+     * @return Pointer to compact socket address storage structure
+     */
+    [[nodiscard]] const SocketAddressStorage *c_storage() const;
 
     /**
      * @return sizeof(sockaddr_in) for IPv4 and sizeof(sockaddr_in6) for IPv6
@@ -137,8 +160,7 @@ public:
     void set_port(uint16_t port);
 
 private:
-    /** sockaddr_storage structure. Internally this is just sockaddr_storage wrapper */
-    sockaddr_storage m_ss{};
+    SocketAddressStorage m_ss{};
 
     [[nodiscard]] ag::SocketAddress to_ipv4_unmapped() const;
     [[nodiscard]] ag::SocketAddress to_ipv4_mapped() const;
