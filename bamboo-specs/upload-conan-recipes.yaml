@@ -44,7 +44,6 @@ Default Job:
 
             python3 -m pip install -r requirements.txt
             ./export_conan.py
-            cd ..
 
             ./conan_upload_and_cleanup.sh
   final-tasks:
