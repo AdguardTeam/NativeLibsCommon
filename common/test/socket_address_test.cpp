@@ -7,7 +7,22 @@
 
 using namespace ag;
 
-TEST(SocketAddress, ConstructIPv4AndPort) {
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
+class SocketAddressTest : public ::testing::Test {
+protected:
+#ifdef _WIN32
+    void SetUp() override {
+        WSADATA wsa_data = {};
+        ASSERT_EQ(0, WSAStartup(MAKEWORD(2, 2), &wsa_data));
+    }
+#endif
+};
+
+TEST_F(SocketAddressTest, ConstructIPv4AndPort) {
     SocketAddress addr("1.2.3.4", 8080);
     EXPECT_TRUE(addr.valid());
     EXPECT_TRUE(addr.is_ipv4());
@@ -18,7 +33,7 @@ TEST(SocketAddress, ConstructIPv4AndPort) {
     EXPECT_EQ(addr.c_socklen(), sizeof(sockaddr_in));
 }
 
-TEST(SocketAddress, ConstructIPv6AndPort) {
+TEST_F(SocketAddressTest, ConstructIPv6AndPort) {
     SocketAddress addr("::1", 443);
     EXPECT_TRUE(addr.valid());
     EXPECT_TRUE(addr.is_ipv6());
@@ -29,7 +44,7 @@ TEST(SocketAddress, ConstructIPv6AndPort) {
     EXPECT_EQ(addr.c_socklen(), sizeof(sockaddr_in6));
 }
 
-TEST(SocketAddress, ConstructFromHostPortString) {
+TEST_F(SocketAddressTest, ConstructFromHostPortString) {
     SocketAddress addr("1.2.3.4:65535");
     EXPECT_TRUE(addr.valid());
     EXPECT_EQ(addr.port(), 65535);
@@ -44,7 +59,7 @@ TEST(SocketAddress, ConstructFromHostPortString) {
     EXPECT_FALSE(invalid.valid());
 }
 
-TEST(SocketAddress, IPv4MappedBehavior) {
+TEST_F(SocketAddressTest, IPv4MappedBehavior) {
     SocketAddress addr("::ffff:192.0.2.1", 53);
     EXPECT_TRUE(addr.valid());
     EXPECT_TRUE(addr.is_ipv6());
@@ -63,13 +78,13 @@ TEST(SocketAddress, IPv4MappedBehavior) {
     EXPECT_EQ(addr.str(), addr.str());
 }
 
-TEST(SocketAddress, FamilyCastInvalidWhenPureIPv6ToIPv4) {
+TEST_F(SocketAddressTest, FamilyCastInvalidWhenPureIPv6ToIPv4) {
     SocketAddress addr("2001:db8::1", 80);
     addr = addr.socket_family_cast(AF_INET);
     EXPECT_FALSE(addr.valid());
 }
 
-TEST(SocketAddress, LoopbackAndAny) {
+TEST_F(SocketAddressTest, LoopbackAndAny) {
     SocketAddress lo4("127.0.0.1", 0);
     EXPECT_TRUE(lo4.is_loopback());
     EXPECT_FALSE(lo4.is_any());
@@ -91,7 +106,7 @@ TEST(SocketAddress, LoopbackAndAny) {
     EXPECT_TRUE(mapped_lo.is_loopback());
 }
 
-TEST(SocketAddress, SetPort) {
+TEST_F(SocketAddressTest, SetPort) {
     SocketAddress addr("1.2.3.4", 80);
     addr.set_port(5353);
     EXPECT_EQ(addr.port(), 5353);
@@ -101,7 +116,7 @@ TEST(SocketAddress, SetPort) {
     EXPECT_EQ(addr.port(), 443);
 }
 
-TEST(SocketAddress, EqualityAndHashConsistency) {
+TEST_F(SocketAddressTest, EqualityAndHashConsistency) {
     SocketAddress addr1("1.2.3.4", 8080);
     SocketAddress addr2("1.2.3.4:8080");
     EXPECT_TRUE(addr1 == addr2);
@@ -116,7 +131,7 @@ TEST(SocketAddress, EqualityAndHashConsistency) {
     EXPECT_EQ(set.count(addr2), 1u);
 }
 
-TEST(SocketAddress, OrderingSanity) {
+TEST_F(SocketAddressTest, OrderingSanity) {
     SocketAddress a("1.2.3.4", 1);
     SocketAddress b("1.2.3.4", 1);
     SocketAddress c("1.2.3.5", 1);
@@ -130,13 +145,13 @@ TEST(SocketAddress, OrderingSanity) {
     }
 }
 
-TEST(SocketAddress, FmtFormatAsWorks) {
+TEST_F(SocketAddressTest, FmtFormatAsWorks) {
     SocketAddress addr("10.0.0.1", 1234);
     EXPECT_EQ(AG_FMT("{}", addr), addr.str());
     EXPECT_EQ(AG_FMT("peer={}", addr), "peer=" + addr.str());
 }
 
-TEST(SocketAddress_Uint8View, IPv4) {
+TEST_F(SocketAddressTest, IPv4) {
     const std::vector<uint8_t> ip4{192, 0, 2, 1};
     SocketAddress addr({ip4.data(), ip4.size()}, 5353);
 
@@ -148,7 +163,7 @@ TEST(SocketAddress_Uint8View, IPv4) {
     EXPECT_EQ(addr.c_socklen(), sizeof(sockaddr_in));
 }
 
-TEST(SocketAddress_Uint8View, IPv4_Bytes) {
+TEST_F(SocketAddressTest, IPv4_Bytes) {
     const std::vector<uint8_t> ip4{0x5D, 0xB8, 0xD8, 0x22};
     SocketAddress addr({ip4.data(), ip4.size()}, 0);
 
@@ -158,7 +173,7 @@ TEST(SocketAddress_Uint8View, IPv4_Bytes) {
     EXPECT_EQ(addr.str(), "93.184.216.34:0");
 }
 
-TEST(SocketAddress_Uint8View, IPv6) {
+TEST_F(SocketAddressTest, IPv6) {
     std::array<uint8_t, 16> ip6{};
     ip6[15] = 1;
     SocketAddress addr({ip6}, 443);
@@ -174,7 +189,7 @@ TEST(SocketAddress_Uint8View, IPv6) {
     EXPECT_EQ(addr.c_socklen(), sizeof(sockaddr_in6));
 }
 
-TEST(SocketAddress_Uint8View, IPv6_Bytes) {
+TEST_F(SocketAddressTest, IPv6_Bytes) {
     // 2606:2800:220:1:248:1893:25c8:1946
     const std::vector<uint8_t> ip6 = {
             0x26,0x06,0x28,0x00,0x02,0x20,0x00,0x01,0x02,0x48,0x18,0x93,0x25,0xC8,0x19,0x46
@@ -188,7 +203,7 @@ TEST(SocketAddress_Uint8View, IPv6_Bytes) {
     ASSERT_EQ(addr.str(), "[2606:2800:220:1:248:1893:25c8:1946]:0");
 }
 
-TEST(SocketAddress_Uint8View, IPv4MappedInIPv6) {
+TEST_F(SocketAddressTest, IPv4MappedInIPv6) {
     // ::ffff:198.51.100.5
     std::array<uint8_t, 16> ip6_mapped{};
     // префикс ::ffff:0:0:
@@ -219,7 +234,7 @@ TEST(SocketAddress_Uint8View, IPv4MappedInIPv6) {
     EXPECT_EQ(back.port(), 8080);
 }
 
-TEST(SocketAddress_Uint8View, InvalidSizeYieldsInvalidAddress) {
+TEST_F(SocketAddressTest, InvalidSizeYieldsInvalidAddress) {
     std::array<uint8_t, 15> bad{};
     SocketAddress a(ag::Uint8View{bad.data(), bad.size()}, 1);
     EXPECT_FALSE(a.valid());
@@ -228,7 +243,7 @@ TEST(SocketAddress_Uint8View, InvalidSizeYieldsInvalidAddress) {
     EXPECT_FALSE(b.valid());
 }
 
-TEST(SocketAddress_Uint8View, HashAndEqualityConsistency) {
+TEST_F(SocketAddressTest, HashAndEqualityConsistency) {
     std::array<uint8_t, 4> ip4{203, 0, 113, 7};
     SocketAddress a1({ip4}, 12345);
     SocketAddress a2("203.0.113.7", 12345);
