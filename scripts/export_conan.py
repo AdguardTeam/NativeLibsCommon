@@ -52,8 +52,8 @@ for version in versions:
         print("HASH is ", the_hash)
         subprocess.run(["git", "checkout", the_hash], check=True)
 
-    subprocess.run(["conan", "export", project_dir, "--user", "adguard_team", "--channel", "native_libs_common", "--version", version])
+    subprocess.run(["conan", "export", project_dir, "--user", "adguard", "--channel", "oss", "--version", version])
     for folder in os.listdir(recipes_dir):
         path = os.path.join(recipes_dir, folder)
         if os.path.isdir(path):
-            subprocess.run(["conan", "export", path, "--user", "adguard_team", "--channel", "native_libs_common"], check=True)
+            subprocess.run(["conan", "export", path, "--user", "adguard", "--channel", "oss"], check=True)
