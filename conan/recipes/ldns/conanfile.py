@@ -9,7 +9,7 @@ class LdnsConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    requires = ["libevent/2.1.11@adguard_team/native_libs_common"]
+    requires = ["libevent/2.1.11@adguard/oss"]
     exports_sources = ["compat/*", "windows/*", "*.patch", "CMakeLists.txt"]
 
     def config_options(self):

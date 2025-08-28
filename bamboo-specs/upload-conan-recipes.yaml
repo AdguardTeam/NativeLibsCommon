@@ -56,12 +56,6 @@ Default Job:
         description: Clean up
   requirements:
     - adg-privileged-docker
-  artifacts:
-    -
-      name: Upload Log
-      location: scripts
-      pattern: 'upload.txt'
-      shared: false
   artifact-subscriptions: []
 repositories:
   - core-libs/native-libs-common:

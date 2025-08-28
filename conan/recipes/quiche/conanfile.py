@@ -9,7 +9,7 @@ class QuicheConan(ConanFile):
     name = "quiche"
     version = "0.17.1"
     settings = "os", "compiler", "build_type", "arch"
-    requires = ["openssl/boring-2023-05-17@adguard_team/native_libs_common"]
+    requires = ["openssl/boring-2024-09-13@adguard/oss"]
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def source(self):

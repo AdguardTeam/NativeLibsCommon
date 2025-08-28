@@ -46,14 +46,14 @@ else:
 for version in versions:
     if re.match(r'\d+\.\d+\.\d+', version) is not None:
         hash1 = yaml_data["commit_hash"][version]["hash"]
-        result = subprocess.run(["git", "log", "--reverse", "--ancestry-path", hash1 + "..master", "--pretty=%h"],
+        result = subprocess.run(["git", "log", "--reverse", "--ancestry-path", hash1 + "..HEAD", "--pretty=%h"],
                                 check=True, capture_output=True)
         the_hash = result.stdout.decode().splitlines()[0]
         print("HASH is ", the_hash)
         subprocess.run(["git", "checkout", the_hash], check=True)
 
-    subprocess.run(["conan", "export", project_dir, "--user", "adguard_team", "--channel", "native_libs_common", "--version", version])
+    subprocess.run(["conan", "export", project_dir, "--user", "adguard", "--channel", "oss", "--version", version])
     for folder in os.listdir(recipes_dir):
         path = os.path.join(recipes_dir, folder)
         if os.path.isdir(path):
-            subprocess.run(["conan", "export", path, "--user", "adguard_team", "--channel", "native_libs_common"], check=True)
+            subprocess.run(["conan", "export", path, "--user", "adguard", "--channel", "oss"], check=True)
