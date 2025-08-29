@@ -70,7 +70,8 @@ Win build:
             conan remove -c "*" *> $null
             conan cache clean *> $null
   requirements:
-    - system.builder.msbuild.MSBuild v15.0 (32bit)
+    - ephemeral-windows
+    - image: registry.int.agrd.dev/windows/windows11-bamboo:7
   artifact-subscriptions: []
 Linux build:
   key: LB
