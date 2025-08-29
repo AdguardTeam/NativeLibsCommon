@@ -30,17 +30,17 @@ class NativeLibsCommon(ConanFile):
 
     def requirements(self):
         self.requires("fmt/10.1.1", transitive_headers=True)
-        self.requires("libevent/2.1.11@adguard_team/native_libs_common", transitive_headers=True)
-        self.requires("llhttp/9.1.3@adguard_team/native_libs_common", transitive_headers=True)
+        self.requires("libevent/2.1.11@adguard/oss", transitive_headers=True)
+        self.requires("llhttp/9.1.3@adguard/oss", transitive_headers=True)
         self.requires("magic_enum/0.9.5", transitive_headers=True)
-        self.requires("nghttp2/1.56.0@adguard_team/native_libs_common", transitive_headers=True)
-        self.requires("nghttp3/1.0.0@adguard_team/native_libs_common", transitive_headers=True)
-        self.requires("ngtcp2/1.0.1@adguard_team/native_libs_common", transitive_headers=True)
+        self.requires("nghttp2/1.56.0@adguard/oss", transitive_headers=True)
+        self.requires("nghttp3/1.0.0@adguard/oss", transitive_headers=True)
+        self.requires("ngtcp2/1.0.1@adguard/oss", transitive_headers=True)
         if "mips" in str(self.settings.arch):
-            self.requires("openssl/3.1.5-quic1@adguard_team/native_libs_common", transitive_headers=True, force=True)
+            self.requires("openssl/3.1.5-quic1@adguard/oss", transitive_headers=True, force=True)
         else:
-            self.requires("openssl/boring-2023-05-17@adguard_team/native_libs_common", transitive_headers=True)
-        self.requires("pcre2/10.37@adguard_team/native_libs_common", transitive_headers=True)
+            self.requires("openssl/boring-2024-09-13@adguard/oss", transitive_headers=True)
+        self.requires("pcre2/10.37@adguard/oss", transitive_headers=True)
 
     def build_requirements(self):
         self.test_requires("gtest/1.14.0")

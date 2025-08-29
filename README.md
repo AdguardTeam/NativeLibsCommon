@@ -85,7 +85,7 @@ do the following:
 2) Commit the changes you wish to test.
 3) Execute `./script/export_conan.py local`. This script will export the package, assigning the last commit hash as its version.
 4) In the project that depends on `native_libs_common`, update the version to `<commit_hash>` (where `<commit_hash>` is the hash of the target commit):
-Replace `native_libs_common/1.0.0@adguard_team/native_libs_common` with `native_libs_common/<commit_hash>@adguard_team/native_libs_common`.
+Replace `native_libs_common/1.0.0@adguard/oss` with `native_libs_common/<commit_hash>@adguard/oss`.
 5) Re-run the cmake command.
    Note:
     * If you have already exported the library in this way, the cached version must be purged: `conan remove -f native_libs_common/<commit_hash>`.
