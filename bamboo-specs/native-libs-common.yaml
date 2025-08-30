@@ -26,6 +26,7 @@ Win build:
             $ErrorActionPreference = 'Stop'
 
             & conan remote add --index 0 art ${bamboo.conanRepoUrl}
+            $env:bamboo_sshSecretKey -replace '\\n', "`n" | sc $Env:USERPROFILE\.ssh\id_rsa
 
             # Save vcvars to switch between them
             $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
@@ -73,7 +74,7 @@ Win build:
             conan cache clean *> $null
   requirements:
     - ephemeral-windows
-    - image: registry.int.agrd.dev/windows/windows11-bamboo:7
+    - image: registry.int.agrd.dev/windows/windows11-bamboo:9
   artifact-subscriptions: []
 Linux build:
   key: LB
