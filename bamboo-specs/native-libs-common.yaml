@@ -26,7 +26,7 @@ Win build:
             $ErrorActionPreference = 'Stop'
 
             & conan remote add --index 0 art ${bamboo.conanRepoUrl}
-            $env:bamboo_sshSecretKey -replace '\\n', "`n" | sc $Env:USERPROFILE\.ssh\id_rsa
+            $Env:bamboo_sshSecretKey -replace '\\n', "`n" | sc $Env:USERPROFILE\.ssh\id_rsa
 
             # Save vcvars to switch between them
             $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
