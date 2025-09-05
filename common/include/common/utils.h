@@ -3,21 +3,23 @@
 #pragma GCC visibility push(default)
 #include <future>
 #pragma GCC visibility pop
+
 #include <algorithm>
 #include <array>
+#include <cctype>
+#include <charconv>
+#include <cstdio>
 #include <functional>
+#include <istream>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <type_traits>
-#include <vector>
-#include <cctype>
-#include <charconv>
-#include <istream>
-#include <cstdio>
 #include <utility>
+#include <vector>
 
 #ifndef _WIN32
 #include <sys/wait.h>
@@ -26,6 +28,7 @@
 #include "common/defs.h"
 #include "common/error.h"
 #include "common/format.h"
+#include "common/move_only_function.h"
 
 /**
  * Macros to create constexpr value and type to check expression
