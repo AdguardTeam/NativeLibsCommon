@@ -5,10 +5,14 @@
 #else
 #include <arpa/inet.h>
 #endif
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <list>
 #include <optional>
+#include <set>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include "common/defs.h"
@@ -427,6 +431,11 @@ public:
         return AG_FMT("{}/{}", get_address_as_string(), std::to_string(m_prefix_len));
     }
 
+    /**
+     * This implementation induces a total order on the set of all CidrRanges
+     * and also satisfies an additional condition that if `a.contains(b)`,
+     * then `a <= b` (i.e. `!(b < a)`).
+     */
     bool operator<(const CidrRange &range) const {
         if (m_address.size() != range.m_address.size()) {
             return m_address.size() < range.m_address.size();
@@ -442,6 +451,81 @@ public:
     [[nodiscard]] bool valid() const {
         return m_error.empty();
     }
+};
+
+/**
+ * Provides a container of CidrRanges with an operation that checks if any CidrRange in the container
+ * contains the given CidrRange in `O(log(N))` time, where `N` is the size of the container.
+ */
+class CidrRangeSet {
+public:
+    /**
+     * If the set does not include `range`, insert `range` into the set and return `true`.
+     * Otherwise, return `false` and leave the set unmodified.
+     */
+    bool insert(CidrRange range) {
+        auto [eqr_begin, eqr_end] = m_set.equal_range(range);
+        for (auto it = eqr_begin; it != eqr_end;) {
+            if (range.contains(*it)) {
+                it = m_set.erase(it);
+            } else if (it->contains(range)) {
+                return false;
+            }
+        }
+        m_set.insert(eqr_end, std::move(range));
+        return true;
+    }
+
+    /**
+     * Return `true` if the container includes `range`, that is, if the container
+     * contains some range `n` for which `n.contains(range)` holds.
+     */
+    bool includes(const CidrRange &range) const { // NOLINT(*-use-nodiscard)
+        auto [eqr_begin, eqr_end] = m_set.equal_range(range);
+        return std::any_of(eqr_begin, eqr_end, [&range](const CidrRange &n) {
+            return n.contains(range);
+        });
+    }
+
+    /**
+     * Remove all ranges from the set.
+     */
+    void clear() {
+        m_set.clear();
+    }
+
+    auto size() const { // NOLINT(*-use-nodiscard)
+        return m_set.size();
+    }
+
+private:
+    // A (multi)set contains an element r IFF:
+    //  (1) !(n << r) && !(r << n)
+    // where n is some element of set and operator<< is a comparison (less)
+    // operator that is assumed to induce total order.
+    //
+    // Assuming that operator< induces a total order on the set of all CidrRanges,
+    // with an additional constraint that `a.contains(b)` implies `!(b < a)`,
+    // let's modify the comparison in the following way:
+    //
+    // operator<<(a, b):
+    //     return (a < b && !a.contains(b))
+    //
+    // Then (1) becomes:
+    //  (2) !(n < r && !n.contains(r)) && !(r < n && !r.contains(n))
+    //  (3) (!(n < r) || n.contains(r)) && (!(r < n) || r.contains(n))
+    //
+    // That is, the modified-comparator set contains r IFF some element n of set contains r
+    // OR r contains some element n of set. This can be used to implement a `log(N)`-time
+    // range inclusion test with an `std::multiset` and some additional logic for insertion
+    // and membership testing (see `CidrRangeSet::insert` and `CidrRangeSet::includes`).
+    struct ModifiedLess {
+        bool operator()(const CidrRange &lhs, const CidrRange &rhs) const noexcept {
+            return lhs < rhs && !lhs.contains(rhs);
+        }
+    };
+
+    std::multiset<CidrRange, ModifiedLess> m_set;
 };
 
 } // namespace ag

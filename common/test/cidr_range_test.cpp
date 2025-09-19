@@ -1,6 +1,16 @@
 #include <gtest/gtest.h>
 
+#include <fmt/core.h>
+
+#include <cstdio>
+#include <functional>
+#include <set>
+#include <tuple>
+#include <utility>
+
 #include "common/cidr_range.h"
+#include "common/file.h"
+#include "common/utils.h"
 
 using namespace ag;
 
@@ -185,4 +195,143 @@ TEST_F(CidrRangeTest, testErrors) {
     auto ipv6_address = CidrRange::get_address_from_string("12:2:");
     ASSERT_EQ(ipv6_address.has_error(), true);
     ASSERT_EQ(ipv6_address.error()->value(), ag::CidrError::AE_PARSE_NET_STRING_ERROR);
+}
+
+// This test/microbenchmark is disabled because the sample data is large,
+// and it takes a long time to exclude 19000 prefixes from ::/0.
+// To run this test, get cn.txt from:
+// https://raw.githubusercontent.com/Loyalsoldier/geoip/refs/heads/release/text/cn.txt
+// and put it into the test binary directory.
+TEST_F(CidrRangeTest, DISABLED_CidrRangeSetMicrobenchmark) {
+    fmt::println(stderr, "Preparing may take a long time");
+
+    std::vector<CidrRange> input;
+    auto h = ag::file::open("cn.txt", ag::file::RDONLY);
+    ag::file::for_each_line(h, [](uint32_t, std::string_view line, void *arg) {
+        CidrRange range{line};
+        if (range.valid()) {
+            auto *ranges = (std::vector<CidrRange> *) arg;
+            ranges->emplace_back(std::move(range));
+        }
+        return true;
+    }, &input);
+    ag::file::close(h);
+
+    std::vector<CidrRange> complement_v4 = ag::CidrRange::exclude(CidrRange{"0.0.0.0/0"}, input);
+    std::vector<CidrRange> complement_v6 = ag::CidrRange::exclude(CidrRange{"::/0"}, input);
+
+    ag::utils::Timer t;
+
+    using T = std::pair<const std::vector<CidrRange> &, bool>;
+    using F = std::tuple<std::string_view, std::function<void(CidrRange)>, std::function<bool(const CidrRange &)>>;
+
+    std::set < CidrRange > stdset;
+    F stdset_functions{
+            "std::set",
+            [&](CidrRange r) { stdset.insert(std::move(r)); },
+            [&](const CidrRange &probe) {
+                return std::any_of(stdset.begin(), stdset.upper_bound(probe), [&probe](const auto &r) {
+                    return r.contains(probe);
+                });
+            },
+    };
+
+    CidrRangeSet agset;
+    F agset_functions{
+            "ag::CidrRangeSet",
+            [&](CidrRange r) { agset.insert(std::move(r)); },
+            [&](const CidrRange &probe) { return agset.includes(probe); },
+    };
+
+    for (auto [label, insert, check]: {stdset_functions, agset_functions}) {
+        fmt::println(stderr, "{}", label);
+        t.reset();
+        for (const CidrRange &range: input) {
+            insert(range);
+        }
+        fmt::println(stderr, "Inserted {} in {} ms", stdset.size(), t.elapsed<Millis>().count());
+
+        for (auto [vec, included]: {T{input, true}, T{complement_v4, false}, T{complement_v6, false}}) {
+            t.reset();
+            for (const CidrRange &probe: vec) {
+                ASSERT_EQ(included, check(probe));
+            }
+            fmt::println(stderr, "{} {} matches in {} ms", vec.size(), included ? "positive" : "negative",
+                    t.elapsed<Millis>().count());
+        }
+    }
+}
+
+TEST_F(CidrRangeTest, CidrRangeSet) {
+    ag::CidrRangeSet s;
+    s.insert(CidrRange{"0.0.0.0/0"});
+    s.insert(CidrRange{"::/0"});
+    ASSERT_TRUE(s.includes(CidrRange{"0.0.0.0/0"}));
+    ASSERT_TRUE(s.includes(CidrRange{"0.0.0.0/8"}));
+    ASSERT_TRUE(s.includes(CidrRange{"10.0.0.0/8"}));
+    ASSERT_TRUE(s.includes(CidrRange{"127.0.0.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"1.1.1.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"::/0"}));
+    ASSERT_TRUE(s.includes(CidrRange{"2000::/3"}));
+    ASSERT_TRUE(s.includes(CidrRange{"2001:4860:4860::8844"}));
+    ASSERT_TRUE(s.includes(CidrRange{"2001:4860:4860::8888"}));
+    s.clear();
+    ASSERT_FALSE(s.includes(CidrRange{"0.0.0.0/0"}));
+    ASSERT_FALSE(s.includes(CidrRange{"0.0.0.0/8"}));
+    ASSERT_FALSE(s.includes(CidrRange{"10.0.0.0/8"}));
+    ASSERT_FALSE(s.includes(CidrRange{"127.0.0.1"}));
+    ASSERT_FALSE(s.includes(CidrRange{"1.1.1.1"}));
+    ASSERT_FALSE(s.includes(CidrRange{"::/0"}));
+    ASSERT_FALSE(s.includes(CidrRange{"2000::/3"}));
+    ASSERT_FALSE(s.includes(CidrRange{"2001:4860:4860::8844"}));
+    ASSERT_FALSE(s.includes(CidrRange{"2001:4860:4860::8888"}));
+    s.insert(CidrRange{"0.0.0.0/0"});
+    ASSERT_TRUE(s.includes(CidrRange{"0.0.0.0/0"}));
+    ASSERT_TRUE(s.includes(CidrRange{"0.0.0.0/8"}));
+    ASSERT_TRUE(s.includes(CidrRange{"10.0.0.0/8"}));
+    ASSERT_TRUE(s.includes(CidrRange{"127.0.0.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"1.1.1.1"}));
+    ASSERT_FALSE(s.includes(CidrRange{"::/0"}));
+    ASSERT_FALSE(s.includes(CidrRange{"2000::/3"}));
+    ASSERT_FALSE(s.includes(CidrRange{"2001:4860:4860::8844"}));
+    ASSERT_FALSE(s.includes(CidrRange{"2001:4860:4860::8888"}));
+    s.clear();
+    s.insert(CidrRange{"::/0"});
+    ASSERT_FALSE(s.includes(CidrRange{"0.0.0.0/0"}));
+    ASSERT_FALSE(s.includes(CidrRange{"0.0.0.0/8"}));
+    ASSERT_FALSE(s.includes(CidrRange{"10.0.0.0/8"}));
+    ASSERT_FALSE(s.includes(CidrRange{"127.0.0.1"}));
+    ASSERT_FALSE(s.includes(CidrRange{"1.1.1.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"::/0"}));
+    ASSERT_TRUE(s.includes(CidrRange{"2000::/3"}));
+    ASSERT_TRUE(s.includes(CidrRange{"2001:4860:4860::8844"}));
+    ASSERT_TRUE(s.includes(CidrRange{"2001:4860:4860::8888"}));
+    s.clear();
+    s.insert(CidrRange{"192.168.10.0/24"});
+    s.insert(CidrRange{"192.168.0.0/16"});
+    s.insert(CidrRange{"172.17.0.0/12"});
+    s.insert(CidrRange{"10.0.0.0/16"});
+    ASSERT_TRUE(s.includes(CidrRange{"192.168.10.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"192.168.10.0/24"}));
+    ASSERT_TRUE(s.includes(CidrRange{"192.168.0.0/16"}));
+    ASSERT_FALSE(s.includes(CidrRange{"192.168.0.0/8"}));
+    ASSERT_FALSE(s.includes(CidrRange{"192.169.1.2"}));
+    ASSERT_TRUE(s.includes(CidrRange{"172.17.2.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"10.0.0.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"10.0.0.0/24"}));
+    ASSERT_FALSE(s.includes(CidrRange{"10.0.0.0/8"}));
+    ASSERT_FALSE(s.includes(CidrRange{"11.22.33.44"}));
+    s.insert(CidrRange{"128.0.0.0/1"});
+    s.insert(CidrRange{"0.0.0.0/1"});
+    ASSERT_EQ(2, s.size());
+    ASSERT_TRUE(s.includes(CidrRange{"192.168.10.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"192.168.10.0/24"}));
+    ASSERT_TRUE(s.includes(CidrRange{"192.168.0.0/16"}));
+    ASSERT_TRUE(s.includes(CidrRange{"192.168.0.0/8"}));
+    ASSERT_TRUE(s.includes(CidrRange{"192.169.1.2"}));
+    ASSERT_TRUE(s.includes(CidrRange{"172.17.2.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"10.0.0.1"}));
+    ASSERT_TRUE(s.includes(CidrRange{"10.0.0.0/24"}));
+    ASSERT_TRUE(s.includes(CidrRange{"10.0.0.0/8"}));
+    ASSERT_TRUE(s.includes(CidrRange{"11.22.33.44"}));
 }
