@@ -259,9 +259,22 @@ public:
         return this->insert(k, std::move(v), TIMEOUT);
     }
 
-    bool insert(Key k, Val v, Duration to) {
+    /**
+     * If the cache already contains an entry for `k`, then its timeout is reset to `to`. If the existing entry's
+     * timeout is greater than `to` and `preserve_longer_timeout == true`, then `to` is replaced with the existing
+     * entry's timeout.
+     */
+    bool insert(Key k, Val v, Duration to, bool preserve_longer_timeout = false) {
         if (this->AUTO_UPDATE) {
             this->update();
+        }
+
+        if (auto it = m_keys_timeout_iters.find(k); it != m_keys_timeout_iters.end()) {
+            if (preserve_longer_timeout && it->second->second.to > to) {
+                to = it->second->second.to;
+            }
+            m_timeout_keys.erase(it->second);
+            m_keys_timeout_iters.erase(it);
         }
 
         auto key_timeout = std::chrono::time_point_cast<Duration>(Clock::now() + to);

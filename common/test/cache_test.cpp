@@ -212,6 +212,42 @@ TEST(LruTimeoutCache, Works) {
     }
 }
 
+TEST(LruTimeoutCache, PreservesLaterDeadline) {
+    using namespace std::chrono_literals;
+    ag::LruTimeoutCache<size_t, std::string> cache(CACHE_SIZE, 10h);
+
+    cache.insert(1, "one", 2h);
+    ASSERT_TRUE(cache.get(1));
+    cache.insert(1, "one", 1h);
+    ag::SteadyClock::add_time_shift(1h + 1s);
+    ASSERT_FALSE(cache.get(1));
+
+    cache.insert(1, "one", 2h);
+    cache.insert(1, "one", 1h, /*preserve_longer_timeout*/true);
+    ag::SteadyClock::add_time_shift(1h + 1s);
+    ASSERT_TRUE(cache.get(1)); // Access resets the entry timeout.
+    ag::SteadyClock::add_time_shift(2h + 1s);
+    ASSERT_FALSE(cache.get(1));
+
+    // Check timeout is reset to `to`.
+    cache.insert(1, "one", 2h);
+    ag::SteadyClock::add_time_shift(1h + 1s);
+    cache.insert(1, "one", 2h);
+    ag::SteadyClock::add_time_shift(1h + 1s);
+    ASSERT_TRUE(cache.get(1)); // Access resets the entry timeout.
+    ag::SteadyClock::add_time_shift(2h + 1s);
+    ASSERT_FALSE(cache.get(1));
+
+    // Check timeout is reset to `max(to, existing.to)`.
+    cache.insert(1, "one", 2h);
+    ag::SteadyClock::add_time_shift(1h + 1s);
+    cache.insert(1, "one", 1h, /*preserve_longer_timeout*/true);
+    ag::SteadyClock::add_time_shift(1h + 1s);
+    ASSERT_TRUE(cache.get(1)); // Access resets the entry timeout.
+    ag::SteadyClock::add_time_shift(2h + 1s);
+    ASSERT_FALSE(cache.get(1));
+}
+
 TEST(LruTimeoutCache, DoesNotLeak) {
     using namespace std::chrono_literals;
     ag::LruTimeoutCache<int, std::string> cache(3, 1h, true);
