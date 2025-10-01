@@ -24,19 +24,20 @@ struct AnyOfCondSharedState : public std::enable_shared_from_this<AnyOfCondShare
         auto weak_self = this->weak_from_this();
         this->remaining++;
         auto r = co_await aw;
-        if (weak_self.expired()) {
+        auto self = weak_self.lock();
+        if (!self) {
             co_return;
         }
-        std::unique_lock l(this->mutex);
-        --this->remaining;
+        std::unique_lock l(self->mutex);
+        --self->remaining;
         bool has_return_value = false;
-        if (!this->return_value.has_value() && (!this->check_cond || this->check_cond(r))) {
-            this->return_value = std::move(r);
+        if (!self->return_value.has_value() && (!self->check_cond || self->check_cond(r))) {
+            self->return_value = std::move(r);
             has_return_value = true;
         }
-        if ((!this->return_value.has_value() && this->remaining == 0) || has_return_value) {
-            if (this->suspended_handle) {
-                auto h = this->suspended_handle;
+        if ((!self->return_value.has_value() && self->remaining == 0) || has_return_value) {
+            if (self->suspended_handle) {
+                auto h = self->suspended_handle;
                 l.unlock();
                 h.resume();
             }
