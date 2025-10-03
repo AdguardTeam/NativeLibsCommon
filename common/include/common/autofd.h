@@ -13,7 +13,7 @@ namespace ag {
  * A class for automatic file descriptor management
  *
  * This class manages a file descriptor, ensuring it's closed when the object is destroyed.
- * It supports both duplication (for sending) and moving (for receiving) of file descriptors.
+ * It supports both duplication and moving of file descriptors.
  *
  * @note This class can't be used to manage file descriptors obtained with `_open`, `_wopen`,
  *       `_sopen_s` and `_wsopen_s` methods on Windows.
