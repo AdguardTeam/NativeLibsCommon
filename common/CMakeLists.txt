@@ -59,3 +59,13 @@ add_unit_test(base64_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(rotating_log_to_file_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(regex_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(move_only_function_test ${TEST_DIR} "" TRUE TRUE)
+add_unit_test(coro_exception_test ${TEST_DIR} "" TRUE TRUE)
+
+# Enable exceptions for coro_exception_test
+if (NOT MSVC)
+    target_compile_options(coro_exception_test PRIVATE -fexceptions)
+    target_compile_definitions(coro_exception_test PRIVATE FMT_EXCEPTIONS=1)
+else()
+    # For MSVC, exceptions are enabled by default, just override FMT_EXCEPTIONS
+    target_compile_definitions(coro_exception_test PRIVATE FMT_EXCEPTIONS=1)
+endif()

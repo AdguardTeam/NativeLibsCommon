@@ -1,5 +1,6 @@
 #pragma once
 
+#include <exception>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -23,26 +24,46 @@ struct AnyOfCondSharedState : public std::enable_shared_from_this<AnyOfCondShare
     coro::Task<void> run(auto aw) {
         auto weak_self = this->weak_from_this();
         this->remaining++;
-        auto r = co_await aw;
-        auto self = weak_self.lock();
-        if (!self) {
-            co_return;
+        try {
+            auto r = co_await aw;
+            if (auto self = weak_self.lock()) {
+                self->process_return_value(std::move(r));
+            }
+        } catch (...) {
+            if (auto self = weak_self.lock()) {
+                self->process_exception();
+            }
         }
-        std::unique_lock l(self->mutex);
-        --self->remaining;
+        co_return;
+    }
+
+    void process_return_value(R &&r) {
+        std::unique_lock l(this->mutex);
+        --this->remaining;
         bool has_return_value = false;
-        if (!self->return_value.has_value() && (!self->check_cond || self->check_cond(r))) {
-            self->return_value = std::move(r);
+        if (!this->return_value.has_value() && (!this->check_cond || this->check_cond(r))) {
+            this->return_value = std::move(r);
             has_return_value = true;
         }
-        if ((!self->return_value.has_value() && self->remaining == 0) || has_return_value) {
-            if (self->suspended_handle) {
-                auto h = self->suspended_handle;
+        if ((!this->return_value.has_value() && this->remaining == 0) || has_return_value) {
+            if (this->suspended_handle) {
+                auto h = this->suspended_handle;
                 l.unlock();
                 h.resume();
             }
         }
-        co_return;
+    }
+
+    void process_exception() {
+        std::unique_lock l(this->mutex);
+        --this->remaining;
+        if ((!this->return_value.has_value() && this->remaining == 0)) {
+            if (this->suspended_handle) {
+                auto h = this->suspended_handle;
+                l.unlock();
+                h.resume();
+            }
+        }
     }
 };
 
@@ -149,10 +170,21 @@ struct AllOfSharedState {
     std::coroutine_handle<> suspended_handle{};
     size_t remaining = 0;
     std::vector<R> return_values{};
+    std::exception_ptr exception;
 
     coro::Task<void> run(auto aw) {
         this->remaining++;
-        auto r = co_await aw;
+        std::exception_ptr e;
+        try {
+            auto r = co_await aw;
+            process_return_value(std::move(r));
+        } catch (...) {
+            process_exception();
+        }
+        co_return;
+    };
+
+    void process_return_value(R &&r) {
         std::unique_lock l(this->mutex);
         this->return_values.emplace_back(std::move(r));
         if (--this->remaining == 0) {
@@ -162,8 +194,20 @@ struct AllOfSharedState {
                 h.resume();
             }
         }
-        co_return;
-    };
+    }
+
+    void process_exception() {
+        auto e = std::current_exception();
+        std::unique_lock l(this->mutex);
+        this->exception = e;
+        if (--this->remaining == 0) {
+            if (this->suspended_handle) {
+                auto h = this->suspended_handle;
+                l.unlock();
+                h.resume();
+            }
+        }
+    }
 };
 
 template<typename R>
@@ -191,6 +235,9 @@ struct AllOfAwaitable {
 
     std::vector<R> await_resume() {
         std::unique_lock l{state->mutex};
+        if (state->exception) {
+            std::rethrow_exception(state->exception);
+        }
         return std::move(state->return_values);
     }
 };
