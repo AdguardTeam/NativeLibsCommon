@@ -74,7 +74,7 @@ Win build:
             conan cache clean *> $null
   requirements:
     - ephemeral-windows
-    - image: registry.int.agrd.dev/windows/windows11-bamboo:16
+    - image: registry.int.agrd.dev/windows/windows11-bamboo:19
   artifact-subscriptions: []
 Linux build:
   key: LB
