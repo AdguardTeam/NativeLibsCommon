@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <exception>
 #pragma GCC visibility push(default)
 #include <future>
 #pragma GCC visibility pop
@@ -152,11 +153,22 @@ struct [[nodiscard]] Task {
                 return handle;
             }
 
-            Ret await_resume() noexcept {
-                Ret ret = std::move(handle.promise().ret.value());
-                // Destroy handle because it is in final_suspended state if we get here
-                handle.destroy();
-                return ret;
+            Ret await_resume() {
+                auto &promise = handle.promise();
+
+                if (promise.exception) {
+                    // Exception case: extract exception, destroy handle, and rethrow
+                    auto exception = promise.exception;
+                    // Handle needs manual destruction because it is final-suspended
+                    handle.destroy();
+                    std::rethrow_exception(exception);
+                } else {
+                    // Success case: extract return value, destroy handle, and return
+                    Ret ret = std::move(promise.ret.value());
+                    // Handle needs manual destruction because it is final-suspended
+                    handle.destroy();
+                    return ret;
+                }
             }
         };
         return Awaitable{.handle = handle};
@@ -167,6 +179,7 @@ struct [[nodiscard]] Task {
 
         std::coroutine_handle<> caller{};
         std::optional<Ret> ret;
+        std::exception_ptr exception;
 
         std::suspend_always initial_suspend() noexcept { return {}; }
 
@@ -197,7 +210,7 @@ struct [[nodiscard]] Task {
         }
 
         void unhandled_exception() noexcept {
-            *(int *) 0x142 = 42;
+            exception = std::current_exception();
         }
 
         Task get_return_object() {
@@ -252,9 +265,18 @@ struct [[nodiscard]] Task<void> {
                 return handle;
             }
 
-            void await_resume() noexcept {
-                // Destroy handle because it is in final_suspended state if we get here
-                handle.destroy();
+            void await_resume() {
+                auto &promise = handle.promise();
+
+                if (promise.exception) {
+                    auto exception = promise.exception;
+                    // Handle needs manual destruction because it is final-suspended
+                    handle.destroy();
+                    std::rethrow_exception(exception);
+                } else {
+                    // Handle needs manual destruction because it is final-suspended
+                    handle.destroy();
+                }
             }
         };
         return Awaitable{.handle = handle};
@@ -264,6 +286,7 @@ struct [[nodiscard]] Task<void> {
         Promise() = default;
 
         std::coroutine_handle<> caller{};
+        std::exception_ptr exception;
 
         std::suspend_always initial_suspend() noexcept { return {}; }
 
@@ -289,7 +312,7 @@ struct [[nodiscard]] Task<void> {
         }
 
         void unhandled_exception() noexcept {
-            *(int *) 0x142 = 42;
+            exception = std::current_exception();
         }
 
         Task get_return_object() {
