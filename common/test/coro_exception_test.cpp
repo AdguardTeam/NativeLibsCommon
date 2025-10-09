@@ -8,7 +8,9 @@
 
 namespace ag::test {
 
-// Helper scheduler for async operations (simplified version)
+/**
+ * Suspends coroutine but immediately resumes it
+ */
 static auto immediate() {
     struct Awaitable {
         bool await_ready() { return false; }
@@ -285,7 +287,7 @@ TEST_F(CoroExceptionTest, RunDetachedWithException) {
     
     // Give some time for the detached coroutine to complete
     // In a real scenario, you might need proper synchronization
-    std::this_thread::sleep_for(std::chrono::milliseconds(10)); // NOLINT: magic number for test
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // NOLINT: magic number for test
     
     // If we reach here without crashing, the test passes
     SUCCEED();
