@@ -9,27 +9,23 @@
 namespace ag::test {
 
 // Helper scheduler for async operations (simplified version)
-struct SimpleScheduler {
-    auto immediate() {
-        struct Awaitable {
-            bool await_ready() { return false; }
-            void await_suspend(std::coroutine_handle<> h) {
-                h.resume(); // Resume immediately
-            }
-            void await_resume() {}
-        };
-        return Awaitable{};
-    }
-};
+static auto immediate() {
+    struct Awaitable {
+        bool await_ready() { return false; }
+        void await_suspend(std::coroutine_handle<> h) {
+            h.resume(); // Resume immediately
+        }
+        void await_resume() {}
+    };
+    return Awaitable{};
+}
 
 class CoroExceptionTest : public ::testing::Test {
-protected:
-    SimpleScheduler m_scheduler;
 };
 
 // Test coroutines that throw exceptions
 coro::Task<int> throw_runtime_error() {
-    co_await SimpleScheduler{}.immediate();
+    co_await immediate();
     throw std::runtime_error("Test runtime error");
     co_return 42; // This should never be reached
 }
@@ -40,14 +36,14 @@ coro::Task<void> throw_logic_error() {
 }
 
 coro::Task<std::string> throw_invalid_argument() {
-    co_await SimpleScheduler{}.immediate();
+    co_await immediate();
     throw std::invalid_argument("Test invalid argument");
     co_return std::string("should not reach");
 }
 
 coro::Task<int> throw_after_await() {
-    co_await SimpleScheduler{}.immediate();
-    co_await SimpleScheduler{}.immediate();
+    co_await immediate();
+    co_await immediate();
     throw std::runtime_error("Exception after multiple awaits");
     co_return 123; // NOLINT: magic number for test
 }
@@ -85,7 +81,7 @@ coro::Task<void> exception_in_destructor_test() {
     };
     
     ThrowingDestructor obj;
-    co_await SimpleScheduler{}.immediate();
+    co_await immediate();
     // Exception should be thrown when obj is destroyed
     co_return;
 }

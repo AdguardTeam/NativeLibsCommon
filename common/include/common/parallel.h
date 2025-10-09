@@ -174,7 +174,6 @@ struct AllOfSharedState {
 
     coro::Task<void> run(auto aw) {
         this->remaining++;
-        std::exception_ptr e;
         try {
             auto r = co_await aw;
             process_return_value(std::move(r));
