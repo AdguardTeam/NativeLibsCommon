@@ -21,16 +21,28 @@ set(SOURCE_FILES
         rotating_log_to_file.cpp
 )
 
+if(NOT MSVC)
+    list(APPEND SOURCE_FILES network_monitor.cpp)
+endif()
+
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
 find_package(fmt REQUIRED)
 find_package(libevent REQUIRED)
 find_package(pcre2 REQUIRED)
 
-target_include_directories(${PROJECT_NAME} PUBLIC include)
+target_include_directories(${PROJECT_NAME}
+    PUBLIC include
+)
 target_compile_definitions(${PROJECT_NAME} PUBLIC PCRE2_STATIC=1 PCRE2_CODE_UNIT_WIDTH=8)
-target_link_libraries(${PROJECT_NAME} fmt::fmt libevent::libevent
-        pcre2::pcre2)
+target_link_libraries(${PROJECT_NAME}
+    PUBLIC fmt::fmt
+    PUBLIC libevent::libevent
+    PUBLIC pcre2::pcre2
+)
+if(APPLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE "-framework Network")
+endif()
 if (NOT MSVC)
     target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
     target_compile_options(${PROJECT_NAME}  PRIVATE -fno-exceptions)
@@ -38,7 +50,7 @@ else ()
     target_compile_definitions(${PROJECT_NAME} PRIVATE
             WIN32_LEAN_AND_MEAN
             NOMINMAX)
-    target_link_libraries(${PROJECT_NAME} Iphlpapi.lib Ntdll.lib)
+    target_link_libraries(${PROJECT_NAME} PUBLIC Iphlpapi.lib PUBLIC Ntdll.lib PUBLIC Ws2_32)
 endif()
 target_compile_definitions(${PROJECT_NAME}  PUBLIC FMT_EXCEPTIONS=0)
 
@@ -55,6 +67,9 @@ add_unit_test(error_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(cidr_range_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(coro_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(net_utils_test ${TEST_DIR} "" TRUE TRUE)
+if(NOT MSVC)
+    add_unit_test(network_monitor_test ${TEST_DIR} "" TRUE TRUE)
+endif()
 add_unit_test(base64_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(rotating_log_to_file_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(regex_test ${TEST_DIR} "" TRUE TRUE)

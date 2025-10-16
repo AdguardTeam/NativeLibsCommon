@@ -43,6 +43,32 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
 
 Currently, it contains Conan recipes for AdGuard libs
 
+## Testing
+
+#### Build All Tests
+
+```shell
+# Configure the project (if not done already)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+
+# Build all tests
+cmake --build build --target tests
+```
+
+#### Run All Tests
+
+```shell
+# Run all tests using CTest
+ctest --test-dir build --verbose
+```
+
+#### Run Specific Tests
+
+```shell
+# Run a specific test executable directly
+./build/common/network_monitor_test
+```
+
 ## How to use conan
 
 Conan is a C++ package manager. It is similar to maven, but stores recipes and binaries separately.

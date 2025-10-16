@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <chrono>
 #include <event2/event.h>
 #include <string>
@@ -8,6 +9,20 @@
 #include "common/defs.h"
 #include "common/error.h"
 #include "common/socket_address.h"
+
+#include <unordered_set>
+
+#ifdef _WIN32
+  // The order of includes is important
+  #ifndef WIN32_LEAN_AND_MEAN
+  #  define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+  #include <iphlpapi.h>
+  #include <netioapi.h>
+  #include <ifdef.h>
+#endif
 
 namespace ag {
 namespace utils {
@@ -37,6 +52,20 @@ enum TransportProtocol {
     TP_UDP,
     TP_TCP,
 };
+
+#ifdef _WIN32
+/**
+ * Populate `physical_ifs` with the interface indices of physical network adapters.
+ * @return An error code, or `ERROR_SUCCESS`.
+ */
+DWORD get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_ifs);
+
+/**
+ * Return the network interface which is currently active.
+ * May return 0 in case it is not found.
+ */
+std::uint32_t win_detect_active_if();
+#endif // defined _WIN32
 
 /**
  * Split address string to host and port with error
