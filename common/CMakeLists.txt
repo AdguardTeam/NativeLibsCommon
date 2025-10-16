@@ -31,17 +31,11 @@ find_package(fmt REQUIRED)
 find_package(libevent REQUIRED)
 find_package(pcre2 REQUIRED)
 
-target_include_directories(${PROJECT_NAME}
-    PUBLIC include
-)
+target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_compile_definitions(${PROJECT_NAME} PUBLIC PCRE2_STATIC=1 PCRE2_CODE_UNIT_WIDTH=8)
-target_link_libraries(${PROJECT_NAME}
-    PUBLIC fmt::fmt
-    PUBLIC libevent::libevent
-    PUBLIC pcre2::pcre2
-)
+target_link_libraries(${PROJECT_NAME} fmt::fmt libevent::libevent pcre2::pcre2)
 if(APPLE)
-    target_link_libraries(${PROJECT_NAME} PRIVATE "-framework Network")
+    target_link_libraries(${PROJECT_NAME} "-framework Network")
 endif()
 if (NOT MSVC)
     target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
@@ -50,7 +44,7 @@ else ()
     target_compile_definitions(${PROJECT_NAME} PRIVATE
             WIN32_LEAN_AND_MEAN
             NOMINMAX)
-    target_link_libraries(${PROJECT_NAME} PUBLIC Iphlpapi.lib PUBLIC Ntdll.lib PUBLIC Ws2_32)
+    target_link_libraries(${PROJECT_NAME} Iphlpapi.lib Ntdll.lib Ws2_32)
 endif()
 target_compile_definitions(${PROJECT_NAME}  PUBLIC FMT_EXCEPTIONS=0)
 
