@@ -101,7 +101,7 @@ namespace utils {
  */
 std::string generate_uuid();
 
-/** Get the error description */
+/** Get the error description with english locale for easier debug */
 const char *strerror(int code);
 
 /**

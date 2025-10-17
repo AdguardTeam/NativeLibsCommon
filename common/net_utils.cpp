@@ -1,5 +1,4 @@
 #include <event2/thread.h>
-#include <event2/thread.h>
 #include <event2/util.h>
 
 #include "common/net_utils.h"
