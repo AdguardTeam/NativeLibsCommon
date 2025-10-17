@@ -198,6 +198,10 @@ bool NetworkMonitorImpl::is_running() const {
 #ifdef __linux__
     return m_monitor_event != nullptr;
 #endif // __linux__
+
+#ifdef _WIN32
+    return true;
+#endif // _WIN32
 }
 
 NetworkMonitorImpl::~NetworkMonitorImpl() {

@@ -56,9 +56,7 @@ protected:
     void start_monitor() {
 #ifdef __linux__
         m_monitor->start(m_ev_base.get());
-#elif defined(__APPLE__)
-        m_monitor->start(nullptr);
-#elif defined(_WIN32)
+#elif defined(__APPLE__) || defined(_WIN32)
         m_monitor->start(nullptr);
 #endif
     }
@@ -70,12 +68,15 @@ TEST_F(NetworkMonitorTest, GetDefaultInterface) {
     ASSERT_FALSE(if_name.empty());
 }
 
+// NetworkMonitorImpl doesn't support start/stop on Windows
+#ifndef _WIN32
 TEST_F(NetworkMonitorTest, StartAndStopMonitor) {
     start_monitor();
     ASSERT_TRUE(m_monitor->is_running());
     m_monitor->stop();
     ASSERT_FALSE(m_monitor->is_running());
 }
+#endif // _WIN32
 
 TEST_F(NetworkMonitorTest, GetDefaultInterfaceIfStart) {
     std::string if_name = m_monitor->get_default_interface();

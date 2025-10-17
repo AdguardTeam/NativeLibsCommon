@@ -19,11 +19,8 @@ set(SOURCE_FILES
         error.cpp
         url.cpp
         rotating_log_to_file.cpp
+		network_monitor.cpp
 )
-
-if(NOT MSVC)
-    list(APPEND SOURCE_FILES network_monitor.cpp)
-endif()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
@@ -61,9 +58,7 @@ add_unit_test(error_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(cidr_range_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(coro_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(net_utils_test ${TEST_DIR} "" TRUE TRUE)
-if(NOT MSVC)
-    add_unit_test(network_monitor_test ${TEST_DIR} "" TRUE TRUE)
-endif()
+add_unit_test(network_monitor_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(base64_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(rotating_log_to_file_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(regex_test ${TEST_DIR} "" TRUE TRUE)
