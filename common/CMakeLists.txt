@@ -5,21 +5,22 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCE_FILES
-        utils.cpp
-        socket_address.cpp
-        logger.cpp
-        time_utils.cpp
-        clock.cpp
-        regex.cpp
-        file.cpp
         base64.cpp
         cesu8.cpp
-        route_resolver.cpp
-        net_utils.cpp
+        clock.cpp
         error.cpp
-        url.cpp
+        file.cpp
+        logger.cpp
+        net_utils.cpp
+        network_monitor.cpp
+        regex.cpp
         rotating_log_to_file.cpp
-		network_monitor.cpp
+        route_resolver.cpp
+        socket_address.cpp
+        system_error.cpp
+        time_utils.cpp
+        url.cpp
+        utils.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})

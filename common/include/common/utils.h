@@ -101,9 +101,6 @@ namespace utils {
  */
 std::string generate_uuid();
 
-/** Get the error description with english locale for easier debug */
-const char *strerror(int code);
-
 /**
  * Check if the `rhs` is a subset of the `lhs`
  */
