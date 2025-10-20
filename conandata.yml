@@ -479,3 +479,5 @@ commit_hash:
     hash: "c49c67d14ce25c219682f42d04711921ff224e3e"
   "7.0.45":
     hash: "6d46c6c7fd270bb0a92b2b76d8afacce463d214f"
+  "8.0.0":
+    hash: "d64f24183ee6dcd5fd6e02e604d6f66abf220cf6"
