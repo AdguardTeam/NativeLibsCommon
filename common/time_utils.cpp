@@ -111,12 +111,15 @@ size_t validate_gmt_tz(std::string_view s) {
         return std::string_view::npos;
     }
 
-    char c = may_be_alpha_code ? str[ALPHA_TZ_LEN] : str[DIGIT_TZ_LEN];
-    if (isdigit((uint8_t) c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-        return std::string_view::npos;
+    size_t len = may_be_alpha_code ? ALPHA_TZ_LEN : DIGIT_TZ_LEN;
+    if (str.size() > len) {
+        char c = str[len];
+        if (isdigit((uint8_t) c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+            return std::string_view::npos;
+        }
     }
 
-    return start_offset + (may_be_alpha_code ? ALPHA_TZ_LEN : DIGIT_TZ_LEN);
+    return start_offset + len;
 }
 
 /**
