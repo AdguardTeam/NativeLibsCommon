@@ -244,6 +244,7 @@ uint32_t utils::gettid(void) {
 }
 #endif // _WIN32
 
+
 std::string utils::encode_to_hex(Uint8View data) {
     static constexpr char TABLE[] = "0123456789abcdef";
     static constexpr size_t NIBBLE_BITS = 4;

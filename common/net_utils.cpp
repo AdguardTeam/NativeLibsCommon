@@ -3,6 +3,7 @@
 
 #include "common/net_utils.h"
 #include "common/socket_address.h"
+#include "common/system_error.h"
 #include "common/utils.h"
 
 #ifndef _WIN32
@@ -226,11 +227,11 @@ static DWORD get_default_route_ifs(
     PMIB_IPFORWARD_TABLE2 table_v6{};
     DWORD error = ERROR_SUCCESS;
     if (error = GetIpForwardTable2(AF_INET, &table_v4); error != ERROR_SUCCESS) {
-        errlog(g_logger, "Ipv4 GetIpForwardTable2(): {}", std::error_code(error, std::system_category()).message());
+        errlog(g_logger, "Ipv4 GetIpForwardTable2(): {}", sys::strerror(error));
         return error;
     }
     if (error = GetIpForwardTable2(AF_INET6, &table_v6); error != ERROR_SUCCESS) {
-        errlog(g_logger, "Ipv6 GetIpForwardTable2(): {}", std::error_code(error, std::system_category()).message());
+        errlog(g_logger, "Ipv6 GetIpForwardTable2(): {}", sys::strerror(error));
         return error;
     }
     for (size_t i = 0; i < table_v4->NumEntries; i++) {
@@ -263,7 +264,7 @@ static std::pair<uint32_t, uint32_t> get_min_metric_if(std::unordered_set<NET_IF
         row.Family = ip_family;
         row.InterfaceIndex = index;
         if (DWORD error = GetIpInterfaceEntry(&row); error != ERROR_SUCCESS) {
-            errlog(g_logger, "GetIpInterfaceEntry(): {}", std::error_code(error, std::system_category()).message());
+            errlog(g_logger, "GetIpInterfaceEntry(): {}", sys::strerror(error));
         } else if (row.Connected && row.Metric < min_metric) {
             result_idx = row.InterfaceIndex;
             min_metric = row.Metric;
@@ -281,15 +282,14 @@ DWORD utils::get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_i
     if (ret != ERROR_BUFFER_OVERFLOW) {
         if (ret == NO_ERROR)
             return ERROR_SUCCESS;
-        errlog(g_logger, "GetAdaptersAddresses(size probe) failed: {}",
-            std::error_code(ret, std::system_category()).message());
+        errlog(g_logger, "GetAdaptersAddresses(size probe) failed: {}", sys::strerror(ret));
         return ret;
     }
 
     std::vector<uint8_t> buf(size);
     ret = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, (IP_ADAPTER_ADDRESSES *) buf.data(), &size);
     if (ret != NO_ERROR) {
-        errlog(g_logger, "GetAdaptersAddresses() failed: {}", std::error_code(ret, std::system_category()).message());
+        errlog(g_logger, "GetAdaptersAddresses() failed: {}", sys::strerror(ret));
         return ret;
     }
 
@@ -314,7 +314,7 @@ uint32_t utils::win_detect_active_if() {
     DWORD error = get_physical_interfaces(physical_ifs);
     if (physical_ifs.empty()) {
         SetLastError(error);
-        errlog(g_logger, "get_physical_interfaces: {}", std::error_code(error, std::system_category()).message());
+        errlog(g_logger, "get_physical_interfaces: {}", sys::strerror(error));
         return 0;
     }
     // get interfaces with default route from routing table
@@ -323,7 +323,7 @@ uint32_t utils::win_detect_active_if() {
     error = get_default_route_ifs(net_ifs_v4, net_ifs_v6);
     if (error != ERROR_SUCCESS) {
         SetLastError(error);
-        errlog(g_logger, "get_default_route_ifs: {}", std::error_code(error, std::system_category()).message());
+        errlog(g_logger, "get_default_route_ifs: {}", sys::strerror(error));
         return 0;
     }
     // exclude non-physical interfaces

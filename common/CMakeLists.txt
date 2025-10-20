@@ -5,25 +5,23 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCE_FILES
-        utils.cpp
-        socket_address.cpp
-        logger.cpp
-        time_utils.cpp
-        clock.cpp
-        regex.cpp
-        file.cpp
         base64.cpp
         cesu8.cpp
-        route_resolver.cpp
-        net_utils.cpp
+        clock.cpp
         error.cpp
-        url.cpp
+        file.cpp
+        logger.cpp
+        net_utils.cpp
+        network_monitor.cpp
+        regex.cpp
         rotating_log_to_file.cpp
+        route_resolver.cpp
+        socket_address.cpp
+        system_error.cpp
+        time_utils.cpp
+        url.cpp
+        utils.cpp
 )
-
-if(NOT MSVC)
-    list(APPEND SOURCE_FILES network_monitor.cpp)
-endif()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
@@ -61,9 +59,7 @@ add_unit_test(error_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(cidr_range_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(coro_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(net_utils_test ${TEST_DIR} "" TRUE TRUE)
-if(NOT MSVC)
-    add_unit_test(network_monitor_test ${TEST_DIR} "" TRUE TRUE)
-endif()
+add_unit_test(network_monitor_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(base64_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(rotating_log_to_file_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(regex_test ${TEST_DIR} "" TRUE TRUE)
