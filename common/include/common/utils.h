@@ -772,8 +772,8 @@ struct AutoPod {
         data = d;
     }
 
-    void release() {
-        data = {};
+    T release() {
+        return std::exchange(data, {});
     }
 };
 
