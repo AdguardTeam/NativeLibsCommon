@@ -38,6 +38,9 @@ endif()
 if (NOT MSVC)
     target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
     target_compile_options(${PROJECT_NAME}  PRIVATE -fno-exceptions)
+    if (NOT ANDROID)
+        target_link_libraries(${PROJECT_NAME} resolv)
+    endif()
 else ()
     target_compile_definitions(${PROJECT_NAME} PRIVATE
             WIN32_LEAN_AND_MEAN

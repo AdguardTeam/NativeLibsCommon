@@ -10,8 +10,6 @@
 #include "common/error.h"
 #include "common/socket_address.h"
 
-#include <unordered_set>
-
 #ifdef _WIN32
   // The order of includes is important
   #ifndef WIN32_LEAN_AND_MEAN
@@ -51,6 +49,36 @@ static constexpr auto AG_ECONNRESET = WSAECONNRESET;
 enum TransportProtocol {
     TP_UDP,
     TP_TCP,
+};
+
+static constexpr uint32_t PLAIN_DNS_PORT_NUMBER = 53;
+static constexpr std::string_view AG_UNFILTERED_DNS_IPS_V4[] = {
+    "46.243.231.30",
+    "46.243.231.31",
+};
+static constexpr std::string_view AG_UNFILTERED_DNS_IPS_V6[] = {
+    "2a10:50c0::1:ff",
+    "2a10:50c0::2:ff",
+};
+
+/**
+ * A system DNS server descriptor. Based on Windows 11 model as the most comprehensive among
+ * the supported platforms.
+ */
+struct SystemDnsServer {
+    /** URL of the DNS server. The syntax corresponds to the one used in the DNS proxy. */
+    std::string address;
+    /**
+     * The network address of the hostname from the URL in `address` field.
+     * @note The library does not check whether the address matches the hostname.
+     */
+    std::optional<SocketAddress> resolved_host;
+};
+
+struct SystemDnsServers {
+    std::vector<SystemDnsServer> main;
+    std::vector<std::string> fallback;
+    std::vector<std::string> bootstrap;
 };
 
 #ifdef _WIN32
@@ -134,7 +162,33 @@ std::optional<SocketAddress> get_peer_address(evutil_socket_t fd);
  */
 std::optional<SocketAddress> get_local_address(evutil_socket_t fd);
 
+#if !defined(__ANDROID__)
+
+enum RetrieveSystemDnsError: uint8_t {
+    AE_INIT,
+};
+
+/**
+ * Retrieve DNS servers
+ */
+Result<SystemDnsServers, RetrieveSystemDnsError> retrieve_system_dns_servers();
+
+#endif // ifdef __ANDROID__
+
 } // namespace utils
+
+#ifndef __ANDROID__
+template <>
+struct ErrorCodeToString<utils::RetrieveSystemDnsError> {
+    std::string operator()(utils::RetrieveSystemDnsError code) {
+        // clang-format off
+        switch (code) {
+        case utils::AE_INIT: return "res_ninit()";
+        }
+        // clang-format on
+    }
+};
+#endif // ifdef __ANDROID__
 
 // clang-format off
 template<>

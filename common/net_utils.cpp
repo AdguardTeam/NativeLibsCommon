@@ -7,7 +7,9 @@
 #include "common/utils.h"
 
 #ifndef _WIN32
+#include <fstream>
 #include <net/if.h> // For if_nametoindex/if_indextoname
+#include <resolv.h>
 #else
 #include <Iphlpapi.h>
 #include <Winsock2.h>
@@ -351,6 +353,125 @@ uint32_t utils::win_detect_active_if() {
     }
     return index_v6;
 }
+
+#elif defined(__MACH__)
+
+Result<utils::SystemDnsServers, utils::RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
+    struct __res_state res = {};
+    if (0 != res_ninit(&res)) {
+        return make_error(RetrieveSystemDnsError::AE_INIT);
+    }
+
+    Uint8Vector addrs_buf(res.nscount * sizeof(res_sockaddr_union));
+    res_getservers(&res, (res_sockaddr_union *) addrs_buf.data(), res.nscount);
+
+    SystemDnsServers servers;
+    servers.main.reserve(res.nscount);
+    for (const res_sockaddr_union &addr : std::span{(res_sockaddr_union *) addrs_buf.data(), size_t(res.nscount)}) {
+        SocketAddress sock_addr((sockaddr *) &addr);
+        if (!sock_addr.valid()) {
+            warnlog(g_logger, "Skipping invalid address: {}", encode_to_hex({(uint8_t *) &addr, sizeof(addr)}));
+            continue;
+        }
+
+        servers.main.emplace_back(SystemDnsServer{
+            .address = sock_addr.host_str(),
+        });
+    }
+
+    res_ndestroy(&res);
+    return servers;
+}
+
+#elif defined(__GLIBC__)
+
+Result<utils::SystemDnsServers, utils::RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
+    struct __res_state res = {};
+    if (0 != res_ninit(&res)) {
+        return make_error(utils::RetrieveSystemDnsError::AE_INIT);
+    }
+
+    SystemDnsServers servers;
+    servers.main.reserve(res.nscount);
+    for (int i = 0; i < res.nscount; ++i) {
+        SocketAddress addr;
+        if (res.nsaddr_list[i].sin_family == AF_INET) {
+            addr = SocketAddress((sockaddr *) &res.nsaddr_list[i]);
+        } else if (res._u._ext.nsaddrs[i]->sin6_family == AF_INET6) {
+            addr = SocketAddress((sockaddr *) res._u._ext.nsaddrs[i]);
+        }
+
+        if (!addr.valid()) {
+            warnlog(g_logger, "Skipping invalid address: {}", encode_to_hex({(uint8_t *) &res, sizeof(res)}));
+            continue;
+        }
+
+#if defined __linux__
+        static const std::array UNFILTERED_IPS {
+            SocketAddress{AG_UNFILTERED_DNS_IPS_V4[0], PLAIN_DNS_PORT_NUMBER},
+            SocketAddress{AG_UNFILTERED_DNS_IPS_V4[1], PLAIN_DNS_PORT_NUMBER},
+            SocketAddress{AG_UNFILTERED_DNS_IPS_V6[0], PLAIN_DNS_PORT_NUMBER},
+            SocketAddress{AG_UNFILTERED_DNS_IPS_V6[1], PLAIN_DNS_PORT_NUMBER},
+        };
+        if (addr.is_loopback() || std::ranges::find(UNFILTERED_IPS, addr) != UNFILTERED_IPS.end()) {
+            warnlog(g_logger, "Skipping potential route loop address: {}", addr);
+            continue;
+        }
+#endif // __linux__
+
+        servers.main.emplace_back(SystemDnsServer{
+                .address = addr.host_str(),
+        });
+    }
+
+    res_nclose(&res);
+    return servers;
+}
+
+#elif defined(__ANDROID__)
+//
+// Android retrieves system DNS servers in Java code
+//
+#else
+
+Result<utils::SystemDnsServers, utils::RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
+    SystemDnsServers servers;
+    std::ifstream ifs{"/etc/resolv.conf"};
+    std::string line;
+    while (std::getline(ifs, line)) {
+        std::string_view line_view = line;
+        constexpr std::string_view NAMESERVER = "nameserver";
+        if (line_view.starts_with(NAMESERVER)) {
+            line_view.remove_prefix(NAMESERVER.size());
+        }
+        line_view = ltrim(line_view);
+        line_view = line_view.substr(0,
+                std::distance(line_view.begin(), std::ranges::find_if(line_view, isspace)));
+        SocketAddress addr{line_view, PLAIN_DNS_PORT_NUMBER};
+
+        if (!addr.valid()) {
+            warnlog(g_logger, "Skipping invalid address: {}", line_view);
+            continue;
+        }
+
+#if defined __linux__
+        static const std::array UNFILTERED_IPS {
+            SocketAddress{AG_UNFILTERED_DNS_IPS_V4[0], PLAIN_DNS_PORT_NUMBER},
+            SocketAddress{AG_UNFILTERED_DNS_IPS_V4[1], PLAIN_DNS_PORT_NUMBER},
+            SocketAddress{AG_UNFILTERED_DNS_IPS_V6[0], PLAIN_DNS_PORT_NUMBER},
+            SocketAddress{AG_UNFILTERED_DNS_IPS_V6[1], PLAIN_DNS_PORT_NUMBER},
+        };
+        if (addr.is_loopback() || std::ranges::find(UNFILTERED_IPS, addr) != std::end(UNFILTERED_IPS)) {
+            warnlog(g_logger, "Skipping potential route loop address: {}", addr);
+            continue;
+        }
+#endif // __linux__
+
+        servers.main.emplace_back(SystemDnsServer{std::string(line_view), std::nullopt});
+    };
+    return servers;
+}
+
 #endif
 
 } // namespace ag

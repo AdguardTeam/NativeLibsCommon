@@ -105,6 +105,9 @@ class NativeLibsCommon(ConanFile):
         ]
         if self.settings.os == "Windows":
             self.cpp_info.system_libs = ["ws2_32", "iphlpapi", "ntdll"]
-        elif self.settings.os in ["Macos", "iOS"]:
-            self.cpp_info.frameworks = ["Network"]
+        else:
+            if self.settings.os != "Android":
+                self.cpp_info.system_libs = ["resolv"]
+            if self.settings.os in ["Macos", "iOS"]:
+                self.cpp_info.frameworks = ["Network"]
         self.cpp_info.defines.append("FMT_EXCEPTIONS=0")
