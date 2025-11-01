@@ -356,7 +356,7 @@ uint32_t utils::win_detect_active_if() {
 
 #elif defined(__MACH__)
 
-Result<utils::SystemDnsServers, utils::RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
+Result<SystemDnsServers, RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
     struct __res_state res = {};
     if (0 != res_ninit(&res)) {
         return make_error(RetrieveSystemDnsError::AE_INIT);
@@ -385,10 +385,10 @@ Result<utils::SystemDnsServers, utils::RetrieveSystemDnsError> utils::retrieve_s
 
 #elif defined(__GLIBC__)
 
-Result<utils::SystemDnsServers, utils::RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
+Result<SystemDnsServers, RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
     struct __res_state res = {};
     if (0 != res_ninit(&res)) {
-        return make_error(utils::RetrieveSystemDnsError::AE_INIT);
+        return make_error(RetrieveSystemDnsError::AE_INIT);
     }
 
     SystemDnsServers servers;
@@ -434,7 +434,7 @@ Result<utils::SystemDnsServers, utils::RetrieveSystemDnsError> utils::retrieve_s
 //
 #else
 
-Result<utils::SystemDnsServers, utils::RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
+Result<SystemDnsServers, RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
     SystemDnsServers servers;
     std::ifstream ifs{"/etc/resolv.conf"};
     std::string line;
