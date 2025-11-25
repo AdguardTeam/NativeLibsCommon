@@ -176,7 +176,7 @@ Mac build:
             ./bamboo-specs/scripts/conan_upload_and_cleanup.sh
   requirements:
     - ephemeral
-    - image: registry.int.agrd.dev/macos/sequoia-build-agent-xcode26.1.1:latest
+    - image: registry.int.agrd.dev/macos/tahoe-build-agent-xcode26.1.1:latest
   artifact-subscriptions: []
 Android build:
   key: AB
