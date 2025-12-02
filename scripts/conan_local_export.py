@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import shutil
 import subprocess
@@ -20,7 +22,7 @@ def modify_conanfile():
             else:
                 source_found = False
         if line.strip().startswith('exports_sources'):
-            new_lines.append('    exports_sources = ["*"]\n')
+            new_lines.append('    exports_sources = ["*", "!.git/**"]\n')
             continue
         new_lines.append(line)
 

@@ -21,6 +21,12 @@ namespace ag {
 template<typename Signature>
 using MoveOnlyFunction = std::move_only_function<Signature>;
 #else
+// Trait to detect std::function
+template <typename T>
+struct is_std_function : std::false_type {};
+template <typename U>
+struct is_std_function<std::function<U>> : std::true_type {};
+
 // Own implementation for C++20 and earlier
 template <typename>
 class MoveOnlyFunction;
@@ -41,6 +47,7 @@ private:
 
     template <typename F>
     struct Callable : CallableBase {
+        static_assert(!is_std_function<F>::value, "F must not be std::function");
         F func;
         explicit Callable(F &&f)
                 : func(std::move(f)) {
