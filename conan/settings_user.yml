@@ -8,7 +8,7 @@ arch: [ mipsel ]
 # ag_sanitizer is for Address sanitizer
 os:
   Windows:
-    ag_profile_version: &ag_profile_version [ null, "2" ]
+    ag_profile_version: &ag_profile_version [ null, "3" ]
     ag_sanitizer: &ag_sanitizer [ null, "address" ]
   Linux:
     ag_profile_version: *ag_profile_version
