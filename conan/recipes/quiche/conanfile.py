@@ -3,6 +3,7 @@ from conan.errors import ConanInvalidConfiguration
 from conan.tools.files import patch, copy, replace_in_file
 from os import environ
 from os.path import join
+import subprocess
 
 
 class QuicheConan(ConanFile):
@@ -18,11 +19,51 @@ class QuicheConan(ConanFile):
         patch(self, base_path="source_subfolder", patch_file="patches/crate_type.patch")
         patch(self, base_path="source_subfolder", patch_file="patches/ssize_t.patch")
 
+    def _detect_rust_version(self):
+        """Detect active Rust toolchain version from rustup."""
+        try:
+            result = subprocess.run(
+                ["rustup", "show", "active-toolchain"],
+                capture_output=True,
+                text=True,
+                cwd=self.build_folder
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                # Parse output like "1.85.0-aarch64-apple-darwin (default)"
+                # Get first word, then everything before first '-'
+                return result.stdout.split('-')[0]
+        except Exception as e:
+            self.output.warning(f"Failed to detect Rust version: {e}")
+        return None
+
+    def _detect_ndk_from_compiler(self):
+        """Detect NDK path from C compiler path."""
+        try:
+            compilers_from_conf = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+            if 'c' in compilers_from_conf:
+                cc_path = compilers_from_conf['c']
+                # NDK compiler path looks like: /path/to/ndk/25.2.9519653/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang
+                # or: /path/to/android-ndk-r25c/toolchains/...
+                # Find 'ndk/' or 'android-ndk' and take path up to next component
+                for marker in ('/ndk/', '/android-ndk'):
+                    idx = cc_path.find(marker)
+                    if idx != -1:
+                        # Find end of NDK version component (next '/' after marker)
+                        end = cc_path.find('/', idx + len(marker))
+                        return cc_path[:end] if end != -1 else cc_path
+        except Exception as e:
+            self.output.warning(f"Failed to detect NDK from compiler: {e}")
+        return None
+
     def build(self):
         environ["RUSTFLAGS"] = "%s -C relocation-model=pic" \
                                % (environ["RUSTFLAGS"] if "RUSTFLAGS" in environ else "")
 
         cargo_build_type = "--release" if self.settings.build_type != "Debug" else ""
+
+        # Detect Rust version for cargo +version syntax
+        rust_version = self._detect_rust_version()
+        cargo_version_arg = f"+{rust_version} " if rust_version else ""
 
         os = self.settings.os
         arch = str(self.settings.arch)
@@ -42,8 +83,14 @@ class QuicheConan(ConanFile):
             cargo_args = "build %s --target %s-unknown-linux-%s%s" % (cargo_build_type, arch, "musl" if musl else "gnu", eabi)
             environ["CROSS_COMPILE"] = ("%s-linux-musl%s%s-" % (arch, eabi, sf)) if musl else ("%s-unknown-linux-gnu-" % (arch))
         elif os == "Android":
-            if "ANDROID_HOME" in environ and "ANDROID_NDK_HOME" not in environ:
-                environ["ANDROID_NDK_HOME"] = "%s/ndk-bundle" % environ["ANDROID_HOME"]
+            if "ANDROID_NDK_HOME" not in environ:
+                # Try to detect NDK from C compiler path
+                ndk_path = self._detect_ndk_from_compiler()
+                if ndk_path:
+                    self.output.info(f"Detected NDK path from compiler: {ndk_path}")
+                    environ["ANDROID_NDK_HOME"] = ndk_path
+                elif "ANDROID_HOME" in environ:
+                    environ["ANDROID_NDK_HOME"] = "%s/ndk-bundle" % environ["ANDROID_HOME"]
 
             platform = "21"
 
@@ -97,7 +144,7 @@ class QuicheConan(ConanFile):
         environ["QUICHE_BSSL_PATH"] = "%s/lib" % openssl_path
         cargo_quiche_features = "--no-default-features --features ffi"
         cargo_args = "%s %s" % (cargo_args, cargo_quiche_features)
-        self.run("cd source_subfolder/quiche && cargo %s" % (cargo_args))
+        self.run("cd source_subfolder/quiche && cargo %s%s" % (cargo_version_arg, cargo_args))
 
     def package(self):
         copy(self, "*.h", src=join(self.source_folder, "source_subfolder/quiche/include"), dst=join(self.package_folder, "include"), keep_path = True)
