@@ -883,4 +883,12 @@ Result<ExecResult, ExecError> fsystem(std::string_view fmt, Ts &&...args) {
 
 #endif // !defined(_WIN32)
 
+/**
+ * Wrap text to fit within a specified width, breaking at word boundaries when possible.
+ * @param text The text to wrap
+ * @param width Maximum width of each line. If 0, returns the original text as a single element.
+ * @return Vector of string views, each representing a line of wrapped text
+ */
+std::vector<std::string_view> word_wrap(std::string_view text, size_t width);
+
 } // namespace ag

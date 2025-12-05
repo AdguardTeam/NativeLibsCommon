@@ -288,4 +288,100 @@ TEST(fsystem, FsystemWorks) {
     ASSERT_TRUE(ret->output.empty());
 }
 
+TEST(Utils, WordWrap) {
+    // Empty input
+    std::string input;
+    auto result = ag::word_wrap(input, 10);
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_EQ(result.front(), input);
+
+    // Text is shorter than the width
+    input = "Hello";
+    result = ag::word_wrap(input, 10);
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_EQ(result.front(), input);
+
+    // Test with zero width
+    input = "hello world";
+    result = ag::word_wrap(input, 0);
+    EXPECT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], input);
+
+    // Test with empty string
+    input = "";
+    result = ag::word_wrap(input, 10);
+    EXPECT_EQ(result.size(), 1);
+    EXPECT_EQ(result[0], "");
+
+    // Test simple wrap
+    input = "hello world test";
+    result = ag::word_wrap(input, 10);
+    decltype(result) expected = {"hello", "world test"};
+    ASSERT_EQ(result, expected);
+
+    input = "one two three four";
+    result = ag::word_wrap(input, 10);
+    expected = {"one two", "three four"};
+    ASSERT_EQ(result, expected);
+
+    // Wrap sample text
+    input = "You are about to enable one or more annoyance filters. They block elements that are either unrelated to"
+            " website content or related but annoying and disruptive. Website owners may consider these elements"
+            " mandatory: if you block them, you may be violating their terms. AdGuard is not responsible for your"
+            " compliance with the terms of use of websites you visit using our products. Enable this filter?";
+    result = ag::word_wrap(input, 40);
+    expected = {
+            "You are about to enable one or more", "annoyance filters. They block elements",
+            "that are either unrelated to website", "content or related but annoying and",
+            "disruptive. Website owners may consider", "these elements mandatory: if you block",
+            "them, you may be violating their terms.", "AdGuard is not responsible for your",
+            "compliance with the terms of use of", "websites you visit using our products.", "Enable this filter?"
+    };
+    ASSERT_EQ(result, expected);
+}
+
+TEST(Utils, WordWrapSpace) {
+    // Test with multiple consecutive spaces
+    std::string input = "hello    world";
+    auto result = ag::word_wrap(input, 6);
+    decltype(result) expected = {"hello ", "world"};
+    ASSERT_EQ(result, expected);
+
+    // Test with trailing spaces
+    input = "hello world  ";
+    result = ag::word_wrap(input, 8);
+    expected = {"hello", "world  "};
+    ASSERT_EQ(result, expected);
+
+    // Test with leading spaces
+    input = "  hello world";
+    result = ag::word_wrap(input, 8);
+    expected = {"  hello", "world"};
+    ASSERT_EQ(result, expected);
+
+    input = "hello world  ";
+    result = ag::word_wrap(input, 12);
+    expected = {"hello world "};
+    ASSERT_EQ(result, expected);
+}
+
+TEST(Utils, WordWrapQuestions) {
+    std::string question = "Do you want to continue? (yes/no): ";
+    ASSERT_EQ(question.length(), 35);
+
+    //33 char terminal width, 35 char string ending with space
+    auto result = ag::word_wrap(question, 33);
+    decltype(result) expected = {"Do you want to continue?", "(yes/no): "};
+    ASSERT_EQ(result, expected);
+
+    //34 char terminal width, 35 char string ending with space
+    result = ag::word_wrap(question, 34);
+    expected = {"Do you want to continue? (yes/no):"};
+    ASSERT_EQ(result, expected);
+
+    //35 char terminal width, 35 char string ending with space
+    result = ag::word_wrap(question, 35);
+    ASSERT_EQ(result[0], question);
+}
+
 #endif // !defined(_WIN32)
