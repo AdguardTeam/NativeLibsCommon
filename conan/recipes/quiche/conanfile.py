@@ -18,6 +18,25 @@ class QuicheConan(ConanFile):
         patch(self, base_path="source_subfolder", patch_file="patches/crate_type.patch")
         patch(self, base_path="source_subfolder", patch_file="patches/ssize_t.patch")
 
+    def _detect_ndk_from_compiler(self):
+        """Detect NDK path from C compiler path."""
+        try:
+            compilers_from_conf = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+            if 'c' in compilers_from_conf:
+                cc_path = compilers_from_conf['c']
+                # NDK compiler path looks like: /path/to/ndk/25.2.9519653/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang
+                # or: /path/to/android-ndk-r25c/toolchains/...
+                # Find 'ndk/' or 'android-ndk' and take path up to next component
+                for marker in ('/ndk/', '/android-ndk'):
+                    idx = cc_path.find(marker)
+                    if idx != -1:
+                        # Find end of NDK version component (next '/' after marker)
+                        end = cc_path.find('/', idx + len(marker))
+                        return cc_path[:end] if end != -1 else cc_path
+        except Exception as e:
+            self.output.warning(f"Failed to detect NDK from compiler: {e}")
+        return None
+
     def build(self):
         environ["RUSTFLAGS"] = "%s -C relocation-model=pic" \
                                % (environ["RUSTFLAGS"] if "RUSTFLAGS" in environ else "")
@@ -42,8 +61,14 @@ class QuicheConan(ConanFile):
             cargo_args = "build %s --target %s-unknown-linux-%s%s" % (cargo_build_type, arch, "musl" if musl else "gnu", eabi)
             environ["CROSS_COMPILE"] = ("%s-linux-musl%s%s-" % (arch, eabi, sf)) if musl else ("%s-unknown-linux-gnu-" % (arch))
         elif os == "Android":
-            if "ANDROID_HOME" in environ and "ANDROID_NDK_HOME" not in environ:
-                environ["ANDROID_NDK_HOME"] = "%s/ndk-bundle" % environ["ANDROID_HOME"]
+            if "ANDROID_NDK_HOME" not in environ:
+                # Try to detect NDK from C compiler path
+                ndk_path = self._detect_ndk_from_compiler()
+                if ndk_path:
+                    self.output.info(f"Detected NDK path from compiler: {ndk_path}")
+                    environ["ANDROID_NDK_HOME"] = ndk_path
+                elif "ANDROID_HOME" in environ:
+                    environ["ANDROID_NDK_HOME"] = "%s/ndk-bundle" % environ["ANDROID_HOME"]
 
             platform = "21"
 
