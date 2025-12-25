@@ -6,6 +6,7 @@ from os.path import join
 class KlibConan(ConanFile):
     name = "klib"
     version = "2021-04-06"
+    package_type = "header-library"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
@@ -21,3 +22,10 @@ class KlibConan(ConanFile):
     def package(self):
         copy(self, "khash.h", src=join(self.source_folder, "klib"), dst=join(self.package_folder, "include"), keep_path = True)
         copy(self, "kvec.h", src=join(self.source_folder, "klib"), dst=join(self.package_folder, "include"), keep_path = True)
+
+    def package_info(self):
+        self.cpp_info.includedirs = ["include"]
+        self.cpp_info.libdirs = []
+        self.cpp_info.libs = []
+        self.cpp_info.bindirs = []
+        self.cpp_info.resdirs = []
