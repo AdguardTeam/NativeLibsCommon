@@ -62,9 +62,9 @@ void Logger::vlog(LogLevel level, fmt::string_view format, fmt::format_args args
 static void log_to_file(FILE *file, LogLevel level, std::string_view message) {
     std::string_view level_str = (level >= 0 && level < ENUM_NAMES_NUMBER) ? ENUM_NAMES[level] : "UNKNOWN";
     auto now = floor<Micros>(std::chrono::system_clock::now().time_since_epoch());
-    auto secs = now.count() / 1000000;
+    std::time_t secs = now.count() / 1000000;
     auto us = now.count() % 1000000;
-    auto tm = fmt::localtime(secs);
+    std::tm tm = *std::localtime(&secs);
     ag::print(file, "{:%d.%m.%Y %H:%M:%S}.{:06} {:5} [{}] {}\n", tm, us, level_str, utils::gettid(), message);
 };
 

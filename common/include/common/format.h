@@ -74,9 +74,17 @@ private:
 
 public:
     explicit FMT_CONSTEXPR StrictFormatStringChecker(fmt::basic_string_view<Char> fmt)
-            : types_{fmt::detail::mapped_type_constant<Args, fmt::buffer_context<Char>>::value...},
+            : types_{fmt::detail::mapped_type_constant<Args, Char>::value...},
             context_(fmt, num_args, types_),
-            parse_funcs_{&fmt::detail::parse_format_specs<Args, parse_context_type>...} {}
+            parse_funcs_{&parse_one<Args>...} {}
+    
+    template<typename T>
+    static FMT_CONSTEXPR auto parse_one(parse_context_type& ctx) -> const Char* {
+        // fmt 12.x: parse_format_specs just parses and advances iterator
+        // We only need it for validation, not for actual formatting
+        fmt::formatter<T, Char> formatter;
+        return formatter.parse(ctx);
+    }
 
     FMT_CONSTEXPR void on_text(const Char*, const Char*) {}
 
@@ -91,16 +99,9 @@ public:
     FMT_CONSTEXPR auto on_arg_id(int id) -> int {
         return context_.check_arg_id(id), id;
     }
-    FMT_CONSTEXPR auto on_arg_id(fmt::basic_string_view<Char> id) -> int {
-#if FMT_USE_NONTYPE_TEMPLATE_ARGS
-        auto index = fmt::detail::get_arg_index_by_name<Args...>(id);
-        if (index < 0) on_error("named argument is not found");
-        return index;
-#else
-        (void)id;
-        on_error("compile-time checks for named arguments require C++20 support");
+    FMT_CONSTEXPR auto on_arg_id(fmt::basic_string_view<Char>) -> int {
+        on_error("named arguments are not supported");
         return 0;
-#endif
     }
 
     FMT_CONSTEXPR void on_replacement_field(int id, const Char* begin) {
@@ -115,7 +116,7 @@ public:
     }
 
     FMT_CONSTEXPR void on_error(const char* message) {
-        fmt::detail::throw_format_error(message);
+        FMT_THROW(fmt::format_error(message));
     }
 
     FMT_CONSTEXPR void check_num_args() {
@@ -144,13 +145,12 @@ public:
                         (std::is_base_of<fmt::detail::view, fmt::remove_reference_t<Args>>::value &&
                                 std::is_reference<Args>::value)...>() == 0,
                 "passing views as lvalues is disallowed");
-#ifdef FMT_HAS_CONSTEVAL
         if constexpr (fmt::detail::count_named_args<Args...>() ==
-                fmt::detail::count_statically_named_args<Args...>()) {
+                fmt::detail::count_static_named_args<Args...>()) {
             using checker =
                     StrictFormatStringChecker<Char, fmt::remove_cvref_t<Args>...>;
             checker check(s);
-            fmt::detail::parse_format_string<true>(str_, check);
+            fmt::detail::parse_format_string<Char>(str_, check);
 
             // Eat extra argument passed by us to synchronize state.
             // See StrictFormatStringChecker doc for more details.
@@ -158,9 +158,6 @@ public:
             // Finally, do number of arguments check.
             check.check_num_args();
         }
-#else
-        fmt::detail::check_format_string<Args...>(s);
-#endif
     }
     BasicStrictFormatString(fmt::runtime_format_string<Char> fmt) : str_(fmt.str) {}
 
@@ -171,7 +168,7 @@ public:
 // Additional arg is handled by calling `StrictFormatStringChecker::on_finishing_arg()`
 // inside `BasicStringFormatString` constructor.
 template <typename... Args>
-using StrictFormatString = BasicStrictFormatString<char, fmt::type_identity_t<Args>..., int>;
+using StrictFormatString = BasicStrictFormatString<char, std::type_identity_t<Args>..., int>;
 
 template <typename... T>
 FMT_INLINE void print(StrictFormatString<T...> fmt, T&&... args) {

@@ -92,9 +92,9 @@ static constexpr size_t ENUM_NAMES_NUMBER = std::size(ENUM_NAMES);
 
 void ag::RotatingLogToFile::full_log(LogLevel level, std::string_view message) {
     auto now = floor<Micros>(std::chrono::system_clock::now().time_since_epoch());
-    auto secs = now.count() / 1000000;
+    std::time_t secs = now.count() / 1000000;
     auto us = now.count() % 1000000;
-    auto tm = fmt::localtime(secs);
+    std::tm tm = *std::localtime(&secs);
 
     std::string_view level_str = (level >= 0 && level < ENUM_NAMES_NUMBER) ? ENUM_NAMES[level] : "UNKNOWN";
 
@@ -107,9 +107,9 @@ void ag::RotatingLogToFile::full_log(LogLevel level, std::string_view message) {
 
 void ag::RotatingLogToFile::lite_log(std::string_view message) {
     auto now = floor<Micros>(std::chrono::system_clock::now().time_since_epoch());
-    auto secs = now.count() / 1000000;
+    std::time_t secs = now.count() / 1000000;
     auto us = now.count() % 1000000;
-    auto tm = fmt::localtime(secs);
+    std::tm tm = *std::localtime(&secs);
 
     fmt::memory_buffer message_to_log;
     fmt::format_to(std::back_inserter(message_to_log), "{:%d.%m.%Y %H:%M:%S}.{:06} {}\n", tm, us, message);

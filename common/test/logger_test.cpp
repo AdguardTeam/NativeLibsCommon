@@ -26,7 +26,7 @@ TEST(Logger, Works) {
     using namespace ag;
     Logger logger("TEST_LOGGER");
 
-    logger.log(LOG_LEVEL_INFO, FMT_STRING("{}"), "Hello, world!");
+    logger.log(LOG_LEVEL_INFO, "{}", "Hello, world!");
     ASSERT_EQ(ag::Logger::get_log_level(), ag::LOG_LEVEL_INFO);
     int counter;
     Logger::set_callback([&counter](LogLevel level, std::string_view message) {
@@ -36,22 +36,22 @@ TEST(Logger, Works) {
 
     counter = 0;
     Logger::set_log_level(LOG_LEVEL_INFO);
-    logger.log(LOG_LEVEL_TRACE, FMT_STRING("{}"), "Hello, world!");
+    logger.log(LOG_LEVEL_TRACE, "{}", "Hello, world!");
     ASSERT_EQ(counter, 0);
-    logger.log(LOG_LEVEL_DEBUG, FMT_STRING("{}"), "Hello, world!");
+    logger.log(LOG_LEVEL_DEBUG, "{}", "Hello, world!");
     ASSERT_EQ(counter, 0);
-    logger.log(LOG_LEVEL_INFO, FMT_STRING("{}"), "Hello, world!");
-    logger.log(LOG_LEVEL_WARN, FMT_STRING("{}"), "Hello, world!");
-    logger.log(LOG_LEVEL_ERROR, FMT_STRING("{}"), "Hello, world!");
+    logger.log(LOG_LEVEL_INFO, "{}", "Hello, world!");
+    logger.log(LOG_LEVEL_WARN, "{}", "Hello, world!");
+    logger.log(LOG_LEVEL_ERROR, "{}", "Hello, world!");
     ASSERT_EQ(counter, 3);
 
     counter = 0;
     Logger::set_log_level(LOG_LEVEL_TRACE);
-    logger.log(LOG_LEVEL_TRACE, FMT_STRING("{}"), "Hello, world!");
-    logger.log(LOG_LEVEL_DEBUG, FMT_STRING("{}"), "Hello, world!");
-    logger.log(LOG_LEVEL_INFO, FMT_STRING("{}"), "Hello, world!");
-    logger.log(LOG_LEVEL_WARN, FMT_STRING("{}"), "Hello, world!");
-    logger.log(LOG_LEVEL_ERROR, FMT_STRING("{}"), "Hello, world!");
+    logger.log(LOG_LEVEL_TRACE, "{}", "Hello, world!");
+    logger.log(LOG_LEVEL_DEBUG, "{}", "Hello, world!");
+    logger.log(LOG_LEVEL_INFO, "{}", "Hello, world!");
+    logger.log(LOG_LEVEL_WARN, "{}", "Hello, world!");
+    logger.log(LOG_LEVEL_ERROR, "{}", "Hello, world!");
     ASSERT_EQ(counter, 5);
 
     counter = 0;

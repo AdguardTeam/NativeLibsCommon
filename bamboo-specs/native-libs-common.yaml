@@ -79,7 +79,7 @@ Win build:
 Linux build:
   key: LB
   docker:
-    image: adguard/core-libs:2.6
+    image: adguard/core-libs:2.8
     docker-run-arguments: [ ]
   tasks:
     - checkout:
@@ -181,7 +181,7 @@ Mac build:
 Android build:
   key: AB
   docker:
-    image: adguard/core-libs:2.6
+    image: adguard/core-libs:2.8
     volumes:
       ${bamboo.working.directory}: ${bamboo.working.directory}
       ${bamboo.tmp.directory}: ${bamboo.tmp.directory}

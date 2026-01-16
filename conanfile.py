@@ -29,7 +29,7 @@ class NativeLibsCommon(ConanFile):
     exports_sources = patch_files
 
     def requirements(self):
-        self.requires("fmt/10.1.1", transitive_headers=True)
+        self.requires("fmt/12.1.0", transitive_headers=True)
         self.requires("libevent/2.1.11@adguard/oss", transitive_headers=True)
         self.requires("llhttp/9.1.3@adguard/oss", transitive_headers=True)
         self.requires("magic_enum/0.9.5", transitive_headers=True)

@@ -43,7 +43,7 @@ struct fmt::formatter<ag::http::Version> {
     }
 
     template <typename FormatContext>
-    auto format(const ag::http::Version &v, FormatContext &ctx) {
+    auto format(const ag::http::Version &v, FormatContext &ctx) const {
         return fmt::format_to(ctx.out(), "HTTP/{}.{}", ag::http::version_get_major(v), ag::http::version_get_minor(v));
     }
 };
