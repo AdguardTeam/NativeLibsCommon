@@ -15,6 +15,8 @@
 #include "common/logger.h"
 #include "common/rotating_log_to_file.h"
 
+#include "common/time_utils.h"
+
 ag::RotatingLogToFile::RotatingLogToFile(
         std::string log_file_path, size_t file_max_size_bytes, size_t files_count)
         : m_file_max_size_bytes(file_max_size_bytes)
@@ -91,10 +93,9 @@ static constexpr std::string_view ENUM_NAMES[] = {
 static constexpr size_t ENUM_NAMES_NUMBER = std::size(ENUM_NAMES);
 
 void ag::RotatingLogToFile::full_log(LogLevel level, std::string_view message) {
-    auto now = floor<Micros>(std::chrono::system_clock::now().time_since_epoch());
-    std::time_t secs = now.count() / 1000000;
-    auto us = now.count() % 1000000;
-    std::tm tm = *std::localtime(&secs);
+    auto now = std::chrono::system_clock::now();
+    std::tm tm = ag::localtime_from_system_time(now);
+    auto us = to_micros(now.time_since_epoch() - to_secs(now.time_since_epoch())).count();
 
     std::string_view level_str = (level >= 0 && level < ENUM_NAMES_NUMBER) ? ENUM_NAMES[level] : "UNKNOWN";
 
@@ -106,10 +107,9 @@ void ag::RotatingLogToFile::full_log(LogLevel level, std::string_view message) {
 }
 
 void ag::RotatingLogToFile::lite_log(std::string_view message) {
-    auto now = floor<Micros>(std::chrono::system_clock::now().time_since_epoch());
-    std::time_t secs = now.count() / 1000000;
-    auto us = now.count() % 1000000;
-    std::tm tm = *std::localtime(&secs);
+    auto now = std::chrono::system_clock::now();
+    std::tm tm = ag::localtime_from_system_time(now);
+    auto us = to_micros(now.time_since_epoch() - to_secs(now.time_since_epoch())).count();
 
     fmt::memory_buffer message_to_log;
     fmt::format_to(std::back_inserter(message_to_log), "{:%d.%m.%Y %H:%M:%S}.{:06} {}\n", tm, us, message);
