@@ -69,7 +69,7 @@ struct AnyOfCondAwaitable {
     void await_suspend(std::coroutine_handle<> h) {
         std::unique_lock l{state->mutex};
         state->suspended_handle = h;
-        if (state->return_value) {
+        if (state->return_value.has_value() || state->remaining == 0) {
             l.unlock();
             h.resume();
         }
