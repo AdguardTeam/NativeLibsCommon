@@ -23,6 +23,12 @@ set(SOURCE_FILES
         utils.cpp
 )
 
+if (WIN32)
+    list(APPEND SOURCE_FILES
+            guid_utils.cpp
+            wfp_firewall.cpp)
+endif ()
+
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
 find_package(fmt REQUIRED)

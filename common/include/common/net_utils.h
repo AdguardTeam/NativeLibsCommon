@@ -92,13 +92,29 @@ static constexpr std::string_view AG_UNFILTERED_DNS_IPS_V6[] = {
  * Populate `physical_ifs` with the interface indices of physical network adapters.
  * @return An error code, or `ERROR_SUCCESS`.
  */
-DWORD get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_ifs);
+DWORD win_get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_ifs);
 
 /**
  * Return the network interface which is currently active.
  * May return 0 in case it is not found.
  */
 std::uint32_t win_detect_active_if();
+
+/**
+ * Modify the DNS settings for a network interface.
+ *
+ * Equivalent to specifying the preferred/alternative DNS server in IPv4/IPv6 properties in the interface
+ * properties GUI. An empty string is equivalent to selecting "Obtain DNS server address automatically".
+ *
+ * @param dns_list Comma-separated list of nameserver addresses.
+ * @param if_guid Null-terminated interface GUID string. See the `ConvertInterface<X>To<Y>` functions in `netioapi.h`.
+ * @param ipv6 `true` to modify the IPv6 properties, `false` for IPv4.
+ * @return `ERROR_SUCCESS` or an error code defined in Winerror.h. `FormatMessage` with the
+ *         `FORMAT_MESSAGE_FROM_SYSTEM` flag can be used to get a generic description of the error.
+ */
+DWORD win_set_if_nameserver(std::string_view dns_list, const char *if_guid, bool ipv6);
+
+
 #endif // defined _WIN32
 
 /**

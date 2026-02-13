@@ -275,7 +275,7 @@ static std::pair<uint32_t, uint32_t> get_min_metric_if(std::unordered_set<NET_IF
     return {result_idx, min_metric};
 }
 
-DWORD utils::get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_ifs) {
+DWORD utils::win_get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_ifs) {
     ULONG flags =
             GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_INCLUDE_GATEWAYS;
 
@@ -313,7 +313,7 @@ DWORD utils::get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_i
 uint32_t utils::win_detect_active_if() {
     // first find physical network cards interfaces
     std::unordered_set<NET_IFINDEX> physical_ifs;
-    DWORD error = get_physical_interfaces(physical_ifs);
+    DWORD error = win_get_physical_interfaces(physical_ifs);
     if (physical_ifs.empty()) {
         SetLastError(error);
         errlog(g_logger, "get_physical_interfaces: {}", sys::strerror(error));
@@ -352,6 +352,23 @@ uint32_t utils::win_detect_active_if() {
         return index_v4;
     }
     return index_v6;
+}
+
+static constexpr std::string_view WINREG_INTERFACES_PATH_V4 =
+        R"(SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces)";
+static constexpr std::string_view WINREG_INTERFACES_PATH_V6 =
+        R"(SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\Interfaces)";
+
+DWORD utils::win_set_if_nameserver(std::string_view dns_list, const char *if_guid, bool ipv6) {
+    HKEY current_key{};
+    DWORD error = ERROR_SUCCESS;
+    std::string_view interfaces_path = ipv6 ? WINREG_INTERFACES_PATH_V6 : WINREG_INTERFACES_PATH_V4;
+    error = RegOpenKeyExA(HKEY_LOCAL_MACHINE, interfaces_path.data(), 0, KEY_ALL_ACCESS, &current_key);
+    if (error == ERROR_SUCCESS) {
+        error = RegSetKeyValueA(current_key, if_guid, "NameServer", REG_SZ, dns_list.data(), dns_list.size());
+        RegCloseKey(current_key);
+    }
+    return error;
 }
 
 #elif defined(__MACH__)
