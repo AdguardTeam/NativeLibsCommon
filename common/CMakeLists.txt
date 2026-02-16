@@ -23,6 +23,12 @@ set(SOURCE_FILES
         utils.cpp
 )
 
+if (WIN32)
+    list(APPEND SOURCE_FILES
+            guid_utils.cpp
+            wfp_firewall.cpp)
+endif ()
+
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
 find_package(fmt REQUIRED)
@@ -45,7 +51,7 @@ else ()
     target_compile_definitions(${PROJECT_NAME} PRIVATE
             WIN32_LEAN_AND_MEAN
             NOMINMAX)
-    target_link_libraries(${PROJECT_NAME} Iphlpapi.lib Ntdll.lib Ws2_32)
+    target_link_libraries(${PROJECT_NAME} Iphlpapi.lib Ntdll.lib Ws2_32 Fwpuclnt)
 endif()
 target_compile_definitions(${PROJECT_NAME}  PUBLIC FMT_EXCEPTIONS=0)
 

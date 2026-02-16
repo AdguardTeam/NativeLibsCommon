@@ -104,7 +104,7 @@ class NativeLibsCommon(ConanFile):
             "pcre2::pcre2",
         ]
         if self.settings.os == "Windows":
-            self.cpp_info.system_libs = ["ws2_32", "iphlpapi", "ntdll"]
+            self.cpp_info.system_libs = ["ws2_32", "iphlpapi", "ntdll", "fwpuclnt"]
         else:
             if self.settings.os != "Android":
                 self.cpp_info.system_libs = ["resolv"]
