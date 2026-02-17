@@ -5,6 +5,8 @@
 #include <fwpmu.h>
 // clang-format on
 
+#include <fmt/xchar.h>
+
 #include "common/guid_utils.h"
 #include "common/logger.h"
 #include "common/net_utils.h"
@@ -43,16 +45,19 @@ struct ag::WfpFirewall::Impl {
     HANDLE engine_handle = INVALID_HANDLE_VALUE; // NOLINT(performance-no-int-to-ptr)
     GUID provider_key = ag::random_guid();
     GUID sublayer_key = ag::random_guid();
+    std::wstring name;
 };
 
-ag::WfpFirewall::WfpFirewall()
+ag::WfpFirewall::WfpFirewall(std::wstring name)
         : m_impl{std::make_unique<Impl>()} {
-    std::wstring name = L"AdGuard VPN dynamic session";
+    m_impl->name = std::move(name);
+
+    std::wstring session_name = fmt::format(L"{} dynamic session", m_impl->name);
 
     FWPM_SESSION0 session{
             .displayData =
                     {
-                            .name = name.data(),
+                            .name = session_name.data(),
                     },
             .flags = FWPM_SESSION_FLAG_DYNAMIC,
             .txnWaitTimeoutInMSec = INFINITE,
@@ -66,7 +71,7 @@ ag::WfpFirewall::WfpFirewall()
 
     auto register_base_objects =
             [&]() -> WfpFirewallError { // NOLINT(cppcoreguidelines-avoid-capture-default-when-capturing-this)
-        std::wstring name = L"AdGuard VPN provider";
+        std::wstring name = fmt::format(L"{} provider", m_impl->name);;
 
         FWPM_PROVIDER0 provider{
                 .providerKey = m_impl->provider_key,
@@ -80,7 +85,7 @@ ag::WfpFirewall::WfpFirewall()
             return make_error(FE_WFP_ERROR, AG_FMT("FwpmProviderAdd0 failed with code {:#x}", error));
         }
 
-        name = L"AdGuard VPN sublayer";
+        name = fmt::format(L"{} sublayer", m_impl->name);;
         FWPM_SUBLAYER0 sublayer{
                 .subLayerKey = m_impl->sublayer_key,
                 .displayData =
@@ -123,7 +128,7 @@ ag::WfpFirewall::WfpFirewall()
         FWPM_FILTER0 filter{
                 .displayData =
                         {
-                                .name = name.data(),
+                                .name = session_name.data(),
                         },
                 .providerKey = &m_impl->provider_key,
                 .subLayerKey = m_impl->sublayer_key,
@@ -222,7 +227,7 @@ ag::WfpFirewallError ag::WfpFirewall::restrict_dns_to(
                         },
                 };
 
-                std::wstring name = L"AdGuard VPN restrict DNS";
+                std::wstring name = fmt::format(L"{} restrict DNS", m_impl->name);;
                 FWPM_FILTER0 filter{
                         .displayData =
                                 {
@@ -332,7 +337,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_ipv6() {
     }
     return run_transaction(m_impl->engine_handle,
             [&]() -> WfpFirewallError { // NOLINT(cppcoreguidelines-avoid-capture-default-when-capturing-this)
-                std::wstring name = L"AdGuard VPN block IPv6";
+                std::wstring name = fmt::format(L"{} block IPv6", m_impl->name);;
                 FWPM_FILTER0 filter{
                         .displayData =
                                 {
@@ -396,7 +401,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                         });
                     }
 
-                    std::wstring name = L"AdGuard VPN block untunneled IPv4";
+                    std::wstring name = fmt::format(L"{} block untunneled IPv4", m_impl->name);;
                     FWPM_FILTER0 filter{
                             .displayData = {.name = name.data()},
                             .providerKey = &m_impl->provider_key,
@@ -444,7 +449,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                                     },
                     });
 
-                    name = L"AdGuard VPN block untunneled IPv4 (allow tunneled and loopback)";
+                    name = fmt::format(L"{} block untunneled IPv4 (allow tunneled and loopback)", m_impl->name);;
                     filter.displayData = {.name = name.data()};
                     filter.action = {.type = FWP_ACTION_PERMIT};
                     filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;
@@ -473,7 +478,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                             });
                         }
 
-                        name = L"AdGuard VPN block untunneled IPv4 (allow excluded ports)";
+                        name = fmt::format(L"{} block untunneled IPv4 (allow excluded ports)", m_impl->name);;
                         filter.displayData = {.name = name.data()};
                         filter.action = {.type = FWP_ACTION_PERMIT};
                         filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;
@@ -513,7 +518,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                         });
                     }
 
-                    std::wstring name = L"AdGuard VPN block untunneled IPv6";
+                    std::wstring name = fmt::format(L"{} block untunneled IPv6", m_impl->name);;
                     FWPM_FILTER0 filter{
                             .displayData = {.name = name.data()},
                             .providerKey = &m_impl->provider_key,
@@ -561,7 +566,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                                     },
                     });
 
-                    name = L"AdGuard VPN block untunneled IPv6 (allow tunneled and loopback)";
+                    name = fmt::format(L"{} block untunneled IPv6 (allow tunneled and loopback)", m_impl->name);;
                     filter.displayData = {.name = name.data()};
                     filter.action = {.type = FWP_ACTION_PERMIT};
                     filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;
@@ -590,7 +595,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                             });
                         }
 
-                        name = L"AdGuard VPN block untunneled IPv6 (allow excluded ports)";
+                        name = fmt::format(L"{} block untunneled IPv6 (allow excluded ports)", m_impl->name);;
                         filter.displayData = {.name = name.data()};
                         filter.action = {.type = FWP_ACTION_PERMIT};
                         filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;
