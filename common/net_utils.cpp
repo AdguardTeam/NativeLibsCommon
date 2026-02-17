@@ -371,6 +371,31 @@ DWORD utils::win_set_if_nameserver(std::string_view dns_list, const char *if_gui
     return error;
 }
 
+std::optional<std::string> utils::win_get_if_nameserver(const char *if_guid, bool ipv6) {
+    HKEY current_key{};
+    DWORD error = ERROR_SUCCESS;
+    std::string_view interfaces_path = ipv6 ? WINREG_INTERFACES_PATH_V6 : WINREG_INTERFACES_PATH_V4;
+    error = RegOpenKeyExA(HKEY_LOCAL_MACHINE, interfaces_path.data(), 0, KEY_ALL_ACCESS, &current_key);
+    if (error != ERROR_SUCCESS) {
+        return std::nullopt;
+    }
+    DWORD size = 0;
+    error = RegGetValueA(current_key, if_guid, "NameServer", RRF_RT_REG_SZ, NULL, NULL, &size);
+    if (error != ERROR_SUCCESS || size == 0) {
+        RegCloseKey(current_key);
+        return std::nullopt;
+    }
+    std::string value;
+    value.resize(size - 1);
+    error = RegGetValueA(current_key, if_guid, "NameServer", RRF_RT_REG_SZ, NULL, value.data(), &size);
+    if (error != ERROR_SUCCESS) {
+        RegCloseKey(current_key);
+        return std::nullopt;
+    }
+    RegCloseKey(current_key);
+    return value;
+}
+
 #elif defined(__MACH__)
 
 Result<SystemDnsServers, RetrieveSystemDnsError> utils::retrieve_system_dns_servers() {
