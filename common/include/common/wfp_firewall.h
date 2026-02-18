@@ -33,7 +33,8 @@ using WfpFirewallError = Error<WfpFirewallErrorCode>;
 /** WFP-based firewall. */
 class WfpFirewall {
 public:
-    WfpFirewall();
+    /** `name` will be used in WFP entities names. */
+    explicit WfpFirewall(std::wstring name);
     ~WfpFirewall();
 
     WfpFirewall(const WfpFirewall &) = delete;

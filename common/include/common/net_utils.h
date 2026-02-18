@@ -114,6 +114,14 @@ std::uint32_t win_detect_active_if();
  */
 DWORD win_set_if_nameserver(std::string_view dns_list, const char *if_guid, bool ipv6);
 
+/**
+ * Get the current value of the NameServer property of an interface. Return `std::nullopt` on any error,
+ * including if the property does not exist or isn't a null-terminated string.
+ *
+ * @param if_guid Null-terminated interface GUID string. See the `ConvertInterface<X>To<Y>` functions in `netioapi.h`.
+ * @param ipv6 `true` to get the IPv6 property, `false` for IPv4.
+ */
+std::optional<std::string> win_get_if_nameserver(const char *if_guid, bool ipv6);
 
 #endif // defined _WIN32
 
