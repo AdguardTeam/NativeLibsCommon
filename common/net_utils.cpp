@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include <event2/thread.h>
 #include <event2/util.h>
 
@@ -386,13 +388,14 @@ std::optional<std::string> utils::win_get_if_nameserver(const char *if_guid, boo
         return std::nullopt;
     }
     std::string value;
-    value.resize(size - 1);
+    value.resize(size);
     error = RegGetValueA(current_key, if_guid, "NameServer", RRF_RT_REG_SZ, NULL, value.data(), &size);
     if (error != ERROR_SUCCESS) {
         RegCloseKey(current_key);
         return std::nullopt;
     }
     RegCloseKey(current_key);
+    value.resize(strlen(value.data()));
     return value;
 }
 
