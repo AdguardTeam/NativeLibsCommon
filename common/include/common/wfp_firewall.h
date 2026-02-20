@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <span>
+#include <string>
 
 #include "common/cidr_range.h"
 #include "common/error.h"
@@ -33,8 +35,13 @@ using WfpFirewallError = Error<WfpFirewallErrorCode>;
 /** WFP-based firewall. */
 class WfpFirewall {
 public:
-    /** `name` will be used in WFP entities names. */
-    explicit WfpFirewall(std::wstring name);
+    /**
+     * Create an instance of the firewall. All restrictions added through this instance
+     * are active until this instance is destroyed.
+     * @param name A string that will be used in WFP entities names.
+     * @param exclude_pid ID of the process to exclude from all restrictions. If `0`, exclude the current process.
+     */
+    explicit WfpFirewall(std::wstring name, uint32_t exclude_pid = 0);
     ~WfpFirewall();
 
     WfpFirewall(const WfpFirewall &) = delete;

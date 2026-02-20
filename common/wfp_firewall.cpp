@@ -48,7 +48,7 @@ struct ag::WfpFirewall::Impl {
     std::wstring name;
 };
 
-ag::WfpFirewall::WfpFirewall(std::wstring name)
+ag::WfpFirewall::WfpFirewall(std::wstring name, uint32_t exclude_pid)
         : m_impl{std::make_unique<Impl>()} {
     m_impl->name = std::move(name);
 
@@ -104,7 +104,21 @@ ag::WfpFirewall::WfpFirewall(std::wstring name)
     auto allow_self = [&]() -> WfpFirewallError { // NOLINT(cppcoreguidelines-avoid-capture-default-when-capturing-this)
         // Allow any DNS traffic for our process. Required for, e.g., resolving exclusions through the system DNS.
         wchar_t module_name[4096]{}; // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
-        if (!GetModuleFileNameW(nullptr, &module_name[0], std::size(module_name))) {
+        if (exclude_pid) {
+            HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, exclude_pid);
+            if (!h) {
+                return make_error(FE_WINAPI_ERROR,
+                        AG_FMT("OpenProcess (PID {}) failed with code {:#x}", exclude_pid, GetLastError()));
+            }
+            DWORD size = std::size(module_name);
+            BOOL ret = QueryFullProcessImageNameW(h, 0, &module_name[0], &size);
+            CloseHandle(h);
+            if (!ret) {
+                return make_error(FE_WINAPI_ERROR,
+                        AG_FMT("QueryFullProcessImageNameW (PID {}) failed with code {:#x}", exclude_pid,
+                                GetLastError()));
+            }
+        } else if (!GetModuleFileNameW(nullptr, &module_name[0], std::size(module_name))) {
             return make_error(FE_WINAPI_ERROR, AG_FMT("GetModuleFileNameW failed with code {:#x}", GetLastError()));
         }
         FWP_BYTE_BLOB *app_id_blob = nullptr;
