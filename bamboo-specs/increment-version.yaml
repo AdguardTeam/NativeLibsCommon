@@ -33,6 +33,9 @@ Default Job:
         git config user.name "Bamboo"
         git config user.email "Bamboo"
 
+        printf "%b\n" "${bamboo_sshSecretKey}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
         if [ "${bamboo_custom_version}" = "none" ]; then
             bamboo_custom_version=
         fi
@@ -43,7 +46,6 @@ Default Job:
             ./increment_version.sh ${bamboo_custom_version} || exit 1
 
             cd ..
-            ../git-scripts/git_kit.sh pull ${bamboo_planRepository_repositoryUrl}
             git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
             git reset
             git add conandata.yml
