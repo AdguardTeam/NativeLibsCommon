@@ -28,7 +28,7 @@ Default Job:
       interpreter: SHELL
       scripts:
       - |-
-        set -x
+        set -x -e
 
         git config user.name "Bamboo"
         git config user.email "Bamboo"
