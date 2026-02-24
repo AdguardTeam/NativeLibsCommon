@@ -46,11 +46,10 @@ Default Job:
             ./increment_version.sh ${bamboo_custom_version} || exit 1
 
             cd ..
-            git branch --set-upstream-to=origin/${bamboo_planRepository_branchName} ${bamboo_planRepository_branchName}
             git reset
             git add conandata.yml
             git commit -m "skipci: Automatic version increment by Bamboo"
-            git push
+            git push origin HEAD:${bamboo_planRepository_branchName}
 
             BAMBOO_URL=$(echo ${bamboo_resultsUrl} | sed -ne 's|\(https://[^/]\+\)/.*|\1|p')
             curl -H "Authorization: Bearer ${bamboo.bambooTriggerTokenSecret}" \
