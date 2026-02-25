@@ -1,0 +1,49 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index edd9fc01..bcc23ea3 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -124,8 +124,9 @@ endif()
+ if(ENABLE_JEMALLOC)
+   find_package(Jemalloc)
+ endif()
+-find_package(Libev 4.11)
+-find_package(Libnghttp3 0.0.0)
++# Commented by AdGuard because used only in examples
++# find_package(Libev 4.11)
++# find_package(Libnghttp3 0.0.0)
+ find_package(CUnit 2.1)
+ enable_testing()
+ set(HAVE_CUNIT      ${CUNIT_FOUND})
+@@ -188,9 +189,11 @@ endif()
+ # jemalloc
+ set(HAVE_JEMALLOC ${JEMALLOC_FOUND})
+ # libev (required for examples)
+-set(HAVE_LIBEV      ${LIBEV_FOUND})
++# Commented by AdGuard because used only in examples
++# set(HAVE_LIBEV      ${LIBEV_FOUND})
+ # libnghttp3 (required for examples)
+-set(HAVE_LIBNGHTTP3 ${LIBNGHTTP3_FOUND})
++# Commented by AdGuard because used only in examples
++#set(HAVE_LIBNGHTTP3 ${LIBNGHTTP3_FOUND})
+ 
+ # GnuTLS (required for libngtcp2_crypto_gnutls)
+ if(ENABLE_GNUTLS AND GNUTLS_FOUND)
+@@ -335,7 +338,8 @@ add_subdirectory(lib)
+ add_subdirectory(tests)
+ add_subdirectory(crypto)
+ add_subdirectory(third-party)
+-add_subdirectory(examples)
++# Commented by AdGuard
++# add_subdirectory(examples)
+ 
+ 
+ string(TOUPPER "${CMAKE_BUILD_TYPE}" _build_type)
+@@ -360,8 +364,6 @@ message(STATUS "summary of build options:
+       CUnit:          ${HAVE_CUNIT} (LIBS='${CUNIT_LIBRARIES}')
+     Libs:
+       OpenSSL:        ${HAVE_OPENSSL} (LIBS='${OPENSSL_LIBRARIES}')
+-      Libev:          ${HAVE_LIBEV} (LIBS='${LIBEV_LIBRARIES}')
+-      Libnghttp3:     ${HAVE_LIBNGHTTP3} (LIBS='${LIBNGHTTP3_LIBRARIES}')
+       GnuTLS:         ${HAVE_GNUTLS} (LIBS='${GNUTLS_LIBRARIES}')
+       BoringSSL:      ${HAVE_BORINGSSL} (LIBS='${BORINGSSL_LIBRARIES}')
+       Picotls:        ${HAVE_PICOTLS} (LIBS='${PICOTLS_LIBRARIES}')
