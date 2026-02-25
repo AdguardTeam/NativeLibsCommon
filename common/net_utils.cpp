@@ -4,25 +4,34 @@
 #include <event2/util.h>
 
 #include "common/net_utils.h"
+
 #include "common/socket_address.h"
 #include "common/system_error.h"
 #include "common/utils.h"
 
 #ifndef _WIN32
+
 #include <fstream>
 #include <net/if.h> // For if_nametoindex/if_indextoname
 #include <resolv.h>
-#else
+
+#else // !defined(_WIN32)
+
 #include <Iphlpapi.h>
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
 #include <netioapi.h>
+
 #ifndef INET6_ADDRSTRLEN
 #define INET6_ADDRSTRLEN 46
 #endif
+
 #undef IF_NAMESIZE
 #define IF_NAMESIZE 256
-#endif
+
+#include "common/guid_utils.h"
+
+#endif // !defined(_WIN32)
 
 namespace ag {
 static const Logger g_logger("NET_UTILS");
@@ -354,6 +363,55 @@ uint32_t utils::win_detect_active_if() {
         return index_v4;
     }
     return index_v6;
+}
+
+static std::string if_index_to_uuid(uint32_t idx) {
+    NET_LUID luid{};
+    GUID guid{};
+    if (NO_ERROR == ConvertInterfaceIndexToLuid(idx, &luid) && NO_ERROR == ConvertInterfaceLuidToGuid(&luid, &guid)) {
+        return ag::guid_to_string(guid);
+    }
+    return "";
+}
+
+std::string utils::win_get_preferred_adapter_guid() {
+    ULONG flags = GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_DNS_INFO
+            | GAA_FLAG_SKIP_FRIENDLY_NAME;
+    std::vector<uint8_t> buf;
+    buf.resize(15 * 1024);
+    ULONG size = buf.size();
+    ULONG ret = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, (IP_ADAPTER_ADDRESSES *) buf.data(), &size);
+    if (ret == ERROR_BUFFER_OVERFLOW) {
+        buf.resize(size * 2);
+        size = buf.size();
+        ret = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, (IP_ADAPTER_ADDRESSES *) buf.data(), &size);
+    }
+    if (ret != ERROR_SUCCESS) {
+        return "";
+    }
+
+    IF_INDEX min_metric_index = 0;
+    ULONG min_metric = ULONG_MAX;
+
+    for (auto *p = (IP_ADAPTER_ADDRESSES *) buf.data(); p != nullptr; p = p->Next) {
+        if (p->OperStatus != IfOperStatusUp) {
+            continue;
+        }
+        if (p->IfIndex && p->Ipv4Metric <= min_metric) {
+            min_metric_index = p->IfIndex;
+            min_metric = p->Ipv4Metric;
+        }
+        if (p->Ipv6IfIndex && p->Ipv6Metric <= min_metric) {
+            min_metric_index = p->Ipv6IfIndex;
+            min_metric = p->Ipv6Metric;
+        }
+    }
+
+    if (min_metric_index == 0) {
+        return "";
+    }
+
+    return if_index_to_uuid(min_metric_index);
 }
 
 static constexpr std::string_view WINREG_INTERFACES_PATH_V4 =

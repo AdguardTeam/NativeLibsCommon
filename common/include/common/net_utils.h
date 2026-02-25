@@ -101,6 +101,13 @@ DWORD win_get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_ifs)
 std::uint32_t win_detect_active_if();
 
 /**
+ * Return the string representation of the GUID of the "preferred adapter":
+ * the network interface whose DNS settings Windows considers first when deciding where to send a DNS query.
+ * @return Interface GUID as a string, empty string on error.
+ */
+std::string win_get_preferred_adapter_guid();
+
+/**
  * Modify the DNS settings for a network interface.
  *
  * Equivalent to specifying the preferred/alternative DNS server in IPv4/IPv6 properties in the interface
