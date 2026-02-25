@@ -16,6 +16,7 @@ class QuicheConan(ConanFile):
         self.run("git clone https://github.com/cloudflare/quiche.git source_subfolder")
         self.run(f"cd source_subfolder && git checkout {self.version}")
         patch(self, base_path="source_subfolder", patch_file="patches/crate_type.patch")
+        patch(self, base_path="source_subfolder", patch_file="patches/no_boring_dep.patch")
         patch(self, base_path="source_subfolder", patch_file="patches/ssize_t.patch")
 
     def _detect_ndk_from_compiler(self):
