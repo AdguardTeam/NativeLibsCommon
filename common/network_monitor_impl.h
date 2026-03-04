@@ -58,6 +58,9 @@ public:
     [[nodiscard]] std::string get_default_if_name() const;
     bool has_default_changed_and_reset();
 
+    [[nodiscard]] const std::vector<RouteEntry> &get_routes_v4() const { return m_routes_v4; }
+    [[nodiscard]] const std::vector<RouteEntry> &get_routes_v6() const { return m_routes_v6; }
+
 private:
     std::vector<RouteEntry> m_routes_v4;
     std::vector<RouteEntry> m_routes_v6;

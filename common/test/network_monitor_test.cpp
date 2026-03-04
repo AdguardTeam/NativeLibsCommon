@@ -8,6 +8,10 @@
 #include "common/defs.h"
 #include "../network_monitor_impl.h"
 
+#ifdef __linux__
+#include <linux/rtnetlink.h>
+#endif
+
 using namespace ag;
 
 class SimulateStatusNetworkMonitor : public utils::NetworkMonitorImpl {
@@ -167,5 +171,178 @@ TEST_F(NetworkMonitorTest, FallbackToIpRoute) {
     ASSERT_EQ(if_name, netlink_if_name);
 
     m_monitor->stop();
+}
+
+class LinuxRoutingTableTest : public testing::Test {
+protected:
+    utils::LinuxRoutingTable m_table;
+
+    // Helper to create mock nlmsghdr with route data
+    struct MockRouteMsg {
+        nlmsghdr nlh;
+        rtmsg rtm;
+        char attrs[256];
+
+        MockRouteMsg(uint8_t family, uint8_t dst_len, uint8_t table, uint8_t type) {
+            memset(this, 0, sizeof(*this));
+            nlh.nlmsg_len = NLMSG_LENGTH(sizeof(rtmsg));
+            nlh.nlmsg_type = RTM_NEWROUTE;
+            rtm.rtm_family = family;
+            rtm.rtm_dst_len = dst_len;
+            rtm.rtm_table = table;
+            rtm.rtm_type = type;
+            rtm.rtm_protocol = RTPROT_BOOT;
+            rtm.rtm_scope = RT_SCOPE_UNIVERSE;
+        }
+
+        void add_attr_u32(uint16_t type, uint32_t value) {
+            auto *rta = reinterpret_cast<rtattr *>(
+                    reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
+                    + nlh.nlmsg_len - NLMSG_LENGTH(sizeof(rtmsg)));
+            rta->rta_type = type;
+            rta->rta_len = RTA_LENGTH(sizeof(uint32_t));
+            memcpy(RTA_DATA(rta), &value, sizeof(value));
+            nlh.nlmsg_len += RTA_ALIGN(rta->rta_len);
+        }
+
+        void add_attr_addr(uint16_t type, const std::vector<uint8_t> &addr) {
+            auto *rta = reinterpret_cast<rtattr *>(
+                    reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
+                    + nlh.nlmsg_len - NLMSG_LENGTH(sizeof(rtmsg)));
+            rta->rta_type = type;
+            rta->rta_len = RTA_LENGTH(addr.size());
+            memcpy(RTA_DATA(rta), addr.data(), addr.size());
+            nlh.nlmsg_len += RTA_ALIGN(rta->rta_len);
+        }
+    };
+};
+
+TEST_F(LinuxRoutingTableTest, HandleNewRouteIPv4) {
+    MockRouteMsg msg(AF_INET, 24, RT_TABLE_MAIN, RTN_UNICAST);
+    msg.add_attr_addr(RTA_DST, {192, 168, 1, 0});
+    msg.add_attr_u32(RTA_OIF, 2);
+    msg.add_attr_u32(RTA_PRIORITY, 100);
+
+    m_table.handle_new_route(&msg.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 1);
+    ASSERT_EQ(m_table.get_routes_v4()[0].prefix.get_prefix_len(), 24);
+    ASSERT_EQ(m_table.get_routes_v4()[0].if_index, 2);
+    ASSERT_EQ(m_table.get_routes_v4()[0].metric, 100);
+}
+
+TEST_F(LinuxRoutingTableTest, HandleNewRouteDefaultIPv4) {
+    MockRouteMsg msg(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    msg.add_attr_u32(RTA_OIF, 3);
+    msg.add_attr_u32(RTA_PRIORITY, 50);
+
+    m_table.handle_new_route(&msg.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 1);
+    ASSERT_TRUE(m_table.get_routes_v4()[0].is_default_route());
+    ASSERT_EQ(m_table.get_default_if_index(), 3);
+}
+
+TEST_F(LinuxRoutingTableTest, HandleDelRoute) {
+    // Add route first
+    MockRouteMsg add_msg(AF_INET, 24, RT_TABLE_MAIN, RTN_UNICAST);
+    add_msg.add_attr_addr(RTA_DST, {10, 0, 0, 0});
+    add_msg.add_attr_u32(RTA_OIF, 5);
+    m_table.handle_new_route(&add_msg.nlh);
+    ASSERT_EQ(m_table.get_routes_v4().size(), 1);
+
+    // Delete route
+    MockRouteMsg del_msg(AF_INET, 24, RT_TABLE_MAIN, RTN_UNICAST);
+    del_msg.add_attr_addr(RTA_DST, {10, 0, 0, 0});
+    del_msg.add_attr_u32(RTA_OIF, 5);
+    del_msg.nlh.nlmsg_type = RTM_DELROUTE;
+    m_table.handle_del_route(&del_msg.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 0);
+}
+
+TEST_F(LinuxRoutingTableTest, HasDefaultChangedAndReset) {
+    // Initially no change
+    ASSERT_FALSE(m_table.has_default_changed_and_reset());
+
+    // Add default route - should trigger change
+    MockRouteMsg msg(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    msg.add_attr_u32(RTA_OIF, 2);
+    m_table.handle_new_route(&msg.nlh);
+
+    ASSERT_TRUE(m_table.has_default_changed_and_reset());
+    // After reset, should be false
+    ASSERT_FALSE(m_table.has_default_changed_and_reset());
+}
+
+TEST_F(LinuxRoutingTableTest, DefaultRouteSelection) {
+    // Add two default routes with different metrics
+    MockRouteMsg msg1(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    msg1.add_attr_u32(RTA_OIF, 10);
+    msg1.add_attr_u32(RTA_PRIORITY, 200);
+    m_table.handle_new_route(&msg1.nlh);
+
+    MockRouteMsg msg2(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    msg2.add_attr_u32(RTA_OIF, 20);
+    msg2.add_attr_u32(RTA_PRIORITY, 100);
+    m_table.handle_new_route(&msg2.nlh);
+
+    // Should select route with lower metric (if_index=20, metric=100)
+    ASSERT_EQ(m_table.get_default_if_index(), 20);
+}
+
+TEST_F(LinuxRoutingTableTest, FilterNonUnicast) {
+    // Add non-unicast route (should be filtered)
+    MockRouteMsg msg(AF_INET, 24, RT_TABLE_MAIN, RTN_BROADCAST);
+    msg.add_attr_addr(RTA_DST, {192, 168, 1, 0});
+    msg.add_attr_u32(RTA_OIF, 2);
+    m_table.handle_new_route(&msg.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 0);
+}
+
+TEST_F(LinuxRoutingTableTest, FilterNonMainTable) {
+    // Add route from non-main table (should be filtered)
+    MockRouteMsg msg(AF_INET, 24, RT_TABLE_LOCAL, RTN_UNICAST);
+    msg.add_attr_addr(RTA_DST, {192, 168, 1, 0});
+    msg.add_attr_u32(RTA_OIF, 2);
+    m_table.handle_new_route(&msg.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 0);
+}
+
+TEST_F(LinuxRoutingTableTest, IPv6DefaultRoute) {
+    MockRouteMsg msg(AF_INET6, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    msg.add_attr_u32(RTA_OIF, 7);
+    msg.add_attr_u32(RTA_PRIORITY, 100);
+    m_table.handle_new_route(&msg.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v6().size(), 1);
+    ASSERT_TRUE(m_table.get_routes_v6()[0].is_default_route());
+    ASSERT_EQ(m_table.get_routes_v6()[0].if_index, 7);
+}
+
+TEST_F(LinuxRoutingTableTest, MultipleInterfaces) {
+    // Add routes for different interfaces
+    MockRouteMsg msg1(AF_INET, 24, RT_TABLE_MAIN, RTN_UNICAST);
+    msg1.add_attr_addr(RTA_DST, {192, 168, 1, 0});
+    msg1.add_attr_u32(RTA_OIF, 2);
+    m_table.handle_new_route(&msg1.nlh);
+
+    MockRouteMsg msg2(AF_INET, 16, RT_TABLE_MAIN, RTN_UNICAST);
+    msg2.add_attr_addr(RTA_DST, {10, 0, 0, 0});
+    msg2.add_attr_u32(RTA_OIF, 3);
+    m_table.handle_new_route(&msg2.nlh);
+
+    MockRouteMsg msg3(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    msg3.add_attr_u32(RTA_OIF, 4);
+    msg3.add_attr_u32(RTA_PRIORITY, 100);
+    m_table.handle_new_route(&msg3.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 3);
+    // Routes should be sorted: /24 first, then /16, then /0
+    ASSERT_EQ(m_table.get_routes_v4()[0].prefix.get_prefix_len(), 24);
+    ASSERT_EQ(m_table.get_routes_v4()[1].prefix.get_prefix_len(), 16);
+    ASSERT_EQ(m_table.get_routes_v4()[2].prefix.get_prefix_len(), 0);
 }
 #endif // __linux__
