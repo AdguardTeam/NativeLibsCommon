@@ -339,6 +339,44 @@ void LinuxRoutingTable::sort_and_update_cache() {
     }
 }
 
+void LinuxRoutingTable::handle_new_route(const nlmsghdr *nlh) {
+    auto entry = parse_route_msg(nlh);
+    if (!entry) {
+        return;
+    }
+
+    auto &routes = (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE)
+            ? m_routes_v4 : m_routes_v6;
+
+    auto it = std::find_if(routes.begin(), routes.end(), [&entry](const RouteEntry &r) {
+        return r.prefix == entry->prefix && r.if_index == entry->if_index;
+    });
+
+    if (it != routes.end()) {
+        *it = std::move(*entry);
+    } else {
+        routes.push_back(std::move(*entry));
+    }
+
+    sort_and_update_cache();
+}
+
+void LinuxRoutingTable::handle_del_route(const nlmsghdr *nlh) {
+    auto entry = parse_route_msg(nlh);
+    if (!entry) {
+        return;
+    }
+
+    auto &routes = (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE)
+            ? m_routes_v4 : m_routes_v6;
+
+    std::erase_if(routes, [&entry](const RouteEntry &r) {
+        return r.prefix == entry->prefix && r.if_index == entry->if_index;
+    });
+
+    sort_and_update_cache();
+}
+
 bool LinuxRoutingTable::reload(int netlink_fd) {
     struct {
         nlmsghdr nlh;
