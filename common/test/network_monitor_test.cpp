@@ -152,4 +152,20 @@ TEST_F(NetworkMonitorTest, NetlinkRoutingTableLoaded) {
 
     m_monitor->stop();
 }
+
+TEST_F(NetworkMonitorTest, FallbackToIpRoute) {
+    // Without calling start(), m_netlink_available remains false
+    // This forces get_default_interface() to use ip route fallback
+    ASSERT_FALSE(m_monitor->is_running());
+
+    std::string if_name = m_monitor->get_default_interface();
+    ASSERT_FALSE(if_name.empty());
+
+    // Verify consistency: fallback result should match Netlink result
+    start_monitor();
+    std::string netlink_if_name = m_monitor->get_default_interface();
+    ASSERT_EQ(if_name, netlink_if_name);
+
+    m_monitor->stop();
+}
 #endif // __linux__
