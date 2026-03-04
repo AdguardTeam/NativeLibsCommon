@@ -518,10 +518,31 @@ void NetworkMonitorImpl::changed_handler() {
     }
 
     for (auto nlh = (nlmsghdr *)buf; NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
-        if (nlh->nlmsg_type == RTM_NEWADDR || nlh->nlmsg_type == RTM_DELADDR) {
+        switch (nlh->nlmsg_type) {
+        case RTM_NEWADDR:
+        case RTM_DELADDR: {
             auto new_if_name = get_default_interface();
             handle_network_change(new_if_name, !new_if_name.empty());
+            break;
         }
+        case RTM_NEWROUTE:
+            if (m_netlink_available) {
+                m_routing_table.handle_new_route(nlh);
+            }
+            break;
+        case RTM_DELROUTE:
+            if (m_netlink_available) {
+                m_routing_table.handle_del_route(nlh);
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    if (m_netlink_available && m_routing_table.has_default_changed_and_reset()) {
+        auto new_if_name = m_routing_table.get_default_if_name();
+        handle_network_change(new_if_name, !new_if_name.empty());
     }
 #endif // __linux__
 }
