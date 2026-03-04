@@ -124,9 +124,12 @@ protected:
 #ifdef __linux__
     UniquePtr<event, &event_free> m_monitor_event;
     evutil_socket_t m_monitor_sock_fd = -1;
+    LinuxRoutingTable m_routing_table;
+    bool m_netlink_available = false;
 
     bool create_socket();
     void close_socket();
+    bool init_routing_table();
 #endif // __linux__
 
     void changed_handler();

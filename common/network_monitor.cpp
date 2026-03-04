@@ -100,6 +100,8 @@ void NetworkMonitorImpl::start(event_base *ev_base) {
         return;
     }
 
+    init_routing_table();
+
     m_monitor_event.reset(event_new(ev_base, m_monitor_sock_fd, EV_READ | EV_PERSIST,
         [](evutil_socket_t fd, short, void *arg) {
             auto *monitor = static_cast<NetworkMonitorImpl *>(arg);
@@ -233,6 +235,7 @@ bool NetworkMonitorImpl::create_socket() {
     sockaddr_nl sa{
         .nl_family = AF_NETLINK,
         .nl_groups = RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR
+                | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE
     };
     if (bind(m_monitor_sock_fd, (sockaddr*)&sa, sizeof(sa)) < 0) {
         errlog(m_logger, "Couldn't bind netlink socket");
@@ -248,6 +251,22 @@ void NetworkMonitorImpl::close_socket() {
         close(m_monitor_sock_fd);
         m_monitor_sock_fd = -1;
     }
+}
+
+bool NetworkMonitorImpl::init_routing_table() {
+    if (m_monitor_sock_fd < 0) {
+        return false;
+    }
+
+    if (!m_routing_table.reload(m_monitor_sock_fd)) {
+        warnlog(m_logger, "Failed to load routing table via Netlink, will use fallback");
+        return false;
+    }
+
+    m_routing_table.has_default_changed_and_reset();
+    m_netlink_available = true;
+    infolog(m_logger, "Routing table loaded via Netlink");
+    return true;
 }
 
 std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh) {
