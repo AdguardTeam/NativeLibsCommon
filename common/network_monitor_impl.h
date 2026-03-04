@@ -6,6 +6,7 @@
 
 #ifdef __linux__
 #include "common/cidr_range.h"
+#include <linux/netlink.h>
 #endif
 
 namespace ag::utils {
@@ -39,6 +40,34 @@ struct RouteEntry {
     [[nodiscard]] bool is_default_route() const {
         return prefix.get_prefix_len() == 0;
     }
+};
+
+/**
+ * @class LinuxRoutingTable
+ * Manages the routing table obtained via Netlink.
+ * Provides methods to reload the full table, handle incremental updates,
+ * and detect default route changes.
+ */
+class LinuxRoutingTable {
+public:
+    bool reload(int netlink_fd);
+    void handle_new_route(const nlmsghdr *nlh);
+    void handle_del_route(const nlmsghdr *nlh);
+
+    [[nodiscard]] std::optional<uint32_t> get_default_if_index() const;
+    [[nodiscard]] std::string get_default_if_name() const;
+    bool has_default_changed_and_reset();
+
+private:
+    std::vector<RouteEntry> m_routes_v4;
+    std::vector<RouteEntry> m_routes_v6;
+    std::optional<uint32_t> m_prev_default_v4;
+    std::optional<uint32_t> m_prev_default_v6;
+    bool m_default_changed = false;
+    Logger m_logger{"ROUTING_TABLE"};
+
+    void sort_and_update_cache();
+    static std::optional<RouteEntry> parse_route_msg(const nlmsghdr *nlh);
 };
 #endif
 
