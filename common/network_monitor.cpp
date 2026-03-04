@@ -167,6 +167,10 @@ std::string NetworkMonitorImpl::get_default_interface() {
 #endif // __APPLE__
 
 #ifdef __linux__
+    if (m_netlink_available) {
+        return m_routing_table.get_default_if_name();
+    }
+
     constexpr std::string_view CMD = "ip -o route show to default";
     infolog(m_logger, "{} {}", (geteuid() == 0) ? '#' : '$', CMD);
     Result result = fsystem(CMD);
