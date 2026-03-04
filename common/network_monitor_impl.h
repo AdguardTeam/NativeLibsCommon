@@ -11,6 +11,12 @@
 namespace ag::utils {
 
 #ifdef __linux__
+/**
+ * @struct RouteEntry
+ * Represents a single routing table entry.
+ * Sorting: more specific prefix (longer prefix_len) has higher priority,
+ * then lower metric is preferred.
+ */
 struct RouteEntry {
     CidrRange prefix;
     uint32_t if_index = 0;
