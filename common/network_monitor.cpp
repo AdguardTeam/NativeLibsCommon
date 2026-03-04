@@ -311,6 +311,119 @@ std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh
 
     return entry;
 }
+
+void LinuxRoutingTable::sort_and_update_cache() {
+    std::sort(m_routes_v4.begin(), m_routes_v4.end());
+    std::sort(m_routes_v6.begin(), m_routes_v6.end());
+
+    std::optional<uint32_t> new_default_v4;
+    std::optional<uint32_t> new_default_v6;
+
+    for (const auto &route : m_routes_v4) {
+        if (route.is_default_route() && route.if_index != 0) {
+            new_default_v4 = route.if_index;
+            break;
+        }
+    }
+    for (const auto &route : m_routes_v6) {
+        if (route.is_default_route() && route.if_index != 0) {
+            new_default_v6 = route.if_index;
+            break;
+        }
+    }
+
+    if (new_default_v4 != m_prev_default_v4 || new_default_v6 != m_prev_default_v6) {
+        m_default_changed = true;
+        m_prev_default_v4 = new_default_v4;
+        m_prev_default_v6 = new_default_v6;
+    }
+}
+
+bool LinuxRoutingTable::reload(int netlink_fd) {
+    struct {
+        nlmsghdr nlh;
+        rtmsg rtm;
+    } req{};
+
+    req.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(rtmsg));
+    req.nlh.nlmsg_type = RTM_GETROUTE;
+    req.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    req.nlh.nlmsg_seq = 1;
+    req.rtm.rtm_family = AF_UNSPEC;
+    req.rtm.rtm_table = RT_TABLE_MAIN;
+
+    if (send(netlink_fd, &req, req.nlh.nlmsg_len, 0) < 0) {
+        errlog(m_logger, "Failed to send RTM_GETROUTE: {}", strerror(errno));
+        return false;
+    }
+
+    std::vector<RouteEntry> new_routes_v4;
+    std::vector<RouteEntry> new_routes_v6;
+
+    char buf[8192];
+    bool done = false;
+    while (!done) {
+        ssize_t len = recv(netlink_fd, buf, sizeof(buf), 0);
+        if (len < 0) {
+            errlog(m_logger, "recv() failed: {}", strerror(errno));
+            return false;
+        }
+
+        for (auto *nlh = reinterpret_cast<nlmsghdr *>(buf);
+                NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
+            if (nlh->nlmsg_type == NLMSG_DONE) {
+                done = true;
+                break;
+            }
+            if (nlh->nlmsg_type == NLMSG_ERROR) {
+                auto *err = static_cast<nlmsgerr *>(NLMSG_DATA(nlh));
+                errlog(m_logger, "Netlink error: {}", strerror(-err->error));
+                return false;
+            }
+            if (nlh->nlmsg_type == RTM_NEWROUTE) {
+                if (auto entry = parse_route_msg(nlh)) {
+                    if (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE) {
+                        new_routes_v4.push_back(std::move(*entry));
+                    } else {
+                        new_routes_v6.push_back(std::move(*entry));
+                    }
+                }
+            }
+        }
+    }
+
+    m_routes_v4 = std::move(new_routes_v4);
+    m_routes_v6 = std::move(new_routes_v6);
+    sort_and_update_cache();
+
+    dbglog(m_logger, "Loaded {} IPv4 and {} IPv6 routes", m_routes_v4.size(), m_routes_v6.size());
+    return true;
+}
+
+std::optional<uint32_t> LinuxRoutingTable::get_default_if_index() const {
+    if (m_prev_default_v4.has_value()) {
+        return m_prev_default_v4;
+    }
+    return m_prev_default_v6;
+}
+
+std::string LinuxRoutingTable::get_default_if_name() const {
+    auto if_index = get_default_if_index();
+    if (!if_index.has_value() || *if_index == 0) {
+        return "";
+    }
+    char if_name[IF_NAMESIZE]{};
+    if (if_indextoname(*if_index, if_name) == nullptr) {
+        return "";
+    }
+    return if_name;
+}
+
+bool LinuxRoutingTable::has_default_changed_and_reset() {
+    bool changed = m_default_changed;
+    m_default_changed = false;
+    return changed;
+}
 #endif // __linux__
 
 void NetworkMonitorImpl::changed_handler() {
