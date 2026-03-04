@@ -249,6 +249,68 @@ void NetworkMonitorImpl::close_socket() {
         m_monitor_sock_fd = -1;
     }
 }
+
+std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh) {
+    auto *rtm = static_cast<const rtmsg *>(NLMSG_DATA(nlh));
+
+    if (rtm->rtm_type != RTN_UNICAST) {
+        return std::nullopt;
+    }
+    if (rtm->rtm_table != RT_TABLE_MAIN && rtm->rtm_table != RT_TABLE_DEFAULT) {
+        return std::nullopt;
+    }
+
+    Uint8Vector dst_addr;
+    uint32_t if_index = 0;
+    uint32_t metric = 0;
+    Uint8Vector gateway;
+
+    size_t addr_len = (rtm->rtm_family == AF_INET) ? IPV4_ADDRESS_SIZE : IPV6_ADDRESS_SIZE;
+
+    auto *rta = RTM_RTA(rtm);
+    int rta_len = static_cast<int>(RTM_PAYLOAD(nlh));
+
+    for (; RTA_OK(rta, rta_len); rta = RTA_NEXT(rta, rta_len)) {
+        switch (rta->rta_type) {
+        case RTA_DST:
+            dst_addr.assign(static_cast<uint8_t *>(RTA_DATA(rta)),
+                    static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
+            break;
+        case RTA_OIF:
+            if_index = *static_cast<uint32_t *>(RTA_DATA(rta));
+            break;
+        case RTA_PRIORITY:
+            metric = *static_cast<uint32_t *>(RTA_DATA(rta));
+            break;
+        case RTA_GATEWAY:
+            gateway.assign(static_cast<uint8_t *>(RTA_DATA(rta)),
+                    static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
+            break;
+        default:
+            break;
+        }
+    }
+
+    if (dst_addr.empty()) {
+        dst_addr.resize(addr_len, 0);
+    }
+
+    CidrRange prefix(dst_addr, rtm->rtm_dst_len);
+    if (!prefix.valid()) {
+        return std::nullopt;
+    }
+
+    RouteEntry entry(std::move(prefix));
+    entry.if_index = if_index;
+    entry.metric = metric;
+    entry.protocol = rtm->rtm_protocol;
+    entry.scope = rtm->rtm_scope;
+    entry.type = rtm->rtm_type;
+    entry.table = rtm->rtm_table;
+    entry.gateway = std::move(gateway);
+
+    return entry;
+}
 #endif // __linux__
 
 void NetworkMonitorImpl::changed_handler() {
