@@ -4,7 +4,37 @@
 #include "common/logger.h"
 #include "common/network_monitor.h"
 
+#ifdef __linux__
+#include "common/cidr_range.h"
+#endif
+
 namespace ag::utils {
+
+#ifdef __linux__
+struct RouteEntry {
+    CidrRange prefix;
+    uint32_t if_index = 0;
+    uint32_t metric = 0;
+    uint8_t protocol = 0;
+    uint8_t scope = 0;
+    uint8_t type = 0;
+    uint8_t table = 0;
+    Uint8Vector gateway;
+
+    explicit RouteEntry(CidrRange p) : prefix(std::move(p)) {}
+
+    bool operator<(const RouteEntry &other) const {
+        if (prefix.get_prefix_len() != other.prefix.get_prefix_len()) {
+            return prefix.get_prefix_len() > other.prefix.get_prefix_len();
+        }
+        return metric < other.metric;
+    }
+
+    [[nodiscard]] bool is_default_route() const {
+        return prefix.get_prefix_len() == 0;
+    }
+};
+#endif
 
 /**
  * @class NetworkMonitorImpl
