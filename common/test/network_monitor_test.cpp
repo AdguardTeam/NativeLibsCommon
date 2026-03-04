@@ -109,3 +109,47 @@ TEST_F(NetworkMonitorTest, NetworkStatusChange) {
 
     m_monitor->stop();
 }
+
+#ifdef __linux__
+TEST(RouteEntryTest, Sorting) {
+    utils::RouteEntry default_route(CidrRange({0, 0, 0, 0}, 0));
+    default_route.metric = 100;
+
+    utils::RouteEntry specific_route(CidrRange({192, 168, 1, 0}, 24));
+    specific_route.metric = 200;
+
+    utils::RouteEntry default_route_low_metric(CidrRange({0, 0, 0, 0}, 0));
+    default_route_low_metric.metric = 50;
+
+    std::vector<utils::RouteEntry> routes;
+    routes.push_back(std::move(default_route));
+    routes.push_back(std::move(specific_route));
+    routes.push_back(std::move(default_route_low_metric));
+
+    std::sort(routes.begin(), routes.end());
+
+    ASSERT_EQ(routes[0].prefix.get_prefix_len(), 24);
+    ASSERT_EQ(routes[1].prefix.get_prefix_len(), 0);
+    ASSERT_EQ(routes[1].metric, 50);
+    ASSERT_EQ(routes[2].prefix.get_prefix_len(), 0);
+    ASSERT_EQ(routes[2].metric, 100);
+}
+
+TEST(RouteEntryTest, IsDefaultRoute) {
+    utils::RouteEntry default_v4(CidrRange({0, 0, 0, 0}, 0));
+    ASSERT_TRUE(default_v4.is_default_route());
+
+    utils::RouteEntry specific(CidrRange({10, 0, 0, 0}, 8));
+    ASSERT_FALSE(specific.is_default_route());
+}
+
+TEST_F(NetworkMonitorTest, NetlinkRoutingTableLoaded) {
+    start_monitor();
+    ASSERT_TRUE(m_monitor->is_running());
+
+    std::string if_name = m_monitor->get_default_interface();
+    ASSERT_FALSE(if_name.empty());
+
+    m_monitor->stop();
+}
+#endif // __linux__
