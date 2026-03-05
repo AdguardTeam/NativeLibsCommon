@@ -30,6 +30,13 @@ using suspend_never = std::experimental::suspend_never;
 namespace ag::coro {
 
 /**
+ * Rethrows the current exception. This function is compiled with exceptions enabled
+ * in a separate compilation unit to allow proper exception handling even when
+ * the rest of the code is compiled with -fno-exceptions.
+ */
+[[noreturn]] void rethrow_current_exception();
+
+/**
  * This class implements interface to coroutine that can be awaitable.
  *
  * It is always in suspended state after creation.
@@ -197,7 +204,7 @@ struct [[nodiscard]] Task {
         }
 
         void unhandled_exception() noexcept {
-            *(int *) 0x142 = 42;
+            rethrow_current_exception();
         }
 
         Task get_return_object() {
@@ -289,7 +296,7 @@ struct [[nodiscard]] Task<void> {
         }
 
         void unhandled_exception() noexcept {
-            *(int *) 0x142 = 42;
+            rethrow_current_exception();
         }
 
         Task get_return_object() {

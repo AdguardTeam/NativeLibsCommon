@@ -8,6 +8,7 @@ set(SOURCE_FILES
         base64.cpp
         cesu8.cpp
         clock.cpp
+        coro_exception_handler.cpp
         error.cpp
         file.cpp
         logger.cpp
@@ -30,6 +31,15 @@ if (WIN32)
 endif ()
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
+
+# Compile coro_exception_handler.cpp with exceptions enabled
+if (NOT MSVC)
+    set_source_files_properties(coro_exception_handler.cpp PROPERTIES
+        COMPILE_OPTIONS "-fexceptions")
+else()
+    set_source_files_properties(coro_exception_handler.cpp PROPERTIES
+        COMPILE_OPTIONS "/EHsc")
+endif()
 
 find_package(fmt REQUIRED)
 find_package(libevent REQUIRED)
