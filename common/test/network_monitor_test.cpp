@@ -84,7 +84,7 @@ TEST_F(NetworkMonitorTest, StartAndStopMonitor) {
 
 TEST_F(NetworkMonitorTest, GetDefaultInterfaceIfStart) {
     std::string if_name = m_monitor->get_default_interface();
-    
+
     start_monitor();
     std::string tmp = m_monitor->get_default_interface();
     // Interface name should be consistent before and after start
@@ -344,5 +344,49 @@ TEST_F(LinuxRoutingTableTest, MultipleInterfaces) {
     ASSERT_EQ(m_table.get_routes_v4()[0].prefix.get_prefix_len(), 24);
     ASSERT_EQ(m_table.get_routes_v4()[1].prefix.get_prefix_len(), 16);
     ASSERT_EQ(m_table.get_routes_v4()[2].prefix.get_prefix_len(), 0);
+}
+
+TEST_F(LinuxRoutingTableTest, MalformedMessageTooShortDstAttr) {
+    MockRouteMsg msg(AF_INET, 24, RT_TABLE_MAIN, RTN_UNICAST);
+    // Manually create malformed RTA_DST with incorrect size
+    auto *rta = reinterpret_cast<rtattr *>(
+            reinterpret_cast<char *>(&msg.rtm) + NLMSG_ALIGN(sizeof(rtmsg)));
+    rta->rta_type = RTA_DST;
+    rta->rta_len = RTA_LENGTH(2); // Only 2 bytes instead of 4 for IPv4
+    msg.nlh.nlmsg_len += RTA_ALIGN(rta->rta_len);
+
+    m_table.handle_new_route(&msg.nlh);
+
+    // Route is created with dst_addr filled with zeros (0.0.0.0/24)
+    // This is acceptable behavior - malformed dst is treated as 0.0.0.0
+    ASSERT_EQ(m_table.get_routes_v4().size(), 1);
+    ASSERT_EQ(m_table.get_routes_v4()[0].prefix.get_prefix_len(), 24);
+}
+
+TEST_F(LinuxRoutingTableTest, MalformedMessageTooShortOifAttr) {
+    MockRouteMsg msg(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    // Manually create malformed RTA_OIF with incorrect size
+    auto *rta = reinterpret_cast<rtattr *>(
+            reinterpret_cast<char *>(&msg.rtm) + NLMSG_ALIGN(sizeof(rtmsg)));
+    rta->rta_type = RTA_OIF;
+    rta->rta_len = RTA_LENGTH(2); // Only 2 bytes instead of 4
+    msg.nlh.nlmsg_len += RTA_ALIGN(rta->rta_len);
+
+    m_table.handle_new_route(&msg.nlh);
+
+    // Route should be added but if_index should be 0 (not read)
+    ASSERT_EQ(m_table.get_routes_v4().size(), 1);
+    ASSERT_EQ(m_table.get_routes_v4()[0].if_index, 0);
+}
+
+TEST_F(LinuxRoutingTableTest, InvalidPrefixIgnored) {
+    MockRouteMsg msg(AF_INET, 33, RT_TABLE_MAIN, RTN_UNICAST); // Invalid prefix_len > 32
+    msg.add_attr_addr(RTA_DST, {192, 168, 1, 0});
+    msg.add_attr_u32(RTA_OIF, 2);
+
+    m_table.handle_new_route(&msg.nlh);
+
+    // Should be ignored due to invalid prefix
+    ASSERT_EQ(m_table.get_routes_v4().size(), 0);
 }
 #endif // __linux__

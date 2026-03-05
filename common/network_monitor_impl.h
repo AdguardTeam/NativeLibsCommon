@@ -22,11 +22,6 @@ struct RouteEntry {
     CidrRange prefix;           ///< Destination network prefix
     uint32_t if_index = 0;      ///< Output interface index
     uint32_t metric = 0;        ///< Route metric (priority, lower is better)
-    uint8_t protocol = 0;       ///< Routing protocol (RTPROT_*)
-    uint8_t scope = 0;          ///< Route scope (RT_SCOPE_*)
-    uint8_t type = 0;           ///< Route type (RTN_*)
-    uint8_t table = 0;          ///< Routing table ID (RT_TABLE_*)
-    Uint8Vector gateway;        ///< Gateway address (if any)
 
     explicit RouteEntry(CidrRange p) : prefix(std::move(p)) {}
 

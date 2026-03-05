@@ -29,9 +29,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-namespace {
-    constexpr size_t NETLINK_BUFFER_SIZE = 8192;
-}
+static constexpr size_t NETLINK_BUFFER_SIZE = 8192;
 #endif // __linux__
 
 namespace ag::utils {
@@ -290,7 +288,6 @@ std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh
     Uint8Vector dst_addr;
     uint32_t if_index = 0;
     uint32_t metric = 0;
-    Uint8Vector gateway;
 
     size_t addr_len = (rtm->rtm_family == AF_INET) ? IPV4_ADDRESS_SIZE : IPV6_ADDRESS_SIZE;
 
@@ -315,12 +312,6 @@ std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh
                 metric = *static_cast<uint32_t *>(RTA_DATA(rta));
             }
             break;
-        case RTA_GATEWAY:
-            if (RTA_PAYLOAD(rta) >= addr_len) {
-                gateway.assign(static_cast<uint8_t *>(RTA_DATA(rta)),
-                        static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
-            }
-            break;
         default:
             break;
         }
@@ -338,11 +329,6 @@ std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh
     RouteEntry entry(std::move(prefix));
     entry.if_index = if_index;
     entry.metric = metric;
-    entry.protocol = rtm->rtm_protocol;
-    entry.scope = rtm->rtm_scope;
-    entry.type = rtm->rtm_type;
-    entry.table = rtm->rtm_table;
-    entry.gateway = std::move(gateway);
 
     return entry;
 }
@@ -384,13 +370,17 @@ void LinuxRoutingTable::handle_new_route(const nlmsghdr *nlh) {
 
     auto &routes = get_routes_by_addr_size(entry->prefix.get_address().size());
 
-    auto it = std::find_if(routes.begin(), routes.end(), [&entry](const RouteEntry &r) {
+    auto it = std::ranges::find_if(routes, [&entry](const RouteEntry &r) {
         return r.prefix == entry->prefix && r.if_index == entry->if_index;
     });
 
     if (it != routes.end()) {
+        dbglog(m_logger, "Route updated: {} via if_index={} metric={}",
+               entry->prefix.to_string(), entry->if_index, entry->metric);
         *it = std::move(*entry);
     } else {
+        dbglog(m_logger, "Route added: {} via if_index={} metric={}",
+               entry->prefix.to_string(), entry->if_index, entry->metric);
         routes.push_back(std::move(*entry));
     }
 
@@ -405,9 +395,15 @@ void LinuxRoutingTable::handle_del_route(const nlmsghdr *nlh) {
 
     auto &routes = get_routes_by_addr_size(entry->prefix.get_address().size());
 
+    size_t before = routes.size();
     std::erase_if(routes, [&entry](const RouteEntry &r) {
         return r.prefix == entry->prefix && r.if_index == entry->if_index;
     });
+
+    if (routes.size() < before) {
+        dbglog(m_logger, "Route deleted: {} via if_index={}",
+               entry->prefix.to_string(), entry->if_index);
+    }
 
     sort_and_update_cache();
 }
@@ -517,7 +513,7 @@ void NetworkMonitorImpl::changed_handler() {
     sockaddr_nl sa{};
     iovec iov = {buf, sizeof(buf)};
     msghdr msg = {
-            .msg_name = static_cast<void*>(&sa),
+            .msg_name = (void*)&sa,
             .msg_namelen = sizeof(sa),
             .msg_iov = &iov,
             .msg_iovlen = 1,
