@@ -28,6 +28,10 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+namespace {
+    constexpr size_t NETLINK_BUFFER_SIZE = 8192;
+}
 #endif // __linux__
 
 namespace ag::utils {
@@ -296,18 +300,26 @@ std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh
     for (; RTA_OK(rta, rta_len); rta = RTA_NEXT(rta, rta_len)) {
         switch (rta->rta_type) {
         case RTA_DST:
-            dst_addr.assign(static_cast<uint8_t *>(RTA_DATA(rta)),
-                    static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
+            if (RTA_PAYLOAD(rta) >= addr_len) {
+                dst_addr.assign(static_cast<uint8_t *>(RTA_DATA(rta)),
+                        static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
+            }
             break;
         case RTA_OIF:
-            if_index = *static_cast<uint32_t *>(RTA_DATA(rta));
+            if (RTA_PAYLOAD(rta) >= sizeof(uint32_t)) {
+                if_index = *static_cast<uint32_t *>(RTA_DATA(rta));
+            }
             break;
         case RTA_PRIORITY:
-            metric = *static_cast<uint32_t *>(RTA_DATA(rta));
+            if (RTA_PAYLOAD(rta) >= sizeof(uint32_t)) {
+                metric = *static_cast<uint32_t *>(RTA_DATA(rta));
+            }
             break;
         case RTA_GATEWAY:
-            gateway.assign(static_cast<uint8_t *>(RTA_DATA(rta)),
-                    static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
+            if (RTA_PAYLOAD(rta) >= addr_len) {
+                gateway.assign(static_cast<uint8_t *>(RTA_DATA(rta)),
+                        static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
+            }
             break;
         default:
             break;
@@ -335,25 +347,27 @@ std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh
     return entry;
 }
 
+std::vector<RouteEntry>& LinuxRoutingTable::get_routes_by_addr_size(size_t addr_size) {
+    return (addr_size == IPV4_ADDRESS_SIZE) ? m_routes_v4 : m_routes_v6;
+}
+
+const std::vector<RouteEntry>& LinuxRoutingTable::get_routes_by_addr_size(size_t addr_size) const {
+    return (addr_size == IPV4_ADDRESS_SIZE) ? m_routes_v4 : m_routes_v6;
+}
+
+std::optional<uint32_t> LinuxRoutingTable::find_default_route(const std::vector<RouteEntry>& routes) {
+    auto it = std::ranges::find_if(routes, [](const RouteEntry& r) {
+        return r.is_default_route() && r.if_index != 0;
+    });
+    return (it != routes.end()) ? std::optional{it->if_index} : std::nullopt;
+}
+
 void LinuxRoutingTable::sort_and_update_cache() {
     std::sort(m_routes_v4.begin(), m_routes_v4.end());
     std::sort(m_routes_v6.begin(), m_routes_v6.end());
 
-    std::optional<uint32_t> new_default_v4;
-    std::optional<uint32_t> new_default_v6;
-
-    for (const auto &route : m_routes_v4) {
-        if (route.is_default_route() && route.if_index != 0) {
-            new_default_v4 = route.if_index;
-            break;
-        }
-    }
-    for (const auto &route : m_routes_v6) {
-        if (route.is_default_route() && route.if_index != 0) {
-            new_default_v6 = route.if_index;
-            break;
-        }
-    }
+    std::optional<uint32_t> new_default_v4 = find_default_route(m_routes_v4);
+    std::optional<uint32_t> new_default_v6 = find_default_route(m_routes_v6);
 
     if (new_default_v4 != m_prev_default_v4 || new_default_v6 != m_prev_default_v6) {
         m_default_changed = true;
@@ -368,8 +382,7 @@ void LinuxRoutingTable::handle_new_route(const nlmsghdr *nlh) {
         return;
     }
 
-    auto &routes = (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE)
-            ? m_routes_v4 : m_routes_v6;
+    auto &routes = get_routes_by_addr_size(entry->prefix.get_address().size());
 
     auto it = std::find_if(routes.begin(), routes.end(), [&entry](const RouteEntry &r) {
         return r.prefix == entry->prefix && r.if_index == entry->if_index;
@@ -390,8 +403,7 @@ void LinuxRoutingTable::handle_del_route(const nlmsghdr *nlh) {
         return;
     }
 
-    auto &routes = (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE)
-            ? m_routes_v4 : m_routes_v6;
+    auto &routes = get_routes_by_addr_size(entry->prefix.get_address().size());
 
     std::erase_if(routes, [&entry](const RouteEntry &r) {
         return r.prefix == entry->prefix && r.if_index == entry->if_index;
@@ -421,7 +433,7 @@ bool LinuxRoutingTable::reload(int netlink_fd) {
     std::vector<RouteEntry> new_routes_v4;
     std::vector<RouteEntry> new_routes_v6;
 
-    char buf[8192];
+    char buf[NETLINK_BUFFER_SIZE];
     bool done = false;
     while (!done) {
         ssize_t len = recv(netlink_fd, buf, sizeof(buf), 0);
@@ -443,11 +455,9 @@ bool LinuxRoutingTable::reload(int netlink_fd) {
             }
             if (nlh->nlmsg_type == RTM_NEWROUTE) {
                 if (auto entry = parse_route_msg(nlh)) {
-                    if (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE) {
-                        new_routes_v4.push_back(std::move(*entry));
-                    } else {
-                        new_routes_v6.push_back(std::move(*entry));
-                    }
+                    auto &routes = (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE)
+                            ? new_routes_v4 : new_routes_v6;
+                    routes.push_back(std::move(*entry));
                 }
             }
         }
@@ -503,11 +513,11 @@ void NetworkMonitorImpl::changed_handler() {
 #endif // __APPLE__
 
 #ifdef __linux__
-    nlmsghdr buf[8192/sizeof(struct nlmsghdr)];
+    nlmsghdr buf[NETLINK_BUFFER_SIZE / sizeof(nlmsghdr)];
     sockaddr_nl sa{};
     iovec iov = {buf, sizeof(buf)};
     msghdr msg = {
-            .msg_name = (void*)&sa,
+            .msg_name = static_cast<void*>(&sa),
             .msg_namelen = sizeof(sa),
             .msg_iov = &iov,
             .msg_iovlen = 1,

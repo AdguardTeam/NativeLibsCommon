@@ -19,14 +19,14 @@ namespace ag::utils {
  * then lower metric is preferred.
  */
 struct RouteEntry {
-    CidrRange prefix;
-    uint32_t if_index = 0;
-    uint32_t metric = 0;
-    uint8_t protocol = 0;
-    uint8_t scope = 0;
-    uint8_t type = 0;
-    uint8_t table = 0;
-    Uint8Vector gateway;
+    CidrRange prefix;           ///< Destination network prefix
+    uint32_t if_index = 0;      ///< Output interface index
+    uint32_t metric = 0;        ///< Route metric (priority, lower is better)
+    uint8_t protocol = 0;       ///< Routing protocol (RTPROT_*)
+    uint8_t scope = 0;          ///< Route scope (RT_SCOPE_*)
+    uint8_t type = 0;           ///< Route type (RTN_*)
+    uint8_t table = 0;          ///< Routing table ID (RT_TABLE_*)
+    Uint8Vector gateway;        ///< Gateway address (if any)
 
     explicit RouteEntry(CidrRange p) : prefix(std::move(p)) {}
 
@@ -71,6 +71,10 @@ private:
 
     void sort_and_update_cache();
     static std::optional<RouteEntry> parse_route_msg(const nlmsghdr *nlh);
+    static std::optional<uint32_t> find_default_route(const std::vector<RouteEntry>& routes);
+
+    std::vector<RouteEntry>& get_routes_by_addr_size(size_t addr_size);
+    const std::vector<RouteEntry>& get_routes_by_addr_size(size_t addr_size) const;
 };
 #endif
 
