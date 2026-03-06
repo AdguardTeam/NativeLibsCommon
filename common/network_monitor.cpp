@@ -527,14 +527,14 @@ void NetworkMonitorImpl::changed_handler() {
         return;
     }
 
+    bool addr_changed = false;
+
     for (auto nlh = (nlmsghdr *)buf; NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
         switch (nlh->nlmsg_type) {
         case RTM_NEWADDR:
-        case RTM_DELADDR: {
-            auto new_if_name = get_default_interface();
-            handle_network_change(new_if_name, !new_if_name.empty());
+        case RTM_DELADDR:
+            addr_changed = true;
             break;
-        }
         case RTM_NEWROUTE:
             if (m_netlink_available) {
                 m_routing_table.handle_new_route(nlh);
@@ -550,8 +550,13 @@ void NetworkMonitorImpl::changed_handler() {
         }
     }
 
-    if (m_netlink_available && m_routing_table.has_default_changed_and_reset()) {
-        auto new_if_name = m_routing_table.get_default_if_name();
+    if (m_netlink_available) {
+        if (addr_changed || m_routing_table.has_default_changed_and_reset()) {
+            auto new_if_name = m_routing_table.get_default_if_name();
+            handle_network_change(new_if_name, !new_if_name.empty());
+        }
+    } else if (addr_changed) {
+        auto new_if_name = get_default_interface();
         handle_network_change(new_if_name, !new_if_name.empty());
     }
 #endif // __linux__
