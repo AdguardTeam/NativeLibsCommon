@@ -30,6 +30,14 @@ if (WIN32)
             wfp_firewall.cpp)
 endif ()
 
+# Disable exceptions for all files
+if (NOT MSVC)
+    add_compile_options(-fno-exceptions)
+else()
+    add_compile_options(/EHs-c-)
+    add_compile_definitions(_HAS_EXCEPTIONS=0)
+endif()
+
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 
 # Compile coro_exception_handler.cpp with exceptions enabled
@@ -53,7 +61,6 @@ if(APPLE)
 endif()
 if (NOT MSVC)
     target_compile_options(${PROJECT_NAME}  PUBLIC -Wno-format-nonliteral) # for fmt's chrono build
-    target_compile_options(${PROJECT_NAME}  PRIVATE -fno-exceptions)
     if (NOT ANDROID)
         target_link_libraries(${PROJECT_NAME} resolv)
     endif()
