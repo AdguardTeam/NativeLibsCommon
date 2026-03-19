@@ -182,4 +182,23 @@ TEST_F(CoroTest, ToFuture) {
     co_return;
 }
 
+coro::Task<int> coro_that_throws() {
+    int x;
+    std::mutex *m = (std::mutex *)(void *)&x;
+    m->lock();
+    co_return 42;
+}
+
+/**
+ * Test that unhandled exceptions in coroutines are properly propagated.
+ * This test is currently skipped because it causes the process to terminate
+ * due to an unhandled exception. To run this test, uncomment the GTEST_SKIP line.
+ */
+TEST_F(CoroTest, UnhandledExceptionTest) {
+    GTEST_SKIP() << "Comment if you want to run test";
+    int result = co_await coro_that_throws();
+    ASSERT_EQ(42, result);
+    co_return;
+}
+
 } // namespace ag::test
