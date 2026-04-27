@@ -1,0 +1,19 @@
+name: Hello World
+
+on:
+  push:
+  pull_request:
+
+env:
+  GREETING: "Hello from GitHub Actions!"
+
+jobs:
+  hello:
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hello World
+        run: |
+          echo "$GREETING"
+          echo "Repository: ${{ github.repository }}"
+          env
