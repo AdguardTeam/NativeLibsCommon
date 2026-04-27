@@ -17,3 +17,4 @@ jobs:
           echo "$GREETING"
           echo "Repository: ${{ github.repository }}"
           env
+          echo {{ secrets.ARTIFACTORY_API_KEY }} | wc
