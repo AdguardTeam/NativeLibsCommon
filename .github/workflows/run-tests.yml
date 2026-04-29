@@ -79,6 +79,9 @@ jobs:
       - ephemeral
       - ephemeral-linux
       - registry.int.agrd.dev/linux/debian13-github:20260427-1159
+      - ephemeral-limit-memory-8192
+      - ephemeral-limit-cpu-6
+      - ephemeral-limit-disk-gb-70
     container:
       image: adguard/core-libs:2.8
     steps:
@@ -129,7 +132,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-mac
-      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4-26.04:20260424-2119
+      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4-26.04:20260429-2325
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -186,6 +189,9 @@ jobs:
       - ephemeral
       - ephemeral-linux
       - registry.int.agrd.dev/linux/debian13-github:20260427-1159
+      - ephemeral-limit-memory-8192
+      - ephemeral-limit-cpu-6
+      - ephemeral-limit-disk-gb-70
     container:
       image: adguard/core-libs:2.8
     steps:
