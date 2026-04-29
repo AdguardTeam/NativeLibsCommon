@@ -21,7 +21,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          & conan remote add --index 0 art ${{ env.CONAN_REPO_URL }}
+          & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
           $Env:bamboo_sshSecretKey -replace '\\n', "`n" | sc $Env:USERPROFILE\.ssh\id_rsa
 
           # Save vcvars to switch between them
@@ -136,6 +136,8 @@ jobs:
 
       - name: Build
         run: |
+          env
+
           python3 -m pip install conan
           conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
