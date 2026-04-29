@@ -1,0 +1,200 @@
+name: NativeLibsCommon - Run tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  win-build:
+    name: Win build
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on:
+      - ephemeral
+      - ephemeral-windows
+      - registry.int.agrd.dev/windows/windows11-github-msvc2022:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          & conan remote add --index 0 art ${{ env.CONAN_REPO_URL }}
+          $Env:bamboo_sshSecretKey -replace '\\n', "`n" | sc $Env:USERPROFILE\.ssh\id_rsa
+
+          # Save vcvars to switch between them
+          $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
+          $vcvars64 = cmd /c "vcvars64 & set"
+          $vcvarsarm64 = cmd /c "vcvarsamd64_arm64 & set"
+          $vcvarsarm = cmd /c "vcvarsamd64_arm & set"
+          function setvar($_) {
+            if ($_ -match "=") {
+              $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+            }
+          }
+
+          # Build 32-bit and 64-bit versions
+          & {
+            $vcvars32 | foreach { setvar $_ }
+            mkdir build
+            pushd build
+            & cmake -DCMAKE_BUILD_TYPE=Debug `
+              -DCMAKE_C_COMPILER="cl.exe" `
+              -DCMAKE_CXX_COMPILER="cl.exe" `
+              -DCMAKE_C_FLAGS_DEBUG=/MT `
+              -DCMAKE_CXX_FLAGS_DEBUG=/MT `
+              -G Ninja ..
+            if (!$?) { exit 1 }
+            & ninja tests
+            if (!$?) { exit 1 }
+            & ctest -D ExperimentalTest --no-compress-output
+            if (!$?) { exit 1 }
+            popd
+          }          
+        shell: pwsh
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-windows
+          path: '**/Testing/*/*.xml'
+
+      - name: Upload to Conan
+        if: always()
+        run: |
+          conan remote login art ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_API_KEY }}
+          conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
+          Write-Host "conan upload finished with status $LASTEXITCODE"
+          conan remove -c "*"
+          conan cache clean
+        shell: pwsh
+
+  linux-build:
+    name: Linux build
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - registry.int.agrd.dev/linux/debian13-github:latest
+    container:
+      image: adguard/core-libs:2.8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Conan
+        run: python3 -m pip install conan --upgrade
+
+      - name: Setup Conan remote
+        run: 
+
+      - name: Configure and Build
+        run: |
+          python3 -m pip install conan --upgrade
+          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+            -DSANITIZE=yes \
+            ..
+          ninja tests
+          ctest -D ExperimentalTest --no-compress-output
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-linux
+          path: '**/Testing/*/*.xml'
+
+      - name: Upload to Conan and cleanup
+        if: always()
+        run: |
+          conan remote login art ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_API_KEY }} || true
+          conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
+          echo "conan upload finished"
+          conan remove -c "*" || true
+          conan cache clean || true
+
+  mac-build:
+    name: Mac build
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on:
+      - ephemeral
+      - ephemeral-mac
+      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4-26.04:20260424
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          python3 -m pip install conan
+          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+
+          ARCH=$(uname -m)
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+            -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
+            ..
+          ninja tests
+          ctest -D ExperimentalTest --no-compress-output
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-macos
+          path: '**/Testing/*/*.xml'
+
+      - name: Upload to Conan and cleanup
+        if: always()
+        run: |
+          conan remote login art ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_PASSWORD }} || true
+          conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
+          echo "conan upload finished"
+          conan remove -c "*" || true
+          conan cache clean || true
+
+  android-build:
+    name: Android build
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - registry.int.agrd.dev/linux/debian13-github:latest
+    container:
+      image: adguard/core-libs:2.8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Android library
+        run: |
+          python3 -m pip install conan --upgrade
+          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+          cd android/NativeLibsCommon
+          touch local.properties
+          CMAKE_DIR=$(dirname $(dirname $(which cmake)))
+          echo cmake.dir=$CMAKE_DIR >> local.properties
+          ./gradlew :lib:assembleRelease
+
+      - name: Upload to Conan and cleanup
+        if: always()
+        run: |
+          conan remote login art ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_PASSWORD }} || true
+          conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
+          echo "conan upload finished"
+          conan remove -c "*" || true
+          conan cache clean || true
