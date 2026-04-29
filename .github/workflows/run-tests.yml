@@ -65,6 +65,7 @@ jobs:
       - name: Upload to Conan
         if: always()
         run: |
+          $ErrorActionPreference = 'SilentlyContinue'
           conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
           conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
           Write-Host "conan upload finished with status $LASTEXITCODE"
@@ -139,7 +140,6 @@ jobs:
 
       - name: Build
         run: |
-          source ~/.zprofile
           env
           rm -rf venv
           python3 -m venv venv
