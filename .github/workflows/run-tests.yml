@@ -15,7 +15,7 @@ jobs:
       - registry.int.agrd.dev/windows/windows11-github-msvc2022:latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build
         run: |
@@ -83,7 +83,7 @@ jobs:
       image: adguard/core-libs:2.8
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Conan
         run: python3 -m pip install conan --upgrade
@@ -132,7 +132,7 @@ jobs:
       - registry.int.agrd.dev/macos/tahoe-github-xcode26.4-26.04:20260424
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build
         run: |
@@ -178,7 +178,7 @@ jobs:
       image: adguard/core-libs:2.8
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build Android library
         run: |
