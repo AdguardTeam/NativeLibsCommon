@@ -65,7 +65,7 @@ jobs:
       - name: Upload to Conan
         if: always()
         run: |
-          conan remote login art ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_API_KEY }}
+          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
           conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
           Write-Host "conan upload finished with status $LASTEXITCODE"
           conan remove -c "*"
@@ -120,7 +120,7 @@ jobs:
       - name: Upload to Conan and cleanup
         if: always()
         run: |
-          conan remote login art ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_API_KEY }} || true
+          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}" || true
           conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
           echo "conan upload finished"
           conan remove -c "*" || true
@@ -139,21 +139,9 @@ jobs:
 
       - name: Build
         run: |
-          set -x
+          source ~/.zprofile
 
           env
-
-          which python3
-
-          ls -l /opt/homebrew/bin/python3
-
-          brew install python3
-
-          hash -r
-
-          which python3
-
-          cat $GITHUB_PATH
 
           python3 -m pip install conan
           conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
@@ -180,7 +168,7 @@ jobs:
       - name: Upload to Conan and cleanup
         if: always()
         run: |
-          conan remote login art ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_API_KEY }} || true
+          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}" || true
           conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
           echo "conan upload finished"
           conan remove -c "*" || true
@@ -215,7 +203,7 @@ jobs:
       - name: Upload to Conan and cleanup
         if: always()
         run: |
-          conan remote login art ${{ secrets.ARTIFACTORY_USER }} --password ${{ secrets.ARTIFACTORY_API_KEY }} || true
+          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}" || true
           conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
           echo "conan upload finished"
           conan remove -c "*" || true
