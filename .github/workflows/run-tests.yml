@@ -139,6 +139,8 @@ jobs:
 
       - name: Build
         run: |
+          set -x
+
           env
 
           which python3
@@ -150,6 +152,8 @@ jobs:
           hash -r
 
           which python3
+
+          cat $GITHUB_PATH
 
           python3 -m pip install conan
           conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
