@@ -15,9 +15,7 @@ on:
 jobs:
   increment-version:
     name: Increment version
-    if: |
-      github.repository == 'AdGuardSoftwareLimited/native-libs-common' &&
-      (github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'skipci'))
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     uses: AdGuardSoftwareLimited/actions/.github/workflows/git-commit-push.yml@master
     with:
       runs-on: team-corelibs
@@ -25,7 +23,7 @@ jobs:
         cd scripts
         ./increment_version.sh ${{ inputs.custom_version }}
       committed-files: conandata.yml
-      commit-message: 'skipci: Automatic version increment'
+      commit-message: '[skip ci] Automatic version increment'
     secrets: inherit
 
   trigger-upload-conan-recipes:
