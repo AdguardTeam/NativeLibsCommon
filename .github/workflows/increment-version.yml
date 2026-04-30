@@ -25,6 +25,9 @@ jobs:
       committed-files: conandata.yml
       commit-message: '[skip ci] Automatic version increment'
     secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
 
   trigger-upload-conan-recipes:
     name: Trigger upload conan recipes
@@ -40,3 +43,5 @@ jobs:
               repo: context.repo.repo,
               event_type: 'upload-conan-recipes'
             })
+    permissions:
+      contents: write
