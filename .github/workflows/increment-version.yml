@@ -18,7 +18,7 @@ jobs:
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     uses: AdGuardSoftwareLimited/actions/.github/workflows/git-commit-push.yml@master
     with:
-      runs-on: team-corelibs
+      runs-on: '[team-corelibs]'
       script: |
         cd scripts
         ./increment_version.sh ${{ inputs.custom_version }}
@@ -32,7 +32,7 @@ jobs:
   trigger-upload-conan-recipes:
     name: Trigger upload conan recipes
     needs: increment-version
-    runs-on: team-corelibs
+    runs-on: [team-corelibs]
     steps:
       - name: Trigger upload-conan-recipes workflow
         uses: actions/github-script@v8
