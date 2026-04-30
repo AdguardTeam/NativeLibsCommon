@@ -1,0 +1,44 @@
+name: NativeLibsCommon - Increment version
+
+on:
+  push:
+    branches:
+      - master
+      - 'stable-*'
+  workflow_dispatch:
+    inputs:
+      custom_version:
+        description: 'Custom version (leave empty for auto-increment)'
+        required: false
+        default: ''
+
+jobs:
+  increment-version:
+    name: Increment version
+    if: |
+      github.repository == 'AdGuardSoftwareLimited/native-libs-common' &&
+      (github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'skipci'))
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/git-commit-push.yml@master
+    with:
+      runs-on: team-corelibs
+      script: |
+        cd scripts
+        ./increment_version.sh ${{ inputs.custom_version }}
+      committed-files: conandata.yml
+      commit-message: 'skipci: Automatic version increment'
+    secrets: inherit
+
+  trigger-upload-conan-recipes:
+    name: Trigger upload conan recipes
+    needs: increment-version
+    runs-on: team-corelibs
+    steps:
+      - name: Trigger upload-conan-recipes workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'upload-conan-recipes'
+            })
