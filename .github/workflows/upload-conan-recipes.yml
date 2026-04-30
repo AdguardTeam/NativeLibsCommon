@@ -34,6 +34,7 @@ jobs:
           # Export packages
           cd scripts
           python3 -m pip install -r requirements.txt
+          git pull
           ./export_conan.py
 
           # Upload to Conan
