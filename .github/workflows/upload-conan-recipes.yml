@@ -35,6 +35,7 @@ jobs:
           cd scripts
           python3 -m pip install -r requirements.txt
           git pull
+          'git' 'log' '--reverse' '--ancestry-path' 'be160279a7f98d29570aca94a46cb1d10db2a6f1..HEAD' '--pretty=%h'
           ./export_conan.py
 
           # Upload to Conan
