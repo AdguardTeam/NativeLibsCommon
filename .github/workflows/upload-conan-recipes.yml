@@ -1,0 +1,42 @@
+name: NativeLibsCommon - Upload conan recipes
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [upload-conan-recipes]
+
+jobs:
+  upload-conan-recipes:
+    name: Upload conan recipes
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    environment: conan-artifactory
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - registry.int.agrd.dev/linux/debian13-github:20260427-1159
+      - ephemeral-limit-memory-8192
+      - ephemeral-limit-cpu-6
+      - ephemeral-limit-disk-gb-70
+    container:
+      image: adguard/core-libs:2.9
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Export and upload Conan recipes
+        run: |
+          set -x
+          set -e
+
+          python3 -m pip install conan --upgrade
+          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+
+          # Export packages
+          cd scripts
+          python3 -m pip install -r requirements.txt
+          ./export_conan.py
+
+          # Upload to Conan
+          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
+          conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
+          echo "conan upload finished"
