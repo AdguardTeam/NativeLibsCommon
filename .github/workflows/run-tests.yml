@@ -15,7 +15,7 @@ jobs:
       - registry.int.agrd.dev/windows/windows11-github-msvc2022:latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Build
         run: |
