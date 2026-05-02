@@ -78,7 +78,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260501-2313
+      - registry.int.agrd.dev/linux/corelibs-builder:20260501-1621
       - ephemeral-limit-memory-8192
       - ephemeral-limit-cpu-6
       - ephemeral-limit-disk-gb-70
@@ -175,7 +175,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260501-2313
+      - registry.int.agrd.dev/linux/corelibs-builder:20260501-1621
       - ephemeral-limit-memory-8192
       - ephemeral-limit-cpu-6
       - ephemeral-limit-disk-gb-70
