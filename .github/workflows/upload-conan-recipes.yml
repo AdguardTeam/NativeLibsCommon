@@ -14,7 +14,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260501-2313
+      - registry.int.agrd.dev/linux/corelibs-builder:20260501-1621
       - ephemeral-limit-memory-8192
       - ephemeral-limit-cpu-6
       - ephemeral-limit-disk-gb-70
@@ -37,9 +37,6 @@ jobs:
           # Export packages
           cd scripts
           python3 -m pip install -r requirements.txt
-          git pull
-          'git' 'log' '--reverse' '--ancestry-path' 'be160279a7f98d29570aca94a46cb1d10db2a6f1..HEAD' '--pretty=%h' || true
-          git log -n30
           ./export_conan.py
 
           # Upload to Conan
