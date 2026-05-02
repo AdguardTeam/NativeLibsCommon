@@ -1,9 +1,10 @@
-name: NativeLibsCommon - Upload conan recipes
+name: Upload conan recipes
 
 on:
   workflow_dispatch:
   repository_dispatch:
-    types: [upload-conan-recipes]
+    types:
+      - After increment version
 
 jobs:
   upload-conan-recipes:

@@ -1,4 +1,4 @@
-name: NativeLibsCommon - Increment version
+name: Increment version
 
 on:
   push:
@@ -29,8 +29,8 @@ jobs:
       contents: write
       id-token: write
 
-  trigger-upload-conan-recipes:
-    name: Trigger upload conan recipes
+  trigger-after-increment-version:
+    name: Trigger after version increment actions
     needs: increment-version
     runs-on: [team-corelibs]
     steps:
@@ -41,7 +41,7 @@ jobs:
             await github.rest.repos.createDispatchEvent({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              event_type: 'upload-conan-recipes'
+              event_type: 'After increment version',
             })
     permissions:
       contents: write
