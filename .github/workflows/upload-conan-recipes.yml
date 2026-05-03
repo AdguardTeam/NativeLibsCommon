@@ -10,7 +10,7 @@ jobs:
   upload-conan-recipes:
     name: Upload conan recipes
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    environment: conan-artifactory-auto
+    environment: conan-artifactory
     runs-on:
       - ephemeral
       - ephemeral-linux
