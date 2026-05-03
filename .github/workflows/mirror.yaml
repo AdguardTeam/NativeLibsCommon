@@ -11,6 +11,7 @@ on:
   repository_dispatch:
     types:
       - After increment version
+      - After tag conanfiles release
 
 jobs:
   mirror:

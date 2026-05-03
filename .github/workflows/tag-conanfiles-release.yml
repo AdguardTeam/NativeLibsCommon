@@ -1,0 +1,51 @@
+name: Tag conanfiles release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  get-version:
+    name: Get version from conandata.yml
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on: [team-corelibs]
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep "[0-9]*\.[0-9]*\." conandata.yml | tail -1 | sed 's/\s*"//' | sed 's/":\s*//')
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+  tag:
+    name: Create conanfiles release tag
+    needs: get-version
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/git-tag.yml@master
+    with:
+      runs-on: '["team-corelibs"]'
+      tag: v${{ needs.get-version.outputs.version }}
+      force: true
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+
+  trigger-mirror:
+    name: Trigger mirror
+    needs: tag
+    runs-on: [team-corelibs]
+    steps:
+      - name: Trigger mirror workflow
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'After tag conanfiles release'
+            })
+    permissions:
+      contents: write
