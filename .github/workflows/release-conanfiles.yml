@@ -11,7 +11,7 @@ jobs:
     name: Release conanfiles.tar.gz
     # This workflow should only run in the public repository, for the private part see tag-conanfiles-release.yml
     if: github.repository == 'AdguardTeam/NativeLibsCommon'
-    runs-on: [team-corelibs]
+    runs-on: ubuntu-latest
     environment: conanfiles-github
     permissions:
       contents: write
