@@ -2,6 +2,10 @@ name: Run tests
 
 on:
   push:
+    branches:
+      - master
+      - 'stable-*'
+      - 'dev-*'
   pull_request:
   workflow_dispatch:
 
@@ -55,7 +59,7 @@ jobs:
         shell: powershell
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-windows
@@ -105,7 +109,7 @@ jobs:
           ctest -D ExperimentalTest --no-compress-output
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-linux
@@ -153,7 +157,7 @@ jobs:
           ctest -D ExperimentalTest --no-compress-output
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results-macos

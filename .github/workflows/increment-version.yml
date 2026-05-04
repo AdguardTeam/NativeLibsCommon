@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - 'stable-*'
+      - 'dev-*'
   workflow_dispatch:
     inputs:
       custom_version:
