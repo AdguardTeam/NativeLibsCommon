@@ -16,7 +16,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-windows
-      - registry.int.agrd.dev/windows/windows11-github-msvc2022:latest
+      - registry.int.agrd.dev/windows/windows11-github-msvc2022:20260505-1859
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -130,7 +130,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-mac
-      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4-26.05:20260505-0243
+      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4.1-26.05:20260506-0008
     steps:
       - name: Checkout
         uses: actions/checkout@v5
