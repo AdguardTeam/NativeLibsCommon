@@ -130,7 +130,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-mac
-      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4-26.04:20260430-0047
+      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4-26.05:20260505-0243
     steps:
       - name: Checkout
         uses: actions/checkout@v5
