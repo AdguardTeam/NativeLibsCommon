@@ -16,7 +16,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-windows
-      - registry.int.agrd.dev/windows/windows11-github-msvc2022:latest
+      - registry.int.agrd.dev/windows/windows11-github-msvc2022:20260505-1859
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -90,7 +90,7 @@ jobs:
       image: adguard/core-libs:2.9
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Configure and Build
         run: |
@@ -130,10 +130,10 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-mac
-      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4-26.04:20260430-0047
+      - registry.int.agrd.dev/macos/tahoe-github-xcode26.4.1-26.05:20260506-0008
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Build
         run: |
@@ -187,7 +187,7 @@ jobs:
       image: adguard/core-libs:2.9
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Build Android library
         run: |
