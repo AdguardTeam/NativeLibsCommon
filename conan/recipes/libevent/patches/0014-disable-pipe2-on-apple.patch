@@ -1,0 +1,28 @@
+Subject: [PATCH] Disable pipe2 detection on Apple platforms
+
+CHECK_FUNCTION_EXISTS_EX is a link-only test. Starting with Xcode 26 /
+iOS Simulator 26.4 SDK the `pipe2` symbol is present in libsystem so the
+link succeeds, but `pipe2` is not declared in any system header for the
+deployment targets we use (e.g. iOS 13). Apple Clang now treats implicit
+function declarations as a hard error, so evutil.c fails to compile.
+
+Skip the detection on Apple — libevent already has a `pipe()` fallback
+gated by `#if defined(EVENT__HAVE_PIPE2)`.
+---
+ CMakeLists.txt | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -454,7 +454,9 @@
+ CHECK_FUNCTION_EXISTS_EX(kqueue EVENT__HAVE_KQUEUE)
+ CHECK_FUNCTION_EXISTS_EX(mmap EVENT__HAVE_MMAP)
+ CHECK_FUNCTION_EXISTS_EX(pipe EVENT__HAVE_PIPE)
+-CHECK_FUNCTION_EXISTS_EX(pipe2 EVENT__HAVE_PIPE2)
++if(NOT APPLE)
++    CHECK_FUNCTION_EXISTS_EX(pipe2 EVENT__HAVE_PIPE2)
++endif()
+ CHECK_FUNCTION_EXISTS_EX(poll EVENT__HAVE_POLL)
+ CHECK_FUNCTION_EXISTS_EX(port_create EVENT__HAVE_PORT_CREATE)
+ CHECK_FUNCTION_EXISTS_EX(sendfile EVENT__HAVE_SENDFILE)
