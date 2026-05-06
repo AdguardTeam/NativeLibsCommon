@@ -14,9 +14,16 @@ on:
         default: ''
 
 jobs:
+  check-prerequisites:
+    name: Check prerequisites
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on: [team-corelibs]
+    steps:
+      - run: 'true'
+
   increment-version:
     name: Increment version
-    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    needs: check-prerequisites
     uses: AdGuardSoftwareLimited/actions/.github/workflows/git-commit-push.yml@master
     with:
       runs-on: '["team-corelibs"]'
