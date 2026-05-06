@@ -26,9 +26,6 @@ jobs:
         run: |
           set -e
 
-          # Temporary disabled
-          exit 0
-
           # Get all workflow states once
           gh workflow list -a --json path,state | jq -c '.[]' | while read -r entry; do
             path=$(echo "$entry" | jq -r '.path')
