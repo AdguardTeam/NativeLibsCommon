@@ -26,21 +26,24 @@ jobs:
         run: |
           set -e
 
-          for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
-            [ -f "$workflow" ] || continue
-            workflow_name=$(basename "$workflow")
+          # Get all workflow states once
+          gh workflow list -a --json path,state | jq -c '.[]' | while read -r entry; do
+            path=$(echo "$entry" | jq -r '.path')
+            state=$(echo "$entry" | jq -r '.state')
+
+            # Skip non-local workflows (e.g., dynamic/github-code-scanning/codeql)
+            [ -f "$path" ] || continue
 
             # Match uses: as a YAML key (at line start with indentation)
-            if grep -Eq '^\s+uses:.*AdGuardSoftwareLimited' "$workflow"; then
+            if grep -Eq '^\s+uses:.*AdGuardSoftwareLimited' "$path"; then
+              workflow_name=$(basename "$path")
               echo "Found private uses in: $workflow_name"
 
-              # Check if workflow is already disabled
-              state=$(gh workflow view "$workflow_name" --json state -q '.state' 2>/dev/null || echo "unknown")
-              if [ "$state" = "disabled_manually" ]; then
-                echo "  Already disabled, skipping"
-              else
+              if [ "$state" = "active" ]; then
                 echo "  Disabling workflow"
                 gh workflow disable "$workflow_name"
+              else
+                echo "  Already disabled (state: $state), skipping"
               fi
             fi
           done
