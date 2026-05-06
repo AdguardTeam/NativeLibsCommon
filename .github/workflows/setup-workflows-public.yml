@@ -28,10 +28,19 @@ jobs:
 
           for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
             [ -f "$workflow" ] || continue
-            
-            if grep -q 'uses:.*AdGuardSoftwareLimited' "$workflow"; then
-              workflow_name=$(basename "$workflow")
-              echo "Disabling workflow: $workflow_name (contains private uses)"
-              gh workflow disable "$workflow_name" || true
+            workflow_name=$(basename "$workflow")
+
+            # Match uses: as a YAML key (at line start with indentation)
+            if grep -Eq '^\s+uses:.*AdGuardSoftwareLimited' "$workflow"; then
+              echo "Found private uses in: $workflow_name"
+
+              # Check if workflow is already disabled
+              state=$(gh workflow view "$workflow_name" --json state -q '.state' 2>/dev/null || echo "unknown")
+              if [ "$state" = "disabled_manually" ]; then
+                echo "  Already disabled, skipping"
+              else
+                echo "  Disabling workflow"
+                gh workflow disable "$workflow_name"
+              fi
             fi
           done
