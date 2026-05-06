@@ -1,0 +1,37 @@
+name: Setup workflows for public repository
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/**'
+
+jobs:
+  disable-private-workflows:
+    name: Disable workflows with private uses
+    if: github.repository == 'AdguardTeam/NativeLibsCommon'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Disable workflows with private uses
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+
+          for workflow in .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ -f "$workflow" ] || continue
+            
+            if grep -q 'uses:.*AdGuardSoftwareLimited' "$workflow"; then
+              workflow_name=$(basename "$workflow")
+              echo "Disabling workflow: $workflow_name (contains private uses)"
+              gh workflow disable "$workflow_name" || true
+            fi
+          done
