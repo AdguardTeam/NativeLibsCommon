@@ -72,17 +72,7 @@ jobs:
 
       - name: Update CHANGELOG.md
         run: |
-          set -e
-
-          NEW_VERSION="${{ steps.version.outputs.new }}"
-          TODAY=$(date +%Y-%m-%d)
-
-          # Replace [Unreleased] section header with the new version
-          # and add a new [Unreleased] section above it
-          sed -i.bak "s/^## \[Unreleased\]$/## [Unreleased]\n\n## [$NEW_VERSION] - $TODAY/" CHANGELOG.md
-          rm -f CHANGELOG.md.bak
-
-          echo "Updated CHANGELOG.md with version $NEW_VERSION"
+          python3 scripts/update_changelog.py "${{ steps.version.outputs.new }}" "$(date +%Y-%m-%d)"
 
       - name: Run set_version script
         run: |
