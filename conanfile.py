@@ -56,10 +56,10 @@ class NativeLibsCommon(ConanFile):
             del self.options.fPIC
 
     def source(self):
-        self.run(f"git init . && git remote add origin {self.vcs_url} && git fetch")
+        self.run(f"git init . && git remote add origin {self.vcs_url} && git fetch --tags")
         if re.match(r'\d+\.\d+\.\d+', self.version) is not None:
-            version_hash = self.conan_data["commit_hash"][self.version]["hash"]
-            self.run("git checkout -f %s" % version_hash)
+            # Use git tag for versioned releases
+            self.run("git checkout -f v%s" % self.version)
         else:
             self.run("git checkout -f %s" % self.version)
         for p in self.patch_files:
