@@ -16,16 +16,12 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write
 
 jobs:
-  prepare-release:
-    name: Prepare release
+  create-release-pr:
+    name: Create release PR
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on: [team-corelibs]
-    outputs:
-      new_version: ${{ steps.version.outputs.new }}
-      branch: ${{ steps.branch.outputs.branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -98,29 +94,26 @@ jobs:
           git checkout -b "$BRANCH_NAME"
           git add -A
           git commit -m "Release v${NEW_VERSION}"
-          git push origin ":$BRANCH_NAME" || true
           git push origin "$BRANCH_NAME"
 
           echo "branch=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
-  create-pr:
-    needs: prepare-release
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-pr.yml@feature/create-pr
-    with:
-      owner: ${{ github.repository_owner }}
-      repo: ${{ github.event.repository.name }}
-      head: ${{ needs.prepare-release.outputs.branch }}
-      base: master
-      title: 'Release v${{ needs.prepare-release.outputs.new_version }}'
-      body: |
-        ## Release v${{ needs.prepare-release.outputs.new_version }}
+      - name: Create pull request
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.PR_WRITE_TOKEN }}
+          script: |
+            const newVersion = '${{ steps.version.outputs.new }}';
+            const branchName = '${{ steps.branch.outputs.branch }}';
+            const baseBranch = context.ref.replace('refs/heads/', '');
 
-        This PR was automatically created by the release workflow.
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Release v${newVersion}`,
+              head: branchName,
+              base: baseBranch,
+              body: `## Release v${newVersion}\n\nThis PR was automatically created by the release workflow.\n\n### Changes\n- Updated CHANGELOG.md\n- Bumped version to ${newVersion}\n\n### Checklist\n- [ ] Review CHANGELOG.md entries\n- [ ] Verify version bump is correct`
+            });
 
-        ### Changes
-        - Updated CHANGELOG.md
-        - Bumped version to ${{ needs.prepare-release.outputs.new_version }}
-
-        ### Checklist
-        - [ ] Review CHANGELOG.md entries
-        - [ ] Verify version bump is correct
+            console.log(`Created PR #${pr.number}: ${pr.html_url}`);
