@@ -2,9 +2,9 @@ name: Upload conan recipes
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types:
-      - After increment version
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   upload-conan-recipes:
