@@ -106,6 +106,8 @@ jobs:
     uses: AdGuardSoftwareLimited/actions/.github/workflows/create-pr.yml@feature/create-pr
     with:
       runs-on: '["team-corelibs"]'
+      owner: ${{ github.repository_owner }}
+      repo: ${{ github.event.repository.name }}
       head: ${{ needs.prepare-release.outputs.branch }}
       base: master
       title: 'Release v${{ needs.prepare-release.outputs.new_version }}'
