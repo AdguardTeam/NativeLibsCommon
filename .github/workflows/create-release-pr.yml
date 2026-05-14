@@ -98,6 +98,7 @@ jobs:
           git checkout -b "$BRANCH_NAME"
           git add -A
           git commit -m "Release v${NEW_VERSION}"
+          git push origin ":$BRANCH_NAME" || true
           git push origin "$BRANCH_NAME"
 
           echo "branch=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
