@@ -18,10 +18,13 @@ permissions:
   pull-requests: write
 
 jobs:
-  create-release-pr:
-    name: Create release PR
+  prepare-release:
+    name: Prepare release
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on: [team-corelibs]
+    outputs:
+      new_version: ${{ steps.version.outputs.new }}
+      branch: ${{ steps.branch.outputs.branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -98,21 +101,23 @@ jobs:
 
           echo "branch=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Create pull request
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const newVersion = '${{ steps.version.outputs.new }}';
-            const branchName = '${{ steps.branch.outputs.branch }}';
-            const baseBranch = context.ref.replace('refs/heads/', '');
+  create-pr:
+    needs: prepare-release
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-pr.yml@feature/create-pr
+    with:
+      runs-on: '["team-corelibs"]'
+      head: ${{ needs.prepare-release.outputs.branch }}
+      base: master
+      title: 'Release v${{ needs.prepare-release.outputs.new_version }}'
+      body: |
+        ## Release v${{ needs.prepare-release.outputs.new_version }}
 
-            const { data: pr } = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `Release v${newVersion}`,
-              head: branchName,
-              base: baseBranch,
-              body: `## Release v${newVersion}\n\nThis PR was automatically created by the release workflow.\n\n### Changes\n- Updated CHANGELOG.md\n- Bumped version to ${newVersion}\n\n### Checklist\n- [ ] Review CHANGELOG.md entries\n- [ ] Verify version bump is correct`
-            });
+        This PR was automatically created by the release workflow.
 
-            console.log(`Created PR #${pr.number}: ${pr.html_url}`);
+        ### Changes
+        - Updated CHANGELOG.md
+        - Bumped version to ${{ needs.prepare-release.outputs.new_version }}
+
+        ### Checklist
+        - [ ] Review CHANGELOG.md entries
+        - [ ] Verify version bump is correct
