@@ -16,6 +16,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
 
 jobs:
   prepare-release:
@@ -105,7 +106,6 @@ jobs:
     needs: prepare-release
     uses: AdGuardSoftwareLimited/actions/.github/workflows/create-pr.yml@feature/create-pr
     with:
-      runs-on: '["team-corelibs"]'
       owner: ${{ github.repository_owner }}
       repo: ${{ github.event.repository.name }}
       head: ${{ needs.prepare-release.outputs.branch }}
