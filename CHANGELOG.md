@@ -8,13 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Added Keep a Changelog support
-- Added tag-based versioning
-- Added automated release PR creation workflow
-
 ### Changed
 
 ### Removed
+
+## [8.1.28] - 2026-05-14
+
+### Added
+
+- Added Keep a Changelog support
+- Added tag-based versioning
+- Added automated release PR creation workflow
 
 ## [8.1.27] - 2026-05-06
 
