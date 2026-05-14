@@ -1,4 +1,4 @@
-name: Auto-tag release
+name: Check CHANGELOG and auto-tag
 
 on:
   push:
@@ -11,9 +11,12 @@ permissions:
 
 jobs:
   autotag:
-    name: Auto-tag from CHANGELOG
+    name: Check CHANGELOG and auto-tag
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on: [team-corelibs]
+    outputs:
+      tagged: ${{ steps.detect.outputs.should_tag }}
+      version: ${{ steps.detect.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -74,3 +77,21 @@ jobs:
           git tag -a "v${{ steps.detect.outputs.version }}" -m "Release ${{ steps.detect.outputs.version }}"
           git push origin "v${{ steps.detect.outputs.version }}"
           echo "Successfully created and pushed tag v${{ steps.detect.outputs.version }}"
+
+  trigger-after-auto-tag:
+    name: Trigger after auto-tag actions
+    needs: autotag
+    if: needs.autotag.outputs.tagged == 'true'
+    runs-on: [team-corelibs]
+    permissions:
+      contents: write
+    steps:
+      - name: Trigger upload-conan-recipes workflow
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              event_type: 'After auto-tag',
+            })
