@@ -31,6 +31,8 @@ jobs:
 
           ps -ef
 
+          lsof -n -d cwd
+
           cargo --version
 
           rm -rf venv
