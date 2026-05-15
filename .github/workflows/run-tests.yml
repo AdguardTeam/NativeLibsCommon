@@ -138,6 +138,11 @@ jobs:
       - name: Build
         run: |
           env
+
+          set -x
+
+          cat /opt/actions-runner/.path
+
           cargo --version
 
           rm -rf venv
