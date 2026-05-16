@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - 'stable-*'
+  workflow_call:
 
 permissions:
   contents: write
@@ -12,7 +13,7 @@ permissions:
 jobs:
   autotag:
     name: Check CHANGELOG and auto-tag
-    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    if: github.repository_owner == 'AdGuardSoftwareLimited'
     runs-on: [team-corelibs]
     outputs:
       tagged: ${{ steps.detect.outputs.should_tag }}
