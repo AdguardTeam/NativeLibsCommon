@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Create release PR workflow is now reusable.
+
 ### Removed
 
 ## [8.1.28] - 2026-05-14
