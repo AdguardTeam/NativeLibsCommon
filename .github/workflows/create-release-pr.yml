@@ -86,6 +86,7 @@ jobs:
           echo "new=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Update CHANGELOG.md
+        id: changelog
         uses: actions/github-script@v8
         with:
           script: |
@@ -160,7 +161,26 @@ jobs:
               return;
             }
 
-            fs.writeFileSync(changelogPath, result.join('\n'));
+            const updatedContent = result.join('\n');
+            fs.writeFileSync(changelogPath, updatedContent);
+
+            const updatedLines = updatedContent.split(/\r?\n/);
+            const startIndex = updatedLines.findIndex((line) => line.startsWith(`## [${newVersion}]`));
+            if (startIndex === -1) {
+              core.setFailed(`Could not find section for version ${newVersion} in updated CHANGELOG.md`);
+              return;
+            }
+
+            let endIndex = updatedLines.length;
+            for (let idx = startIndex + 1; idx < updatedLines.length; idx += 1) {
+              if (/^## \[/.test(updatedLines[idx])) {
+                endIndex = idx;
+                break;
+              }
+            }
+
+            const releaseNotes = updatedLines.slice(startIndex, endIndex).join('\n').trimEnd();
+            core.setOutput('release_notes', releaseNotes);
             console.log(`Updated ${changelogPath} with version ${newVersion}`);
 
       - name: Run set_version script
@@ -198,12 +218,15 @@ jobs:
 
       - name: Create pull request
         uses: actions/github-script@v8
+        env:
+          PR_BODY: ${{ steps.changelog.outputs.release_notes }}
         with:
           github-token: ${{ secrets.PR_WRITE_TOKEN }}
           script: |
             const newVersion = '${{ steps.version.outputs.new }}';
             const branchName = '${{ steps.branch.outputs.branch }}';
             const baseBranch = context.ref.replace('refs/heads/', '');
+            const releaseNotes = process.env.PR_BODY;
 
             const { data: pr } = await github.rest.pulls.create({
               owner: context.repo.owner,
@@ -211,7 +234,7 @@ jobs:
               title: `Release v${newVersion}`,
               head: branchName,
               base: baseBranch,
-              body: `## Release v${newVersion}\n\nThis PR was automatically created by the release workflow.\n\n### Changes\n- Updated CHANGELOG.md\n- Bumped version to ${newVersion}\n\n### Checklist\n- [ ] Review CHANGELOG.md entries\n- [ ] Verify version bump is correct`
+              body: releaseNotes
             });
 
             console.log(`Created PR #${pr.number}: ${pr.html_url}`);

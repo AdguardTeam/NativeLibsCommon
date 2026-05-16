@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Improved auto-tag workflow: version detection is implemented with GitHub Script and tag annotations now use the full detected CHANGELOG version section.
+- Updated release PR workflow to use the same version detection and annotation approach as auto-tag workflow.
+
 ### Removed
 
 ## [8.1.29] - 2026-05-16

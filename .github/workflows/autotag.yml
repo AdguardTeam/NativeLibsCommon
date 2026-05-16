@@ -25,56 +25,94 @@ jobs:
 
       - name: Detect new version in CHANGELOG
         id: detect
-        run: |
-          set -e
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const { execSync } = require('child_process');
 
-          # Get the diff of CHANGELOG.md from the latest commit
-          DIFF=$(git diff HEAD~1 HEAD -- CHANGELOG.md || true)
+            let diff = '';
+            try {
+              diff = execSync('git diff HEAD~1 HEAD -- CHANGELOG.md', { encoding: 'utf8' });
+            } catch (_) {
+              diff = '';
+            }
 
-          if [ -z "$DIFF" ]; then
-            echo "No changes to CHANGELOG.md"
-            echo "should_tag=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+            if (!diff.trim()) {
+              console.log('No changes to CHANGELOG.md');
+              core.setOutput('should_tag', 'false');
+              return;
+            }
 
-          # Look for a new version header being added (lines starting with +## [X.Y.Z])
-          # Exclude [Unreleased]
-          NEW_VERSION=$(echo "$DIFF" | grep -E '^\+## \[[0-9]+\.[0-9]+\.[0-9]+\]' | head -1 | sed -E 's/^\+## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/' || true)
+            const newVersionMatch = diff.match(/^\+## \[(\d+\.\d+\.\d+)\]/m);
+            if (!newVersionMatch) {
+              console.log('No new version found in CHANGELOG.md diff');
+              core.setOutput('should_tag', 'false');
+              return;
+            }
 
-          if [ -z "$NEW_VERSION" ]; then
-            echo "No new version found in CHANGELOG.md diff"
-            echo "should_tag=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+            const newVersion = newVersionMatch[1];
+            console.log(`Found new version: ${newVersion}`);
 
-          echo "Found new version: $NEW_VERSION"
+            const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const lines = changelog.split(/\r?\n/);
 
-          # Verify this version is the latest (first non-Unreleased version) in CHANGELOG.md
-          LATEST_VERSION=$(grep -E '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | head -1 | sed -E 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/')
+            const latestLine = lines.find((line) => /^## \[\d+\.\d+\.\d+\]/.test(line));
+            if (!latestLine) {
+              core.setFailed('Could not find latest version in CHANGELOG.md');
+              return;
+            }
 
-          if [ "$NEW_VERSION" != "$LATEST_VERSION" ]; then
-            echo "New version $NEW_VERSION is not the latest version in CHANGELOG.md (latest is $LATEST_VERSION)"
-            echo "should_tag=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+            const latestVersion = latestLine.match(/^## \[(\d+\.\d+\.\d+)\]/)[1];
+            if (newVersion !== latestVersion) {
+              console.log(`New version ${newVersion} is not the latest version in CHANGELOG.md (latest is ${latestVersion})`);
+              core.setOutput('should_tag', 'false');
+              return;
+            }
 
-          # Check if tag already exists
-          if git rev-parse "v$NEW_VERSION" >/dev/null 2>&1; then
-            echo "Tag v$NEW_VERSION already exists"
-            echo "should_tag=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+            let tagExists = false;
+            try {
+              execSync(`git rev-parse v${newVersion}`, { stdio: 'ignore' });
+              tagExists = true;
+            } catch (_) {
+              tagExists = false;
+            }
 
-          echo "Will create tag v$NEW_VERSION"
-          echo "should_tag=true" >> "$GITHUB_OUTPUT"
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+            if (tagExists) {
+              console.log(`Tag v${newVersion} already exists`);
+              core.setOutput('should_tag', 'false');
+              return;
+            }
+
+            const startIndex = lines.findIndex((line) => line.startsWith(`## [${newVersion}]`));
+            if (startIndex === -1) {
+              core.setFailed(`Could not find section for version ${newVersion} in CHANGELOG.md`);
+              return;
+            }
+
+            let endIndex = lines.length;
+            for (let i = startIndex + 1; i < lines.length; i += 1) {
+              if (/^## \[/.test(lines[i])) {
+                endIndex = i;
+                break;
+              }
+            }
+
+            const releaseNotes = lines.slice(startIndex, endIndex).join('\n').trimEnd();
+
+            console.log(`Will create tag v${newVersion}`);
+            core.setOutput('should_tag', 'true');
+            core.setOutput('version', newVersion);
+            core.setOutput('release_notes', releaseNotes);
 
       - name: Create and push tag
         if: steps.detect.outputs.should_tag == 'true'
+        env:
+          RELEASE_NOTES: ${{ steps.detect.outputs.release_notes }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@adguard.com"
-          git tag -a "v${{ steps.detect.outputs.version }}" -m "Release ${{ steps.detect.outputs.version }}"
+          git tag -a "v${{ steps.detect.outputs.version }}" -m "$RELEASE_NOTES"
           git push origin "v${{ steps.detect.outputs.version }}"
           echo "Successfully created and pushed tag v${{ steps.detect.outputs.version }}"
 
