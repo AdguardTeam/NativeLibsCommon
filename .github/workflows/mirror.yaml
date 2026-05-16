@@ -11,8 +11,7 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types:
-      - After increment version
-      - After tag conanfiles release
+      - After auto-tag
 
 jobs:
   mirror:

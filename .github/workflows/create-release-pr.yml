@@ -12,6 +12,21 @@ on:
           - major
           - minor
           - patch
+  workflow_call:
+    inputs:
+      semver_part:
+        description: 'Version part to increment'
+        required: false
+        default: 'patch'
+        type: string
+      set_version_script_path:
+        description: 'Path to set_version script'
+        required: false
+        default: 'scripts/set_version.sh'
+        type: string
+    secrets:
+      PR_WRITE_TOKEN:
+        required: true
 
 permissions:
   contents: write
@@ -20,7 +35,7 @@ permissions:
 jobs:
   create-release-pr:
     name: Create release PR
-    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    if: github.repository_owner == 'AdGuardSoftwareLimited'
     runs-on: [team-corelibs]
     steps:
       - name: Checkout
@@ -71,14 +86,96 @@ jobs:
           echo "new=$NEW_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Update CHANGELOG.md
-        run: |
-          python3 scripts/update_changelog.py "${{ steps.version.outputs.new }}" "$(date +%Y-%m-%d)"
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+
+            const changelogPath = 'CHANGELOG.md';
+            const newVersion = '${{ steps.version.outputs.new }}';
+            const today = new Date().toISOString().slice(0, 10);
+
+            const content = fs.readFileSync(changelogPath, 'utf8');
+            const lines = content.split(/\r?\n/);
+
+            const result = [];
+            let i = 0;
+            let foundUnreleased = false;
+
+            while (i < lines.length) {
+              const line = lines[i];
+
+              if (line.trim() === '## [Unreleased]') {
+                foundUnreleased = true;
+
+                result.push('## [Unreleased]');
+                result.push('');
+                result.push('### Added');
+                result.push('');
+                result.push('### Changed');
+                result.push('');
+                result.push('### Removed');
+                result.push('');
+                result.push(`## [${newVersion}] - ${today}`);
+
+                i += 1;
+
+                const sectionContent = new Map();
+                let currentSection = null;
+
+                while (i < lines.length && !lines[i].startsWith('## [')) {
+                  const currentLine = lines[i];
+                  if (currentLine.startsWith('### ')) {
+                    currentSection = currentLine;
+                    if (!sectionContent.has(currentSection)) {
+                      sectionContent.set(currentSection, []);
+                    }
+                  } else if (currentSection && currentLine.trim() !== '') {
+                    sectionContent.get(currentSection).push(currentLine);
+                  }
+                  i += 1;
+                }
+
+                for (const [section, items] of sectionContent.entries()) {
+                  if (items.length > 0) {
+                    result.push('');
+                    result.push(section);
+                    result.push('');
+                    for (const item of items) {
+                      result.push(item);
+                    }
+                  }
+                }
+
+                result.push('');
+                continue;
+              }
+
+              result.push(line);
+              i += 1;
+            }
+
+            if (!foundUnreleased) {
+              core.setFailed('Could not find [Unreleased] section in CHANGELOG.md');
+              return;
+            }
+
+            fs.writeFileSync(changelogPath, result.join('\n'));
+            console.log(`Updated ${changelogPath} with version ${newVersion}`);
 
       - name: Run set_version script
         run: |
-          cd scripts
-          chmod +x set_version.sh
-          ./set_version.sh "${{ steps.version.outputs.new }}"
+          set -e
+
+          SET_VERSION_SCRIPT_PATH="${{ inputs.set_version_script_path || 'scripts/set_version.sh' }}"
+
+          if [ ! -f "$SET_VERSION_SCRIPT_PATH" ]; then
+            echo "set_version script not found: $SET_VERSION_SCRIPT_PATH"
+            exit 1
+          fi
+
+          chmod +x "$SET_VERSION_SCRIPT_PATH"
+          "$SET_VERSION_SCRIPT_PATH" "${{ steps.version.outputs.new }}"
 
       - name: Create branch and commit
         id: branch
