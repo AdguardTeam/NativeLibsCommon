@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Optimized conan upload steps: removed cleanup since container will anyway be destroyed.
+
 ### Removed
 
 ## [8.1.30] - 2026-05-16
