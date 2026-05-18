@@ -203,7 +203,7 @@ jobs:
           set -e
 
           NEW_VERSION="${{ steps.version.outputs.new }}"
-          BRANCH_NAME="release/v${NEW_VERSION}"
+          BRANCH_NAME="release-bump/v${NEW_VERSION}"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@adguard.com"
