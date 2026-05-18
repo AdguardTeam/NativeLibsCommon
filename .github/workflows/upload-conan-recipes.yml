@@ -8,11 +8,17 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      export-script:
+        description: 'Script name to run for exporting Conan recipes'
+        type: string
+        default: scripts/export_conan.sh
 
 jobs:
   upload-conan-recipes:
     name: Upload conan recipes
-    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    if: github.repository_owner == 'AdGuardSoftwareLimited'
     environment: conan-artifactory
     runs-on:
       - ephemeral
@@ -38,9 +44,7 @@ jobs:
           conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
           # Export packages
-          cd scripts
-          python3 -m pip install -r requirements.txt
-          ./export_conan.py
+          sh ${{ inputs.export-script || 'scripts/export_conan.sh' }}
 
           # Upload to Conan
           conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
