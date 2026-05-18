@@ -221,7 +221,7 @@ jobs:
         env:
           PR_BODY: ${{ steps.changelog.outputs.release_notes }}
         with:
-          # github-token: ${{ secrets.PR_WRITE_TOKEN }}
+          github-token: ${{ secrets.PR_WRITE_TOKEN }}
           script: |
             const newVersion = '${{ steps.version.outputs.new }}';
             const branchName = '${{ steps.branch.outputs.branch }}';
