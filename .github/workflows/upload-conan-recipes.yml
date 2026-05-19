@@ -10,7 +10,7 @@ on:
       - 'v*'
   workflow_call:
     inputs:
-      export-script:
+      export_script_path:
         description: 'Script name to run for exporting Conan recipes'
         type: string
         default: scripts/export_conan.sh
@@ -44,7 +44,7 @@ jobs:
           conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
           # Export packages
-          sh ${{ inputs.export-script || 'scripts/export_conan.sh' }}
+          sh ${{ inputs.export_script_path || 'scripts/export_conan.sh' }}
 
           # Upload to Conan
           conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"

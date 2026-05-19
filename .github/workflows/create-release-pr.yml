@@ -161,6 +161,25 @@ jobs:
               return;
             }
 
+            // Update reference links at the bottom of the file.
+            // Replace:  [Unreleased]: https://.../compare/vOLD...HEAD
+            // With:     [Unreleased]: https://.../compare/vNEW...HEAD
+            //           [vNEW]: https://.../compare/vOLD...vNEW
+            const currentVersion = '${{ steps.version.outputs.current }}';
+            const unreleasedLinkRe = /^\[Unreleased\]:\s+(https:\/\/[^\s]+\/compare\/v[^\s]+)\.\.\.HEAD\s*$/i;
+            const unreleasedLinkIdx = result.findIndex((l) => unreleasedLinkRe.test(l));
+            if (unreleasedLinkIdx !== -1) {
+              const baseUrl = result[unreleasedLinkIdx].match(unreleasedLinkRe)[1].replace(/\/compare\/v[^/]+$/, '');
+              result.splice(
+                unreleasedLinkIdx,
+                1,
+                `[Unreleased]: ${baseUrl}/compare/v${newVersion}...HEAD`,
+                `[${newVersion}]: ${baseUrl}/compare/v${currentVersion}...v${newVersion}`,
+              );
+            } else {
+              core.warning('Could not find [Unreleased] reference link to update');
+            }
+
             const updatedContent = result.join('\n');
             fs.writeFileSync(changelogPath, updatedContent);
 
