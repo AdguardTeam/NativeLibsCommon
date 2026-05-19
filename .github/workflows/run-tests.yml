@@ -30,18 +30,7 @@ jobs:
         run: |
           set -x
           
-          env
-          ls -la /root
-
-          ls -la /github/home
-
-          mount
-
-          cargo --locked install bindgen-cli
-
-          rmdir /github/home
-          ln -sf /root /github/home
-
+          export HOME=/root
           cargo --locked install bindgen-cli
 
           exit 1
