@@ -73,8 +73,8 @@ jobs:
 
             let tagExists = false;
             try {
-              execSync(`git rev-parse v${newVersion}`, { stdio: 'ignore' });
-              tagExists = true;
+              const remoteTag = execSync(`git ls-remote --tags origin refs/tags/v${newVersion}`, { encoding: 'utf8' });
+              tagExists = Boolean(remoteTag.trim());
             } catch (_) {
               tagExists = false;
             }
@@ -111,6 +111,11 @@ jobs:
         env:
           RELEASE_NOTES: ${{ steps.detect.outputs.release_notes }}
         run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.detect.outputs.version }}" >/dev/null 2>&1; then
+            echo "Tag v${{ steps.detect.outputs.version }} already exists on origin, skipping"
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@adguard.com"
           git tag -a "v${{ steps.detect.outputs.version }}" -m "$RELEASE_NOTES"
