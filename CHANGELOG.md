@@ -10,18 +10,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Optimized conan upload steps: removed cleanup since container will anyway be destroyed.
-- Updated create-release-pr workflow to update reference links and use all 6 Keep a Changelog section types.
-
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 
-- Recategorized old CHANGELOG entries to correct section types (Changed → Fixed for bug fixes).
-
 ### Security
+
+## [8.1.31] - 2026-05-19
+
+### Changed
+
+- Optimized conan upload steps: removed cleanup since container will anyway be destroyed.
+- Updated create-release-pr workflow to update reference links and use all 6 Keep a Changelog section types.
+
+### Fixed
+
+- Recategorized old CHANGELOG entries to correct section types (Changed → Fixed for bug fixes).
 
 ## [8.1.30] - 2026-05-16
 
@@ -1124,7 +1130,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.30...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.31...HEAD
+[8.1.31]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.30...v8.1.31
 [8.1.30]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.29...v8.1.30
 [8.1.29]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.28...v8.1.29
 [8.1.28]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.27...v8.1.28
