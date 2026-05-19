@@ -12,7 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Optimized conan upload steps: removed cleanup since container will anyway be destroyed.
 
+### Deprecated
+
 ### Removed
+
+### Fixed
+
+### Security
 
 ## [8.1.30] - 2026-05-16
 
@@ -565,7 +571,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [6.0.14] - 2024-04-15
 
-### Changed
+### Fixed
 
 - AG-31925 Fix libsodium for Intel Celeron processors
 
@@ -769,7 +775,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [2.0.70] - 2023-09-09
 
-### Changed
+### Fixed
 
 - Use explicit ctor for Awaitable to prevent MSVC UB
 
@@ -919,13 +925,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [2.0.37] - 2022-11-28
 
-### Changed
+### Fixed
 
 - nghttp3 crash on old cpu when calling nghttp3_ringbuf_init
 
 ## [2.0.36] - 2022-11-28
 
-### Changed
+### Fixed
 
 - Ngtcp2 crash on old cpu when calling ngtcp2_ringbuf_buf_init
 

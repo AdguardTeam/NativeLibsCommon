@@ -115,7 +115,13 @@ jobs:
                 result.push('');
                 result.push('### Changed');
                 result.push('');
+                result.push('### Deprecated');
+                result.push('');
                 result.push('### Removed');
+                result.push('');
+                result.push('### Fixed');
+                result.push('');
+                result.push('### Security');
                 result.push('');
                 result.push(`## [${newVersion}] - ${today}`);
 

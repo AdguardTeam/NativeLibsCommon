@@ -36,7 +36,13 @@ def main():
             result.append('')
             result.append('### Changed')
             result.append('')
+            result.append('### Deprecated')
+            result.append('')
             result.append('### Removed')
+            result.append('')
+            result.append('### Fixed')
+            result.append('')
+            result.append('### Security')
             result.append('')
 
             # Add the new version header
