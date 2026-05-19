@@ -11,12 +11,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Optimized conan upload steps: removed cleanup since container will anyway be destroyed.
+- Updated create-release-pr workflow to update reference links and use all 6 Keep a Changelog section types.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Recategorized old CHANGELOG entries to correct section types (Changed → Fixed for bug fixes).
 
 ### Security
 
