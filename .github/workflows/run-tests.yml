@@ -28,7 +28,12 @@ jobs:
 
       - name: Configure and Build
         run: |
+          set -x
+          
           env
+          ls -l /root
+
+          ls -l /github/home
 
           cargo --locked install bindgen-cli
           exit 1
