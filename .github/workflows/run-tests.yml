@@ -31,11 +31,19 @@ jobs:
           set -x
           
           env
-          ls -l /root
+          ls -la /root
 
-          ls -l /github/home
+          ls -la /github/home
+
+          mount
 
           cargo --locked install bindgen-cli
+
+          rmdir /github/home
+          ln -sf /root /github/home
+
+          cargo --locked install bindgen-cli
+
           exit 1
           
           python3 -m pip install conan --upgrade
