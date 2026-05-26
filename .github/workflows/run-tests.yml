@@ -15,8 +15,10 @@ jobs:
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on:
       - ephemeral
-      - ephemeral-windows
-      - registry.int.agrd.dev/windows/windows11-github-msvc2022:20260505-1859
+      - ephemeral-vmwin
+      - registry.int.aged.dev/windows/windows2022-github:20260519-2333
+      - ephemeral-limit-memory-6144
+      - ephemeral-limit-cpu-8
     steps:
       - name: Checkout
         uses: actions/checkout@v6
