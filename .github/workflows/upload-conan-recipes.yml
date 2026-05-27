@@ -46,6 +46,6 @@ jobs:
           sh ${{ inputs.export_script_path || 'scripts/export_conan.sh' }}
 
           # Upload to Conan
-          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
+          conan remote login art "${{ secrets.ARTIFACT_KEEPER_USer }}" --password "${{ secrets.ARTIFACT_KEEPER_API_KEY }}"
           conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
           echo "conan upload finished"
