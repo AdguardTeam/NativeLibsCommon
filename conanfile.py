@@ -80,7 +80,7 @@ class NativeLibsCommon(ConanFile):
         cmake.build()
 
     def package(self):
-        MODULES = ["common", "http"]
+        MODULES = ["common", "http", "tls"]
         for m in MODULES:
             copy(self, "*.h", src=join(self.source_folder, "%s/include" % m), dst=join(self.package_folder, "include"), keep_path=True)
         copy(self, "*.lib", src=self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
@@ -90,7 +90,7 @@ class NativeLibsCommon(ConanFile):
         self.cpp_info.names["cmake_find_package"] = "native_libs_common"
         self.cpp_info.name = "native_libs_common"
         self.cpp_info.includedirs = ["include"]
-        self.cpp_info.libs = ["ag_common", "ag_common_http"]
+        self.cpp_info.libs = ["ag_common", "ag_common_http", "ag_common_tls"]
         self.cpp_info.libdirs = ["lib"]
         self.cpp_info.requires = [
             "fmt::fmt",
