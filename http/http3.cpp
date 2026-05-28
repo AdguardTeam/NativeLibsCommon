@@ -879,10 +879,10 @@ Error<Http3Error> Http3Session<T>::flush_impl() {
                         },
                         {buf, size_t(r)});
             }
-            //if (write_stream_id != -1) {
+            if (write_stream_id != -1) {
                 continue;
-            //}
-            //goto loop_exit; // NOLINT(*-avoid-goto)
+            }
+            goto loop_exit; // NOLINT(*-avoid-goto)
         }
 
         if (r == NGTCP2_NO_ERROR) {
