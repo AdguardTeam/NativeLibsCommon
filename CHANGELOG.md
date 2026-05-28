@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.32] - 2026-05-28
+
+### Added
+
+- ngtcp2 1.22.1 recipe
+
 ## [8.1.31] - 2026-05-19
 
 ### Changed
@@ -1130,7 +1136,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.31...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.32...HEAD
+[8.1.32]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.31...v8.1.32
 [8.1.31]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.30...v8.1.31
 [8.1.30]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.29...v8.1.30
 [8.1.29]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.28...v8.1.29
