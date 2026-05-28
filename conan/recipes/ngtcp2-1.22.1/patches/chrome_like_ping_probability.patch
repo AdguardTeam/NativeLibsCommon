@@ -1,0 +1,19 @@
+--- a/lib/ngtcp2_pkt.c
++++ b/lib/ngtcp2_pkt.c
+@@ -2796,7 +2796,16 @@
+ size_t ngtcp2_pkt_append_ping_and_padding(ngtcp2_vec *data, size_t datacnt,
+                                           ngtcp2_pcg32 *pcg, size_t n) {
+   uint32_t k;
++  size_t min_pings;
++  size_t i;
+ 
++  // Always insert at least 2 PING frames upfront, mirroring Chrome's
++  min_pings = n >= 2 ? 2 : n;
++  for (i = 0; i < min_pings && datacnt < NGTCP2_MAX_STREAM_DATACNT; ++i) {
++    data[datacnt++] = (ngtcp2_vec){.base = NULL, .len = 0}; /* PING */
++    --n;
++  }
++
+   for (; n && datacnt < NGTCP2_MAX_STREAM_DATACNT;) {
+     k = ngtcp2_pcg32_rand_n(pcg, (uint32_t)n + 1);
+     if (k == 0) {
