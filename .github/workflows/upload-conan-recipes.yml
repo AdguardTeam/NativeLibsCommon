@@ -24,8 +24,8 @@ jobs:
       - ephemeral
       - ephemeral-linux
       - ${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}
-      - ephemeral-limit-memory-8192
-      - ephemeral-limit-cpu-6
+      - ephemeral-limit-memory-2048
+      - ephemeral-limit-cpu-2
     container:
       image: adguard/core-libs:2.10
     steps:
