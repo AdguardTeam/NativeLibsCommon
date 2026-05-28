@@ -40,12 +40,12 @@ jobs:
           set -e
 
           python3 -m pip install conan --upgrade
-          conan remote add --index 0 art ${{ vars.ARTIFACT_KEEPER_URL }}/conan/conan || true
+          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
           # Export packages
           sh ${{ inputs.export_script_path || 'scripts/export_conan.sh' }}
 
           # Upload to Conan
-          conan remote login art "${{ secrets.ARTIFACT_KEEPER_USER }}" --password "${{ secrets.ARTIFACT_KEEPER_API_KEY }}"
+          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
           conan upload -r art -c "*" # 2>&1 | grep "Uploading" || true
           echo "conan upload finished"
