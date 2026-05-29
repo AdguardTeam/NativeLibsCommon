@@ -29,13 +29,11 @@ jobs:
 
           & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
 
-          & choco install netfx-4.8 -y
-          Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-          refreshenv
+          $env:Path += ";C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools"
 
           # Save vcvars to switch between them
-          $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
-          $vsdevcmd64 = cmd /c "VsDevCmd -arch=amd64 -host_arch=amd64 & set"
+          $vcvars32 = cmd /c "vcvars32 & set"
+          $vcvars32_64 = cmd /c "vcvarsamd64_x86 & set"
           function setvar($_) {
             if ($_ -match "=") {
               $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
@@ -46,12 +44,10 @@ jobs:
           & {
             $vcvars32 | foreach { setvar $_ }
             where.exe sn
-            & sn /?
             where.exe msbuild
-            & msbuild /?
           }
           & {
-            $vsdevcmd64 | foreach { setvar $_ }
+            $vcvars32_64 | foreach { setvar $_ }
             where.exe sn
             where.exe msbuild
           }          
