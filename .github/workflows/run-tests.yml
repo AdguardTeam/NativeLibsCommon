@@ -46,7 +46,9 @@ jobs:
           & {
             $vcvars32 | foreach { setvar $_ }
             where.exe sn
+            & sn /?
             where.exe msbuild
+            & msbuild /?
           }
           & {
             $vsdevcmd64 | foreach { setvar $_ }
