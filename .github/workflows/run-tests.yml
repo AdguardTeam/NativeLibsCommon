@@ -31,6 +31,9 @@ jobs:
 
           $env:Path += ";C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools"
 
+          dir "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools"
+          dir "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\amd64"
+
           # Save vcvars to switch between them
           $vcvars32 = cmd /c "vcvars32 & set"
           $vcvars32_64 = cmd /c "vcvarsamd64_x86 & set"
