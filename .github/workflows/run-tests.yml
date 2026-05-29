@@ -41,20 +41,7 @@ jobs:
               "${env:ProgramFiles}\Microsoft Visual Studio"
           )
 
-          Write-Host "Searching common SDK directories..." -ForegroundColor Cyan
-          $found = $false
-
-          foreach ($path in $commonPaths) {
-              if (Test-Path $path) {
-                  $results = Get-ChildItem -Path $path -Filter "sn.exe" -Recurse -ErrorAction SilentlyContinue
-                  if ($results) {
-                      $results | ForEach-Object { 
-                          Write-Host "[FOUND] $_" -ForegroundColor Green 
-                      }
-                      $found = $true
-                  }
-              }
-          }
+          & "C:\Program Files\Git\usr\bin\find.exe" c:/ -name sn.exe -o -name msbuild.exe
 
           # Save vcvars to switch between them
           $vcvars32 = cmd /c "vcvars32 & set"
