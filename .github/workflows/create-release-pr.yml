@@ -242,17 +242,17 @@ jobs:
 
           echo "branch=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Obtain Github Token
-        if: github.repository != 'AdGuardSoftwareLimited/actions'
-        id: app-token
-        uses: AdGuardSoftwareLimited/actions/actions/octopass-github-token@master
+      #- name: Obtain Github Token
+      #  if: github.repository != 'AdGuardSoftwareLimited/actions'
+      #  id: app-token
+      #  uses: AdGuardSoftwareLimited/actions/actions/octopass-github-token@master
 
       - name: Create pull request
         uses: actions/github-script@v8
         env:
           PR_BODY: ${{ steps.changelog.outputs.release_notes }}
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ secrets.PR_WRITE_TOKEN }}
           script: |
             const newVersion = '${{ steps.version.outputs.new }}';
             const branchName = '${{ steps.branch.outputs.branch }}';
