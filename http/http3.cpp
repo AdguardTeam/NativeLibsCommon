@@ -583,9 +583,9 @@ Error<Http3Error> Http3Session<T>::initialize_session(
                     },
             .delete_crypto_aead_ctx = ngtcp2_crypto_delete_crypto_aead_ctx_cb,
             .delete_crypto_cipher_ctx = ngtcp2_crypto_delete_crypto_cipher_ctx_cb,
-            .get_path_challenge_data2 = ngtcp2_crypto_get_path_challenge_data2_cb,
             .stream_stop_sending = on_quic_stream_stop_sending,
             .version_negotiation = ngtcp2_crypto_version_negotiation_cb,
+            .get_path_challenge_data2 = ngtcp2_crypto_get_path_challenge_data2_cb,
     };
     // Client and server have different callbacks for handshake completion.
     // Server uses `handshake_completed`, and after that immediately ready to process requests.
