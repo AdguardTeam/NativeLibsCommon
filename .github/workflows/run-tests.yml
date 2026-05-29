@@ -31,9 +31,7 @@ jobs:
 
           # Save vcvars to switch between them
           $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
-          $vcvars64 = cmd /c "vcvars64 & set"
-          $vcvarsarm64 = cmd /c "vcvarsamd64_arm64 & set"
-          $vcvarsarm = cmd /c "vcvarsamd64_arm & set"
+          $vsdevcmd64 = cmd /c "VsDevCmd -arch=amd64 -host_arch=amd64 & set"
           function setvar($_) {
             if ($_ -match "=") {
               $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
@@ -43,7 +41,12 @@ jobs:
           # Build 32-bit and 64-bit versions
           & {
             $vcvars32 | foreach { setvar $_ }
-            dir "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\"
-            dir "C:\Program Files\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\"
+            where.exe sn
+            where.exe msbuild
+          }
+          & {
+            $vsdevcmd64 | foreach { setvar $_ }
+            where.exe sn
+            where.exe msbuild
           }          
         shell: powershell
