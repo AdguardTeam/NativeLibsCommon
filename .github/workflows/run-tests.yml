@@ -25,6 +25,7 @@ jobs:
 
       - name: Build
         run: |
+          refreshenv
           $ErrorActionPreference = 'Continue'
 
           & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
