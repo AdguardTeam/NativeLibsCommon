@@ -29,6 +29,10 @@ jobs:
 
           & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
 
+          & choco install netfx-4.8 -y
+          Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+          refreshenv
+
           # Save vcvars to switch between them
           $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
           $vsdevcmd64 = cmd /c "VsDevCmd -arch=amd64 -host_arch=amd64 & set"
