@@ -528,6 +528,11 @@ TEST_F(Http3Client, FlushLoopContinuesPastControlOnlyPacket) {
 }
 
 TEST(Http3FlushImpl, AllInitialPacketsSentWithPqClientHello) {
+#ifdef _WIN32
+    WSADATA wsa_data = {};
+    ASSERT_EQ(0, WSAStartup(MAKEWORD(2, 2), &wsa_data));
+#endif
+
     ServerSide server_side;
     ASSERT_NO_FATAL_FAILURE(server_side.run());
 

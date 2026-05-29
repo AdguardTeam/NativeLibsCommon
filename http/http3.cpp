@@ -884,7 +884,7 @@ Error<Http3Error> Http3Session<T>::flush_impl() {
             continue;
         }
 
-        if (r == NGTCP2_NO_ERROR) {
+        if (r == 0) {
             goto loop_exit; // NOLINT(*-avoid-goto)
         }
 
