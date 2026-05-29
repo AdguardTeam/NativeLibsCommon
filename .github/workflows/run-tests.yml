@@ -34,6 +34,28 @@ jobs:
           dir "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools"
           dir "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\amd64"
 
+          # 1. Define the most common Microsoft SDK directories to check first (Fast Search)
+          $commonPaths = @(
+              "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v10.0A\bin",
+              "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows",
+              "${env:ProgramFiles}\Microsoft Visual Studio"
+          )
+
+          Write-Host "Searching common SDK directories..." -ForegroundColor Cyan
+          $found = $false
+
+          foreach ($path in $commonPaths) {
+              if (Test-Path $path) {
+                  $results = Get-ChildItem -Path $path -Filter "sn.exe" -Recurse -ErrorAction SilentlyContinue
+                  if ($results) {
+                      $results | ForEach-Object { 
+                          Write-Host "[FOUND] $_" -ForegroundColor Green 
+                      }
+                      $found = $true
+                  }
+              }
+          }
+
           # Save vcvars to switch between them
           $vcvars32 = cmd /c "vcvars32 & set"
           $vcvars32_64 = cmd /c "vcvarsamd64_x86 & set"
