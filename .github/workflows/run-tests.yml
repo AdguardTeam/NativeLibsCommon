@@ -41,7 +41,8 @@ jobs:
               "${env:ProgramFiles}\Microsoft Visual Studio"
           )
 
-          & "C:\Program Files\Git\usr\bin\find.exe" c:/ -name sn.exe -o -name msbuild.exe
+          Set-PSDebug -Trace 1
+          & "C:\Program Files\Git\usr\bin\find.exe" C:/ -iname sn.exe -o -iname msbuild.exe
 
           # Save vcvars to switch between them
           $vcvars32 = cmd /c "vcvars32 & set"
