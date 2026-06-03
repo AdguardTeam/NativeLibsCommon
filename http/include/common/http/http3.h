@@ -568,11 +568,30 @@ public:
      */
     Error<Http3Error> flush();
     /**
+     * Replace callback handlers of an already established session.
+     * Allows handing the session over to a different context (e.g. from a
+     * probing phase to the operational phase) without re-establishing the
+     * QUIC connection. All subsequent events will be delivered to the new
+     * handlers.
+     * @param handler New callback handlers.
+     */
+    void update_callbacks(const Callbacks &handler);
+    /**
      * Get the period for which the session should be kept alive before deletion.
      * It is supposed to be called after receiving the `Callbacks::on_close` event
      * or an error from the `input()` method.
      */
     [[nodiscard]] Nanos probe_timeout() const;
+    /**
+     * Get QUIC connection statistics.
+     * @return ngtcp2_conn_info with connection-level statistics.
+     */
+    [[nodiscard]] ngtcp2_conn_info get_stats() const;
+    /**
+     * Get the non-owning SSL pointer for use in kex_group_nid() and SSL_session_reused logging.
+     * @return raw SSL* owned by this client.
+     */
+    [[nodiscard]] SSL *get_ssl() const;
 
 private:
     friend class Http3Session<Http3Client>;

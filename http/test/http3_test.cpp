@@ -527,6 +527,70 @@ TEST_F(Http3Client, FlushLoopContinuesPastControlOnlyPacket) {
     }
 }
 
+TEST_F(Http3Client, UpdateCallbacks) {
+    ag::http::Request request(ag::http::HTTP_3_0, "GET", "/");
+    request.authority(SERVER_NAME);
+    request.scheme("https");
+
+    // First request — original callbacks.
+    ag::Result r1 = session->submit_request(request, true);
+    ASSERT_TRUE(r1.has_value()) << r1.error()->str();
+    streams[r1.value()] = {};
+    ASSERT_NO_FATAL_FAILURE(flush_session());
+
+    while (!streams[r1.value()].response.has_value()) {
+        ASSERT_NO_FATAL_FAILURE(wait_readable(ag::Secs{5}));
+        ASSERT_NO_FATAL_FAILURE(read_out_socket());
+        ASSERT_NO_FATAL_FAILURE(flush_session());
+    }
+    ASSERT_EQ(streams[r1.value()].response->status_code(), 200);
+
+    // Replace callbacks with a NEW handler that uses a different arg.
+    // This proves that subsequent events are routed through the updated callbacks
+    // and not the original ones.
+    struct NewCtx {
+        Http3Client *self;
+        bool on_response_called = false;
+    } new_ctx{this};
+
+    ag::http::Http3Client::Callbacks new_handler{
+            .arg = &new_ctx,
+            .on_response =
+                    [](void *arg, uint64_t stream_id, ag::http::Response response) {
+                        auto *ctx = static_cast<NewCtx *>(arg);
+                        ctx->on_response_called = true;
+                        on_response(ctx->self, stream_id, std::move(response));
+                    },
+            .on_body =
+                    [](void *arg, uint64_t stream_id, ag::Uint8View chunk) {
+                        on_body(static_cast<NewCtx *>(arg)->self, stream_id, chunk);
+                    },
+            .on_output =
+                    [](void *arg, const ag::http::QuicNetworkPath &path, ag::Uint8View chunk) {
+                        on_output(static_cast<NewCtx *>(arg)->self, path, chunk);
+                    },
+            .on_expiry_update =
+                    [](void *arg, ag::Nanos period) {
+                        on_expiry_update(static_cast<NewCtx *>(arg)->self, period);
+                    },
+    };
+    session->update_callbacks(new_handler);
+
+    // Second request — must be handled entirely by the new callbacks.
+    ag::Result r2 = session->submit_request(request, true);
+    ASSERT_TRUE(r2.has_value()) << r2.error()->str();
+    streams[r2.value()] = {};
+    ASSERT_NO_FATAL_FAILURE(flush_session());
+
+    while (!streams[r2.value()].response.has_value()) {
+        ASSERT_NO_FATAL_FAILURE(wait_readable(ag::Secs{5}));
+        ASSERT_NO_FATAL_FAILURE(read_out_socket());
+        ASSERT_NO_FATAL_FAILURE(flush_session());
+    }
+    ASSERT_EQ(streams[r2.value()].response->status_code(), 200);
+    ASSERT_TRUE(new_ctx.on_response_called) << "on_response was not routed through updated callbacks";
+}
+
 TEST(Http3FlushImpl, AllInitialPacketsSentWithPqClientHello) {
 #ifdef _WIN32
     WSADATA wsa_data = {};

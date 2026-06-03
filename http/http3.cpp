@@ -1415,8 +1415,22 @@ Error<Http3Error> Http3Client::flush() {
     return flush_impl();
 }
 
+void Http3Client::update_callbacks(const Callbacks &handler) {
+    m_handler = handler;
+}
+
 Nanos Http3Client::probe_timeout() const {
     return Nanos{ngtcp2_conn_get_pto(m_quic_conn.get())};
+}
+
+ngtcp2_conn_info Http3Client::get_stats() const {
+    ngtcp2_conn_info info{};
+    ngtcp2_conn_get_conn_info(m_quic_conn.get(), &info);
+    return info;
+}
+
+SSL *Http3Client::get_ssl() const {
+    return m_ssl.get();
 }
 
 } // namespace ag::http
