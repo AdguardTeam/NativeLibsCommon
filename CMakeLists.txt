@@ -28,6 +28,7 @@ endif(SANITIZE)
 
 add_subdirectory(common)
 add_subdirectory(http)
+add_subdirectory(tls)
 
 enable_testing()
 
