@@ -32,7 +32,7 @@ jobs:
           set -x
           set -e
 
-          docker build --volume .:/root . -f - << EOF
+          docker build . -f - << EOF
               FROM ghcr.io/astral-sh/uv:python3.14-alpine
               RUN apk add git && uv pip install --system conan
               RUN --mount=type=bind,source=.,target=/src \
