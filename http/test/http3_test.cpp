@@ -589,6 +589,9 @@ TEST_F(Http3Client, UpdateCallbacks) {
     }
     ASSERT_EQ(streams[r2.value()].response->status_code(), 200);
     ASSERT_TRUE(new_ctx.on_response_called) << "on_response was not routed through updated callbacks";
+
+    // Restore original callbacks so that TearDown()
+    session->update_callbacks(handler);
 }
 
 TEST(Http3FlushImpl, AllInitialPacketsSentWithPqClientHello) {
