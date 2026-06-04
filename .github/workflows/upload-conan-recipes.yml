@@ -20,12 +20,7 @@ jobs:
     name: Upload conan recipes
     if: github.repository_owner == 'AdGuardSoftwareLimited'
     environment: conan-artifactory
-    runs-on:
-      - ephemeral
-      - ephemeral-linux
-      - ${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}
-      - ephemeral-limit-memory-2048
-      - ephemeral-limit-cpu-2
+    runs-on: team-corelibs
     container:
       image: adguard/core-libs:2.10
     steps:
@@ -39,13 +34,12 @@ jobs:
           set -x
           set -e
 
-          python3 -m pip install conan --upgrade
-          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
-
-          # Export packages
-          sh ${{ inputs.export_script_path || 'scripts/export_conan.sh' }}
-
-          # Upload to Conan
-          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
-          conan upload -r art -c "*" # 2>&1 | grep "Uploading" || true
-          echo "conan upload finished"
+          docker build --volume .:/root . -f - << EOF
+              FROM ghcr.io/astral-sh/uv:python3.14-alpine
+              RUN apk add git && uv pip install --system conan
+              RUN cd /root; \
+                  conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true; \
+                  sh ${{ inputs.export_script_path || 'scripts/export_conan.sh' }}; \
+                  conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"; \
+                  conan upload -r art -c "*" # 2>&1 | grep "Uploading" || true
+          EOF
