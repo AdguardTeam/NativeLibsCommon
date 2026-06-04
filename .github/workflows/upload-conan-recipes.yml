@@ -26,10 +26,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Script
-        run: |
-          pwd
-          ls -l /home/runner/_work/native-libs-common/native-libs-common/.github/actions/upload-conan-recipes
       - name: Upload conan recipes
         uses: ./.github/actions/upload-conan-recipes
         with:

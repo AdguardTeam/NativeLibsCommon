@@ -1,0 +1,47 @@
+name: Upload conan recipes
+description: Export and upload Conan recipes to Artifactory
+
+inputs:
+  export_script_path:
+    description: 'Script name to run for exporting Conan recipes'
+    required: true
+    default: 'scripts/export_conan.sh'
+  conan_repo_url:
+    description: 'URL of the Conan repository'
+    required: true
+  artifactory_user:
+    description: 'Artifactory username'
+    required: true
+  artifactory_api_key:
+    description: 'Artifactory API key'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Export and upload Conan recipes
+      shell: bash
+      run: |
+        set -x
+        set -e
+
+        docker build . -f - << DOCKERFILE
+        FROM ghcr.io/astral-sh/uv:python3.14-alpine
+
+        RUN apk add git grep && uv pip install --system conan
+
+        RUN --mount=type=bind,source=.,target=/src,rw << SCRIPT
+            set -e
+
+            cd /src
+
+            conan remote add --index 0 art ${{ inputs.conan_repo_url }} || true
+
+            # Export packages
+            sh ${{ inputs.export_script_path }}
+
+            # Upload to Conan
+            conan remote login art "${{ inputs.artifactory_user }}" --password "${{ inputs.artifactory_api_key }}"
+            conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
+        SCRIPT
+        DOCKERFILE
