@@ -32,6 +32,9 @@ jobs:
             const fs = require('fs');
             const { execSync } = require('child_process');
 
+            const VERSION_REGEX = /^## \[(\d+\.\d+\.\d+(?:[-+.]?[A-Za-z0-9.-]+)*)\]/;
+            const DIFF_VERSION_REGEX = new RegExp(`^\\+${VERSION_REGEX.source.slice(1)}`, 'm');
+
             let diff = '';
             try {
               diff = execSync('git diff HEAD~1 HEAD -- CHANGELOG.md', { encoding: 'utf8' });
@@ -45,7 +48,7 @@ jobs:
               return;
             }
 
-            const newVersionMatch = diff.match(/^\+## \[(\d+\.\d+\.\d+)\]/m);
+            const newVersionMatch = diff.match(DIFF_VERSION_REGEX);
             if (!newVersionMatch) {
               console.log('No new version found in CHANGELOG.md diff');
               core.setOutput('should_tag', 'false');
@@ -58,13 +61,13 @@ jobs:
             const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
             const lines = changelog.split(/\r?\n/);
 
-            const latestLine = lines.find((line) => /^## \[\d+\.\d+\.\d+\]/.test(line));
+            const latestLine = lines.find((line) => VERSION_REGEX.test(line));
             if (!latestLine) {
               core.setFailed('Could not find latest version in CHANGELOG.md');
               return;
             }
 
-            const latestVersion = latestLine.match(/^## \[(\d+\.\d+\.\d+)\]/)[1];
+            const latestVersion = latestLine.match(VERSION_REGEX)[1];
             if (newVersion !== latestVersion) {
               console.log(`New version ${newVersion} is not the latest version in CHANGELOG.md (latest is ${latestVersion})`);
               core.setOutput('should_tag', 'false');
