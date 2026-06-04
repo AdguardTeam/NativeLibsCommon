@@ -35,7 +35,8 @@ jobs:
           docker build --volume .:/root . -f - << EOF
               FROM ghcr.io/astral-sh/uv:python3.14-alpine
               RUN apk add git && uv pip install --system conan
-              RUN cd /root; \
+              RUN --mount=type=bind,source=.,target=/src \
+                  cd /src; \
                   conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true; \
                   sh ${{ inputs.export_script_path || 'scripts/export_conan.sh' }}; \
                   conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"; \
