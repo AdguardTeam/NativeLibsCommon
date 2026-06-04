@@ -33,22 +33,22 @@ jobs:
           set -e
 
           docker build . -f - << DOCKERFILE
-              FROM ghcr.io/astral-sh/uv:python3.14-alpine
+          FROM ghcr.io/astral-sh/uv:python3.14-alpine
 
-              RUN apk add git grep && uv pip install --system conan
+          RUN apk add git grep && uv pip install --system conan
 
-              RUN --mount=type=bind,source=.,target=/src,rw << SCRIPT
-                  set -e
+          RUN --mount=type=bind,source=.,target=/src,rw << SCRIPT
+              set -e
 
-                  cd /src
+              cd /src
 
-                  conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+              conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
-                  # Export packages
-                  sh ${{ inputs.export_script_path || 'scripts/export_conan.sh' }}
+              # Export packages
+              sh ${{ inputs.export_script_path || 'scripts/export_conan.sh' }}
 
-                  # Upload to Conan
-                  conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
-                  conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
-              SCRIPT
+              # Upload to Conan
+              conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
+              conan upload -r art -c "*" 2>&1 | grep "Uploading" || true
+          SCRIPT
           DOCKERFILE
