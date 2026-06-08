@@ -3,54 +3,63 @@ name: Create release PR
 on:
   workflow_dispatch:
     inputs:
-      semver_part:
+      part:
         description: 'Version part to increment'
         required: true
-        default: 'patch'
+        default: 'default'
         type: choice
         options:
           - major
           - minor
-          - patch
+          - default
+      level:
+        description: 'Release level'
+        required: true
+        default: 'default'
+        type: choice
+        options:
+          - default
+          - rc
+          - release
   workflow_call:
     inputs:
-      semver_part:
-        description: 'Version part to increment'
+      part:
+        description: 'Version part to increment (major, minor, default)'
         required: false
-        default: 'patch'
+        default: 'default'
         type: string
-      set_version_script_path:
-        description: 'Path to set_version script'
+      level:
+        description: 'Release level (default, rc, release)'
         required: false
-        default: 'scripts/set_version.sh'
+        default: 'default'
         type: string
-    secrets:
-      PR_WRITE_TOKEN:
-        required: true
 
 permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+  contents: read
 
 jobs:
-  create-release-pr:
-    name: Create release PR
+  # Missing piece not covered by the reusable workflow: derive the next version
+  # from the requested part + level and the latest version in CHANGELOG.md.
+  # The version math lives in the next-version composite action (see its
+  # action.yml for the full transition table).
+  increment:
+    name: Calculate new version
     if: github.repository_owner == 'AdGuardSoftwareLimited'
     runs-on: [team-corelibs]
+    outputs:
+      new: ${{ steps.next.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Calculate new version
-        id: version
+      - name: Read current version from CHANGELOG.md
+        id: current
         run: |
-          set -e
+          set -euo pipefail
 
-          # Get the latest version from CHANGELOG.md (first non-Unreleased version)
-          CURRENT_VERSION=$(grep -E '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | head -1 | sed -E 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/')
+          # Latest version from CHANGELOG.md (first non-Unreleased version,
+          # including any -beta.N / -rc.N prerelease suffix).
+          CURRENT_VERSION=$(grep -E '^## \[[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?\]' CHANGELOG.md | head -1 | sed -E 's/^## \[([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)\].*/\1/')
 
           if [ -z "$CURRENT_VERSION" ]; then
             echo "Could not find current version in CHANGELOG.md"
@@ -58,214 +67,25 @@ jobs:
           fi
 
           echo "Current version: $CURRENT_VERSION"
+          echo "version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
 
-          # Parse version parts
-          MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
-          MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
-          PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
-
-          # Increment the appropriate part
-          case "${{ inputs.semver_part }}" in
-            major)
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            minor)
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            patch)
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
-
-          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-          echo "New version: $NEW_VERSION"
-
-          echo "current=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "new=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Update CHANGELOG.md
-        id: changelog
-        uses: actions/github-script@v8
+      - name: Calculate new version
+        id: next
+        uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/next-version@master
         with:
-          script: |
-            const fs = require('fs');
+          current_version: ${{ steps.current.outputs.version }}
+          part: ${{ inputs.part }}
+          level: ${{ inputs.level }}
 
-            const changelogPath = 'CHANGELOG.md';
-            const newVersion = '${{ steps.version.outputs.new }}';
-            const today = new Date().toISOString().slice(0, 10);
-
-            const content = fs.readFileSync(changelogPath, 'utf8');
-            const lines = content.split(/\r?\n/);
-
-            const result = [];
-            let i = 0;
-            let foundUnreleased = false;
-
-            while (i < lines.length) {
-              const line = lines[i];
-
-              if (line.trim() === '## [Unreleased]') {
-                foundUnreleased = true;
-
-                result.push('## [Unreleased]');
-                result.push('');
-                result.push('### Added');
-                result.push('');
-                result.push('### Changed');
-                result.push('');
-                result.push('### Deprecated');
-                result.push('');
-                result.push('### Removed');
-                result.push('');
-                result.push('### Fixed');
-                result.push('');
-                result.push('### Security');
-                result.push('');
-                result.push(`## [${newVersion}] - ${today}`);
-
-                i += 1;
-
-                const sectionContent = new Map();
-                let currentSection = null;
-
-                while (i < lines.length && !lines[i].startsWith('## [')) {
-                  const currentLine = lines[i];
-                  if (currentLine.startsWith('### ')) {
-                    currentSection = currentLine;
-                    if (!sectionContent.has(currentSection)) {
-                      sectionContent.set(currentSection, []);
-                    }
-                  } else if (currentSection && currentLine.trim() !== '') {
-                    sectionContent.get(currentSection).push(currentLine);
-                  }
-                  i += 1;
-                }
-
-                for (const [section, items] of sectionContent.entries()) {
-                  if (items.length > 0) {
-                    result.push('');
-                    result.push(section);
-                    result.push('');
-                    for (const item of items) {
-                      result.push(item);
-                    }
-                  }
-                }
-
-                result.push('');
-                continue;
-              }
-
-              result.push(line);
-              i += 1;
-            }
-
-            if (!foundUnreleased) {
-              core.setFailed('Could not find [Unreleased] section in CHANGELOG.md');
-              return;
-            }
-
-            // Update reference links at the bottom of the file.
-            // Replace:  [Unreleased]: https://.../compare/vOLD...HEAD
-            // With:     [Unreleased]: https://.../compare/vNEW...HEAD
-            //           [vNEW]: https://.../compare/vOLD...vNEW
-            const currentVersion = '${{ steps.version.outputs.current }}';
-            const unreleasedLinkRe = /^\[Unreleased\]:\s+(https:\/\/[^\s]+\/compare\/v[^\s]+)\.\.\.HEAD\s*$/i;
-            const unreleasedLinkIdx = result.findIndex((l) => unreleasedLinkRe.test(l));
-            if (unreleasedLinkIdx !== -1) {
-              const baseUrl = result[unreleasedLinkIdx].match(unreleasedLinkRe)[1].replace(/\/compare\/v[^/]+$/, '');
-              result.splice(
-                unreleasedLinkIdx,
-                1,
-                `[Unreleased]: ${baseUrl}/compare/v${newVersion}...HEAD`,
-                `[${newVersion}]: ${baseUrl}/compare/v${currentVersion}...v${newVersion}`,
-              );
-            } else {
-              core.warning('Could not find [Unreleased] reference link to update');
-            }
-
-            const updatedContent = result.join('\n');
-            fs.writeFileSync(changelogPath, updatedContent);
-
-            const updatedLines = updatedContent.split(/\r?\n/);
-            const startIndex = updatedLines.findIndex((line) => line.startsWith(`## [${newVersion}]`));
-            if (startIndex === -1) {
-              core.setFailed(`Could not find section for version ${newVersion} in updated CHANGELOG.md`);
-              return;
-            }
-
-            let endIndex = updatedLines.length;
-            for (let idx = startIndex + 1; idx < updatedLines.length; idx += 1) {
-              if (/^## \[/.test(updatedLines[idx])) {
-                endIndex = idx;
-                break;
-              }
-            }
-
-            const releaseNotes = updatedLines.slice(startIndex, endIndex).join('\n').trimEnd();
-            core.setOutput('release_notes', releaseNotes);
-            console.log(`Updated ${changelogPath} with version ${newVersion}`);
-
-      - name: Run set_version script
-        run: |
-          set -e
-
-          SET_VERSION_SCRIPT_PATH="${{ inputs.set_version_script_path || 'scripts/set_version.sh' }}"
-
-          if [ ! -f "$SET_VERSION_SCRIPT_PATH" ]; then
-            echo "set_version script not found: $SET_VERSION_SCRIPT_PATH"
-            exit 1
-          fi
-
-          chmod +x "$SET_VERSION_SCRIPT_PATH"
-          "$SET_VERSION_SCRIPT_PATH" "${{ steps.version.outputs.new }}"
-
-      - name: Create branch and commit
-        id: branch
-        run: |
-          set -e
-
-          NEW_VERSION="${{ steps.version.outputs.new }}"
-          BRANCH_NAME="release-bump/v${NEW_VERSION}"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@adguard.com"
-
-          git checkout -b "$BRANCH_NAME"
-          git add -A
-          git commit -m "Release v${NEW_VERSION}"
-          git push origin ":$BRANCH_NAME" || true  # Delete remote branch if it already exists
-          git push origin "$BRANCH_NAME"
-
-          echo "branch=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
-
-      #- name: Obtain Github Token
-      #  if: github.repository != 'AdGuardSoftwareLimited/actions'
-      #  id: app-token
-      #  uses: AdGuardSoftwareLimited/actions/actions/octopass-github-token@master
-
-      - name: Create pull request
-        uses: actions/github-script@v8
-        env:
-          PR_BODY: ${{ steps.changelog.outputs.release_notes }}
-        with:
-          github-token: ${{ secrets.PR_WRITE_TOKEN }}
-          script: |
-            const newVersion = '${{ steps.version.outputs.new }}';
-            const branchName = '${{ steps.branch.outputs.branch }}';
-            const baseBranch = context.ref.replace('refs/heads/', '');
-            const releaseNotes = process.env.PR_BODY;
-
-            const { data: pr } = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `Release v${newVersion}`,
-              head: branchName,
-              base: baseBranch,
-              body: releaseNotes
-            });
-
-            console.log(`Created PR #${pr.number}: ${pr.html_url}`);
+  # Everything else (changelog patch, branch, commit, PR via Octopass) is handled
+  # by the shared reusable workflow.
+  create-pr:
+    needs: increment
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-release-pr.yml@feature/libs_release_flow
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    with:
+      version: ${{ needs.increment.outputs.new }}
+      team: corelibs

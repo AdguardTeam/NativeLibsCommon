@@ -1,0 +1,159 @@
+name: Next Version
+description: Calculate the next version from a current version, a part to bump, and a release level
+
+# `level` controls the prerelease channel:
+#   default - beta, but leave an existing rc on rc
+#   rc      - rc
+#   release - final release, no prerelease suffix
+#
+# `part` controls which number moves:
+#   major   - bump major
+#   minor   - bump minor
+#   default - bump patch, but leave an existing prerelease in place
+#
+# Transition table (current -> new):
+#
+# level: default
+#   major:
+#     - 1.2.0-beta.5 -> 2.0.0-beta.1
+#     - 1.2.0-rc.5   -> 2.0.0-beta.1
+#     - 1.2.0        -> 2.0.0-beta.1
+#   minor:
+#     - 1.2.0-beta.5 -> 1.3.0-beta.1
+#     - 1.2.0-rc.5   -> 1.3.0-beta.1
+#     - 1.2.0        -> 1.3.0-beta.1
+#   default:
+#     - 1.2.0-beta.5 -> 1.2.0-beta.6
+#     - 1.2.0-rc.5   -> 1.2.0-rc.6
+#     - 1.2.0        -> 1.2.1-beta.1
+#
+# level: rc
+#   major:
+#     - 1.2.0-beta.5 -> 2.0.0-rc.1
+#     - 1.2.0-rc.5   -> 2.0.0-rc.1
+#     - 1.2.0        -> 2.0.0-rc.1
+#   minor:
+#     - 1.2.0-beta.5 -> 1.3.0-rc.1
+#     - 1.2.0-rc.5   -> 1.3.0-rc.1
+#     - 1.2.0        -> 1.3.0-rc.1
+#   default:
+#     - 1.2.0-beta.5 -> 1.2.0-rc.1
+#     - 1.2.0-rc.5   -> 1.2.0-rc.6
+#     - 1.2.0        -> 1.2.1-rc.1
+#
+# level: release
+#   major:
+#     - 1.2.0-beta.5 -> 2.0.0
+#     - 1.2.0-rc.5   -> 2.0.0
+#     - 1.2.0        -> 2.0.0
+#   minor:
+#     - 1.2.0-beta.5 -> 1.3.0
+#     - 1.2.0-rc.5   -> 1.3.0
+#     - 1.2.0        -> 1.3.0
+#   default:
+#     - 1.2.0-beta.5 -> 1.2.0
+#     - 1.2.0-rc.5   -> 1.2.0
+#     - 1.2.0        -> 1.2.1
+
+inputs:
+  current_version:
+    description: 'Current version (X.Y.Z, X.Y.Z-beta.N, or X.Y.Z-rc.N)'
+    required: true
+  part:
+    description: 'Version part to increment (major, minor, or default)'
+    required: false
+    default: 'default'
+  level:
+    description: 'Release level (default, rc, or release)'
+    required: false
+    default: 'default'
+
+outputs:
+  version:
+    description: 'The calculated new version'
+    value: ${{ steps.calc.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Calculate new version
+      id: calc
+      shell: bash
+      env:
+        CURRENT_VERSION: ${{ inputs.current_version }}
+        PART: ${{ inputs.part }}
+        LEVEL: ${{ inputs.level }}
+      run: |
+        set -euo pipefail
+
+        # Parse MAJOR.MINOR.PATCH[-(beta|rc).PRENUM]
+        if [[ "$CURRENT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-(beta|rc)\.([0-9]+))?$ ]]; then
+          MAJOR="${BASH_REMATCH[1]}"
+          MINOR="${BASH_REMATCH[2]}"
+          PATCH="${BASH_REMATCH[3]}"
+          PRE_LABEL="${BASH_REMATCH[5]}"   # beta | rc | "" (released)
+          PRE_NUM="${BASH_REMATCH[6]}"     # N | ""
+        else
+          echo "Invalid version format: $CURRENT_VERSION"
+          exit 1
+        fi
+
+        # Level ladder: beta < rc < release.
+        case "$LEVEL" in
+          default) REQ_LEVEL=1 ;;   # beta channel
+          rc)      REQ_LEVEL=2 ;;
+          release) REQ_LEVEL=3 ;;
+          *) echo "Unknown level: $LEVEL"; exit 1 ;;
+        esac
+
+        case "$PRE_LABEL" in
+          beta) CUR_LEVEL=1 ;;
+          rc)   CUR_LEVEL=2 ;;
+          "")   CUR_LEVEL=3 ;;       # current is a final release
+        esac
+
+        # Prerelease suffix to attach to a freshly-bumped X.Y.Z, per requested level.
+        case "$REQ_LEVEL" in
+          1) FRESH_PRE="-beta.1" ;;
+          2) FRESH_PRE="-rc.1" ;;
+          3) FRESH_PRE="" ;;
+        esac
+
+        case "$PART" in
+          major)
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}${FRESH_PRE}"
+            ;;
+          minor)
+            MINOR=$((MINOR + 1)); PATCH=0
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}${FRESH_PRE}"
+            ;;
+          default)
+            if [ "$CUR_LEVEL" -eq 3 ]; then
+              # Current is a final release: open the next patch on the requested channel.
+              PATCH=$((PATCH + 1))
+              NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}${FRESH_PRE}"
+            else
+              # Current is a prerelease: advance within X.Y.Z. The effective
+              # target channel never goes below the current one (default leaves rc on rc).
+              TARGET=$CUR_LEVEL
+              if [ "$REQ_LEVEL" -gt "$TARGET" ]; then TARGET=$REQ_LEVEL; fi
+
+              if [ "$TARGET" -eq 3 ]; then
+                # Promote to final release: drop the prerelease suffix.
+                NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+              elif [ "$TARGET" -eq "$CUR_LEVEL" ]; then
+                # Same channel: bump the prerelease counter.
+                NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}-${PRE_LABEL}.$((PRE_NUM + 1))"
+              else
+                # Promote beta -> rc: restart the counter.
+                NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}-rc.1"
+              fi
+            fi
+            ;;
+          *)
+            echo "Unknown part: $PART"; exit 1 ;;
+        esac
+
+        echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+        echo "Calculated version: $NEW_VERSION"
