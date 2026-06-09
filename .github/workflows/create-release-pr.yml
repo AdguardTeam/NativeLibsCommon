@@ -15,7 +15,7 @@ on:
       level:
         description: 'Release level'
         required: true
-        default: 'default'
+        default: 'release'
         type: choice
         options:
           - default
@@ -87,5 +87,5 @@ jobs:
       pull-requests: write
       id-token: write
     with:
-      version: ${{ needs.increment.outputs.new }}
+      tag: v${{ needs.increment.outputs.new }}
       team: corelibs
