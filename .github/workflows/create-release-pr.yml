@@ -81,7 +81,7 @@ jobs:
   # by the shared reusable workflow.
   create-pr:
     needs: increment
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-release-pr.yml@feature/libs_release_flow
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-release-pr.yml@master
     permissions:
       contents: write
       pull-requests: write
