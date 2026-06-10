@@ -20,6 +20,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [8.1.34] - 2026-06-10
 
+### Changed
+
+- Use ngtcp2-1.22.1
+
+### Fixed
+
+- Fix flush_impl prematurely exiting send loop after non-stream packets
+
 ## [8.1.33] - 2026-06-03
 
 ### Added
