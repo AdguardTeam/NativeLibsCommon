@@ -18,6 +18,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.34] - 2026-06-10
+
+### Changed
+
+- Use ngtcp2-1.22.1
+
+### Fixed
+
+- Fix flush_impl prematurely exiting send loop after non-stream packets
+
 ## [8.1.33] - 2026-06-03
 
 ### Added
@@ -1142,7 +1152,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.33...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.34...HEAD
+[8.1.34]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.33...v8.1.34
 [8.1.33]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.32...v8.1.33
 [8.1.32]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.31...v8.1.32
 [8.1.31]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.30...v8.1.31
