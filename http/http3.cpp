@@ -20,8 +20,8 @@ namespace ag::http {
 static const Logger g_logger("H3");    // NOLINT(*-identifier-naming)
 static std::atomic_uint32_t g_next_id; // NOLINT(*-avoid-non-const-global-variables)
 
-// Typical DCID length in an initial packet (SCID is zero bytes length in case of Chrome)
-static constexpr size_t ORIGINAL_DCID_DATALEN = 18;
+// DCID length in the Initial packet matches Chrome's QUIC fingerprint (Chrome uses 8 bytes, SCID = 0 bytes)
+static constexpr size_t ORIGINAL_DCID_DATALEN = 8;
 // Typical DCID length after handshake
 static constexpr size_t ACCEPTED_DCID_DATA_LEN = 12;
 static constexpr uint64_t ACTIVE_CONNECTION_ID_LIMIT = 7;
@@ -583,9 +583,9 @@ Error<Http3Error> Http3Session<T>::initialize_session(
                     },
             .delete_crypto_aead_ctx = ngtcp2_crypto_delete_crypto_aead_ctx_cb,
             .delete_crypto_cipher_ctx = ngtcp2_crypto_delete_crypto_cipher_ctx_cb,
-            .get_path_challenge_data = ngtcp2_crypto_get_path_challenge_data_cb,
             .stream_stop_sending = on_quic_stream_stop_sending,
             .version_negotiation = ngtcp2_crypto_version_negotiation_cb,
+            .get_path_challenge_data2 = ngtcp2_crypto_get_path_challenge_data2_cb,
     };
     // Client and server have different callbacks for handshake completion.
     // Server uses `handshake_completed`, and after that immediately ready to process requests.
@@ -599,6 +599,8 @@ Error<Http3Error> Http3Session<T>::initialize_session(
 
     ngtcp2_settings quic_settings;
     ngtcp2_settings_default(&quic_settings);
+    // Start packet number at 1 to match Chrome's QUIC fingerprint (Chrome's first Initial packet has PKN=1)
+    quic_settings.initial_pkt_num = 1;
     quic_settings.cc_algo = to_ng_cc_algo(m_settings.congestion_control_algorithm);
     quic_settings.initial_ts = ts();
     quic_settings.initial_rtt = NGTCP2_DEFAULT_INITIAL_RTT / 2;
@@ -879,13 +881,10 @@ Error<Http3Error> Http3Session<T>::flush_impl() {
                         },
                         {buf, size_t(r)});
             }
-            if (write_stream_id != -1) {
-                continue;
-            }
-            goto loop_exit; // NOLINT(*-avoid-goto)
+            continue;
         }
 
-        if (r == NGTCP2_NO_ERROR) {
+        if (r == 0) {
             goto loop_exit; // NOLINT(*-avoid-goto)
         }
 
@@ -1416,8 +1415,22 @@ Error<Http3Error> Http3Client::flush() {
     return flush_impl();
 }
 
+void Http3Client::update_callbacks(const Callbacks &handler) {
+    m_handler = handler;
+}
+
 Nanos Http3Client::probe_timeout() const {
     return Nanos{ngtcp2_conn_get_pto(m_quic_conn.get())};
+}
+
+ngtcp2_conn_info Http3Client::get_stats() const {
+    ngtcp2_conn_info info{};
+    ngtcp2_conn_get_conn_info(m_quic_conn.get(), &info);
+    return info;
+}
+
+SSL *Http3Client::get_ssl() const {
+    return m_ssl.get();
 }
 
 } // namespace ag::http
