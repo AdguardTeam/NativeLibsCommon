@@ -20,4 +20,4 @@ jobs:
         run: |
           set -e
 
-          gh workflow list --json
+          gh workflow list -a --json path,state
