@@ -17,42 +17,49 @@ jobs:
       contents: read
       id-token: write
     secrets: inherit
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/AG-54696-add-shell-as-param
     with:
       runs-on: '["ephemeral","ephemeral-vmwin","${{ vars.BUILD_IMAGE_VERSION_WINDOWS }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
       container-image: ''
+      shell: 'powershell'
       test-command: |
-        set -e
-        set -x
+        $ErrorActionPreference = 'Stop'
 
-        conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+        & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
 
-        # Import 32-bit MSVC environment into bash.
-        # Skip variables whose names are not valid bash identifiers
-        # (e.g. ProgramFiles(x86)), since MSVC vars we actually need
-        # (INCLUDE, LIB, LIBPATH, PATH, VCToolsInstallDir, ...) are valid.
-        while IFS= read -r line; do
-          [[ -z "$line" ]] && continue
-          key="${line%%=*}"
-          value="${line#*=}"
-          [[ -z "$key" ]] && continue
-          [[ "$key" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || continue
-          export "$key=$value"
-        done < <(cmd /c "vcvarsamd64_x86 & set" | tr -d '\r')
+        # Save vcvars to switch between them
+        $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
+        $vcvars64 = cmd /c "vcvars64 & set"
+        $vcvarsarm64 = cmd /c "vcvarsamd64_arm64 & set"
+        $vcvarsarm = cmd /c "vcvarsamd64_arm & set"
+        function setvar($_) {
+          if ($_ -match "=") {
+            $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+          }
+        }
 
-        mkdir -p build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_C_COMPILER="cl.exe" \
-          -DCMAKE_CXX_COMPILER="cl.exe" \
-          -DCMAKE_C_FLAGS_DEBUG=/MT \
-          -DCMAKE_CXX_FLAGS_DEBUG=/MT \
-          -G Ninja ..
-        ninja tests
-        ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
+        # Build 32-bit and 64-bit versions
+        & {
+          $vcvars32 | foreach { setvar $_ }
+          mkdir build
+          pushd build
+          & cmake -DCMAKE_BUILD_TYPE=Debug `
+            -DCMAKE_C_COMPILER="cl.exe" `
+            -DCMAKE_CXX_COMPILER="cl.exe" `
+            -DCMAKE_C_FLAGS_DEBUG=/MT `
+            -DCMAKE_CXX_FLAGS_DEBUG=/MT `
+            -G Ninja ..
+          if (!$?) { exit 1 }
+          & ninja tests
+          if (!$?) { exit 1 }
+          & ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
+          if (!$?) { exit 1 }
+          popd
+        }
 
-        conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
-        conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
+        $ErrorActionPreference = 'Continue'
+        & conan remote login art "$env:ARTIFACTORY_USER" --password "$env:ARTIFACTORY_API_KEY"
+        & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
       results-path: 'build/junit.xml'
       artifact-name: 'test-results-windows'
 
@@ -63,7 +70,7 @@ jobs:
       contents: read
       id-token: write
     secrets: inherit
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/AG-54696-add-shell-as-param
     with:
       runs-on: '["ephemeral","ephemeral-linux","${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}","ephemeral-limit-memory-8192","ephemeral-limit-cpu-6"]'
       container-image: 'adguard/core-libs:2.10'
@@ -85,7 +92,7 @@ jobs:
         ninja tests
         ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
 
-        conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
+        conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
         conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
       results-path: 'build/junit.xml'
       artifact-name: 'test-results-linux'
@@ -97,7 +104,7 @@ jobs:
       contents: read
       id-token: write
     secrets: inherit
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/AG-54696-add-shell-as-param
     with:
       runs-on: '["ephemeral","ephemeral-mac","${{ vars.BUILD_IMAGE_VERSION_MACOS }}","ephemeral-limit-memory-8192","ephemeral-limit-cpu-4"]'
       container-image: ''
@@ -124,8 +131,7 @@ jobs:
         ninja tests
         ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
 
-        source ./venv/bin/activate
-        conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
+        conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
         conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
       results-path: 'build/junit.xml'
       artifact-name: 'test-results-macos'
