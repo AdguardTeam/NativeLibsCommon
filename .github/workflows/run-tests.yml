@@ -13,159 +13,122 @@ jobs:
   win-build:
     name: Win build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    runs-on:
-      - ephemeral
-      - ephemeral-vmwin
-      - ${{ vars.BUILD_IMAGE_VERSION_WINDOWS }}
-      - ephemeral-limit-memory-4096
-      - ephemeral-limit-cpu-4
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+    permissions:
+      contents: read
+      id-token: write
+    secrets: inherit
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
+    with:
+      runs-on: '["ephemeral","ephemeral-vmwin","${{ vars.BUILD_IMAGE_VERSION_WINDOWS }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
+      container-image: ''
+      test-command: |
+        set -e
+        set -x
 
-      - name: Build
-        run: |
-          $ErrorActionPreference = 'Stop'
+        conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
-          & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
+        # Import 32-bit MSVC environment into bash.
+        # Skip variables whose names are not valid bash identifiers
+        # (e.g. ProgramFiles(x86)), since MSVC vars we actually need
+        # (INCLUDE, LIB, LIBPATH, PATH, VCToolsInstallDir, ...) are valid.
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          key="${line%%=*}"
+          value="${line#*=}"
+          [[ -z "$key" ]] && continue
+          [[ "$key" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || continue
+          export "$key=$value"
+        done < <(cmd /c "vcvarsamd64_x86 & set" | tr -d '\r')
 
-          # Save vcvars to switch between them
-          $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
-          $vcvars64 = cmd /c "vcvars64 & set"
-          $vcvarsarm64 = cmd /c "vcvarsamd64_arm64 & set"
-          $vcvarsarm = cmd /c "vcvarsamd64_arm & set"
-          function setvar($_) {
-            if ($_ -match "=") {
-              $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
-            }
-          }
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_C_COMPILER="cl.exe" \
+          -DCMAKE_CXX_COMPILER="cl.exe" \
+          -DCMAKE_C_FLAGS_DEBUG=/MT \
+          -DCMAKE_CXX_FLAGS_DEBUG=/MT \
+          -G Ninja ..
+        ninja tests
+        ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
 
-          # Build 32-bit and 64-bit versions
-          & {
-            $vcvars32 | foreach { setvar $_ }
-            mkdir build
-            pushd build
-            & cmake -DCMAKE_BUILD_TYPE=Debug `
-              -DCMAKE_C_COMPILER="cl.exe" `
-              -DCMAKE_CXX_COMPILER="cl.exe" `
-              -DCMAKE_C_FLAGS_DEBUG=/MT `
-              -DCMAKE_CXX_FLAGS_DEBUG=/MT `
-              -G Ninja ..
-            if (!$?) { exit 1 }
-            & ninja tests
-            if (!$?) { exit 1 }
-            & ctest -D ExperimentalTest --no-compress-output
-            if (!$?) { exit 1 }
-            popd
-          }          
-        shell: powershell
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: test-results-windows
-          path: '**/Testing/*/*.xml'
-
-      - name: Upload to Conan
-        if: always()
-        run: |
-          $ErrorActionPreference = 'Continue'
-          & conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
-          & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
-        shell: powershell
+        conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
+        conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
+      results-path: 'build/junit.xml'
+      artifact-name: 'test-results-windows'
 
   linux-build:
     name: Linux build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    runs-on:
-      - ephemeral
-      - ephemeral-linux
-      - ${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}
-      - ephemeral-limit-memory-8192
-      - ephemeral-limit-cpu-6
-    container:
-      image: adguard/core-libs:2.10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+    permissions:
+      contents: read
+      id-token: write
+    secrets: inherit
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
+    with:
+      runs-on: '["ephemeral","ephemeral-linux","${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}","ephemeral-limit-memory-8192","ephemeral-limit-cpu-6"]'
+      container-image: 'adguard/core-libs:2.10'
+      test-command: |
+        set -e
+        set -x
 
-      - name: Configure and Build
-        run: |
-          python3 -m pip install conan --upgrade
-          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+        python3 -m pip install conan --upgrade
+        conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
-          mkdir -p build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-            -DSANITIZE=yes \
-            ..
-          ninja tests
-          ctest -D ExperimentalTest --no-compress-output
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+          -DSANITIZE=yes \
+          ..
+        ninja tests
+        ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: test-results-linux
-          path: '**/Testing/*/*.xml'
-
-      - name: Upload to Conan
-        if: always()
-        run: |
-          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
-          conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
+        conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
+        conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
+      results-path: 'build/junit.xml'
+      artifact-name: 'test-results-linux'
 
   mac-build:
     name: Mac build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    runs-on:
-      - ephemeral
-      - ephemeral-mac
-      - ${{ vars.BUILD_IMAGE_VERSION_MACOS }}
-      - ephemeral-limit-memory-8192
-      - ephemeral-limit-cpu-4
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+    permissions:
+      contents: read
+      id-token: write
+    secrets: inherit
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
+    with:
+      runs-on: '["ephemeral","ephemeral-mac","${{ vars.BUILD_IMAGE_VERSION_MACOS }}","ephemeral-limit-memory-8192","ephemeral-limit-cpu-4"]'
+      container-image: ''
+      test-command: |
+        set -e
+        set -x
 
-      - name: Build
-        run: |
-          rm -rf venv
-          python3 -m venv venv
-          source ./venv/bin/activate
+        rm -rf venv
+        python3 -m venv venv
+        source ./venv/bin/activate
 
-          python3 -m pip install conan
-          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+        python3 -m pip install conan
+        conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
-          ARCH=$(uname -m)
-          mkdir -p build
-          cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
-            -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-            -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
-            ..
-          ninja tests
-          ctest -D ExperimentalTest --no-compress-output
+        ARCH=$(uname -m)
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
+          -DCMAKE_C_COMPILER=clang \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+          -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
+          ..
+        ninja tests
+        ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: test-results-macos
-          path: '**/Testing/*/*.xml'
-
-      - name: Upload to Conan
-        if: always()
-        run: |
-          source ./venv/bin/activate
-          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
-          conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
+        source ./venv/bin/activate
+        conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
+        conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
+      results-path: 'build/junit.xml'
+      artifact-name: 'test-results-macos'
 
   android-build:
     name: Android build
