@@ -20,15 +20,6 @@ permissions:
 jobs:
   # 1. Read the released version from CHANGELOG.md and create the v{version} tag.
   tag:
-    if: >-
-      github.repository_owner == 'AdGuardSoftwareLimited' &&
-      (
-        github.event_name == 'workflow_dispatch' ||
-        (
-          github.event.pull_request.merged == true &&
-          startsWith(github.event.pull_request.head.ref, 'release-bump/')
-        )
-      )
     uses: AdGuardSoftwareLimited/actions/.github/workflows/tag-from-changelog.yml@master
     permissions:
       contents: write
