@@ -69,8 +69,11 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    secrets: inherit
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/AG-54696-add-shell-as-param
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/junit-tests-extra-env
+    secrets:
+      test-env: |
+        ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
+        ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
     with:
       runs-on: '["ephemeral","ephemeral-linux","${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}","ephemeral-limit-memory-8192","ephemeral-limit-cpu-6"]'
       container-image: 'adguard/core-libs:2.10'
@@ -104,7 +107,7 @@ jobs:
       contents: read
       id-token: write
     secrets: inherit
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/AG-54696-add-shell-as-param
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/junit-tests-extra-env
     with:
       runs-on: '["ephemeral","ephemeral-mac","${{ vars.BUILD_IMAGE_VERSION_MACOS }}","ephemeral-limit-memory-8192","ephemeral-limit-cpu-4"]'
       container-image: ''
