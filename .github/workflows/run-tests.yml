@@ -58,8 +58,9 @@ jobs:
           if (!$?) { exit 1 }
           popd
         }
-
+      finally-script: |
         $ErrorActionPreference = 'Continue'
+
         & conan remote login art "$env:ARTIFACTORY_USER" --password "$env:ARTIFACTORY_API_KEY"
         & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
       results-path: 'build/junit.xml'
@@ -96,6 +97,9 @@ jobs:
           ..
         ninja tests
         ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
+      finally-script: |
+        set -e
+        set -x
 
         conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
         conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
@@ -138,6 +142,9 @@ jobs:
           ..
         ninja tests
         ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
+      finally-script: |
+        set -e
+        set -x
 
         conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
         conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
