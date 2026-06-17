@@ -131,7 +131,7 @@ jobs:
     with:
       runs-on: ${{ matrix.runs-on }}
       container-image: ${{ matrix.container-image }}
-      shell: ${{ matrix.shell }}
+      shell: ${{ matrix.shell || 'bash' }}
       test-command: ${{ matrix.test-command }}
       finally-script: ${{ matrix.finally-script }}
       results-path: 'build/junit.xml'
