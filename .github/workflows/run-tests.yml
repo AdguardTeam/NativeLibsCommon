@@ -20,7 +20,7 @@ jobs:
       test-env: |
         ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
         ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/junit-tests-extra-env
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
     with:
       runs-on: '["ephemeral","ephemeral-vmwin","${{ vars.BUILD_IMAGE_VERSION_WINDOWS }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
       container-image: ''
@@ -41,7 +41,6 @@ jobs:
           }
         }
 
-        # Build 32-bit and 64-bit versions
         & {
           $vcvars32 | foreach { setvar $_ }
           mkdir build
@@ -76,7 +75,7 @@ jobs:
       test-env: |
         ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
         ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/junit-tests-extra-env
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
     with:
       runs-on: '["ephemeral","ephemeral-linux","${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}","ephemeral-limit-memory-8192","ephemeral-limit-cpu-6"]'
       container-image: 'adguard/core-libs:2.10'
@@ -113,7 +112,7 @@ jobs:
       test-env: |
         ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
         ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@feat/junit-tests-extra-env
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
     with:
       runs-on: '["ephemeral","ephemeral-mac","${{ vars.BUILD_IMAGE_VERSION_MACOS }}","ephemeral-limit-memory-8192","ephemeral-limit-cpu-4"]'
       container-image: ''
