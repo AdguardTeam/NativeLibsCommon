@@ -21,8 +21,6 @@ jobs:
     with:
       team: corelibs
       target_repo: 'git@github.com:AdguardTeam/NativeLibsCommon.git'
-      disable_workflows_target: all -release-conanfiles.yml
-      disable_workflows_source: release-conanfiles.yml
     secrets: inherit
     permissions:
       actions: write

@@ -1,0 +1,92 @@
+name: Publish release
+
+# Runs in the private repo once a release-bump PR (from prepare-release.yml) is
+# merged, or on manual dispatch. It:
+#   1. Reads the released version from CHANGELOG.md and creates the v{version}
+#      tag (tag-from-changelog.yml).
+#   2. Builds the conanfiles.tar.gz archive.
+#   3. Mirrors to the public repo and publishes the GitHub release there, with
+#      conanfiles.tar.gz attached (mirror-and-release.yml).
+#   4. Exports and uploads the Conan recipes to Artifactory.
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # 1. Read the released version from CHANGELOG.md and create the v{version} tag.
+  tag:
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/tag-from-changelog.yml@master
+    permissions:
+      contents: write
+    with:
+      team: corelibs
+      ref: ${{ github.event.pull_request.merge_commit_sha || '' }}
+
+  # 2. Build the conanfiles archive attached to the public GitHub release.
+  build-conanfiles:
+    needs: tag
+    runs-on: team-corelibs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || '' }}
+
+      - name: Build conanfiles archive
+        run: |
+          set -e -x
+
+          mkdir conanfiles_build
+          cd conanfiles_build
+
+          cp -r ../conan/profiles .
+          cp -r ../conan/settings_user.yml .
+          cp -r ../cmake/conan_provider.cmake .
+          tar czf conanfiles.tar.gz *
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: conanfiles
+          path: conanfiles_build/conanfiles.tar.gz
+
+  # 3. Mirror to the public repo and publish the release (with conanfiles.tar.gz).
+  mirror-and-release:
+    needs: [tag, build-conanfiles]
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/mirror-and-release.yml@master
+    permissions:
+      actions: write
+      contents: write
+      id-token: write
+    with:
+      team: corelibs
+      target_repo: AdguardTeam/NativeLibsCommon
+      tag: ${{ needs.tag.outputs.tag }}
+      changelog: ${{ needs.tag.outputs.changelog }}
+      artifact_name: conanfiles
+    secrets: inherit
+
+  # 4. Export and upload the Conan recipes to Artifactory.
+  upload-conan-recipes:
+    needs: tag
+    environment: conan-artifactory
+    runs-on: team-corelibs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || '' }}
+          fetch-depth: 0
+
+      - name: Upload conan recipes
+        uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/upload-conan-recipes@master
+        with:
+          export_script_path: scripts/export_conan.sh
+          conan_repo_url: ${{ vars.CONAN_REPO_URL }}
+          artifactory_user: ${{ secrets.ARTIFACTORY_USER }}
+          artifactory_api_key: ${{ secrets.ARTIFACTORY_API_KEY }}
