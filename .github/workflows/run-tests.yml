@@ -121,6 +121,7 @@ jobs:
               set -e
               set -x
 
+              source ./venv/bin/activate
               conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
               conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
     uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
