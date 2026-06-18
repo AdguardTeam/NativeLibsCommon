@@ -1,6 +1,7 @@
 #include <atomic>
 #include <cassert>
 #include <utility>
+#include <vector>
 
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -731,6 +732,16 @@ int Http3Session<T>::recv_h3_stream_data(int64_t stream_id, Uint8View chunk, boo
     nghttp3_ssize r = nghttp3_conn_read_stream(m_http_conn.get(), stream_id, chunk.data(), chunk.length(), eof);
     if (r < 0) {
         log_sid(dbg, m_id, stream_id, "Couldn't read stream: {} ({})", nghttp3_strerror(r), r);
+        // For such errors on a bidirectional request stream, reset just that stream and keep the connection alive
+        bool stream_level_error = r == NGHTTP3_ERR_H3_FRAME_UNEXPECTED || r == NGHTTP3_ERR_H3_FRAME_ERROR
+                || r == NGHTTP3_ERR_MALFORMED_HTTP_HEADER || r == NGHTTP3_ERR_MALFORMED_HTTP_MESSAGING;
+        if (stream_level_error && ngtcp2_is_bidi_stream(stream_id)) {
+            if (Error<Http3Error> error = reset_stream_impl(stream_id, nghttp3_err_infer_quic_app_error_code(int(r)));
+                    error != nullptr) {
+                log_sid(dbg, m_id, stream_id, "Couldn't reset stream after H3 error: {}", error->str());
+            }
+            return 0;
+        }
         ngtcp2_ccerr_set_application_error(&m_last_error, nghttp3_err_infer_quic_app_error_code(int(r)), nullptr, 0);
         return NGTCP2_ERR_CALLBACK_FAILURE;
     }
@@ -749,8 +760,18 @@ Error<Http3Error> Http3Session<T>::push_data(Stream &stream, Uint8View chunk, bo
         stream.data_source.buffer.reset(evbuffer_new());
     }
     stream.flags.set(Stream::HAS_EOF, eof);
-    if (0 != evbuffer_add(stream.data_source.buffer.get(), chunk.data(), chunk.size())) {
-        return make_error(Http3Error{NGTCP2_ERR_NOMEM}, "Couldn't write data in buffer");
+    if (!chunk.empty()) {
+        // nghttp3's read_data callback is no-copy: it keeps raw pointers into this buffer
+        // until the data is acknowledged, and ngtcp2 re-reads them for retransmission.
+        auto owned = std::make_unique<std::vector<uint8_t>>(chunk.data(), chunk.data() + chunk.size());
+        if (0 != evbuffer_add_reference(
+                    stream.data_source.buffer.get(), owned->data(), owned->size(), [](const void *, size_t, void *arg) {
+                        delete static_cast<std::vector<uint8_t> *>(arg);
+                    }, owned.get())) {
+            return make_error(Http3Error{NGTCP2_ERR_NOMEM}, "Couldn't write data in buffer");
+        }
+        // Ownership handed off to the evbuffer; the cleanup callback frees it on ACK/drain.
+        (void) owned.release();
     }
 
     return {};
@@ -1344,7 +1365,7 @@ Error<Http3Error> Http3Client::input(const QuicNetworkPath &path, Uint8View chun
 Result<uint64_t, Http3Error> Http3Client::submit_request(const Request &request, bool eof) {
     int64_t stream_id = 0;
     if (int status = ngtcp2_conn_open_bidi_stream(m_quic_conn.get(), &stream_id, nullptr); status != NGTCP2_NO_ERROR) {
-        return make_error(Http3Error{status}, "Couldn't open stream: {} ({})");
+        return make_error(Http3Error{status}, AG_FMT("Couldn't open stream: {} ({})", nghttp3_strerror(status), status));
     }
 
     bool head_request = request.method() == "HEAD";
@@ -1370,7 +1391,8 @@ Result<uint64_t, Http3Error> Http3Client::submit_request(const Request &request,
                 m_http_conn.get(), stream_id, nv_list.data(), nv_list.size(), eof ? nullptr : &reader, nullptr);
             status != 0) {
         m_streams.erase(stream_id);
-        return make_error(Http3Error{NGTCP2_INTERNAL_ERROR}, AG_FMT("Couldn't submit request: {} ({})", nghttp3_strerror(status), status));
+        return make_error(Http3Error{NGTCP2_ERR_INTERNAL},
+                AG_FMT("Couldn't submit request: {} ({})", nghttp3_strerror(status), status));
     }
 
     return uint64_t(stream_id);
