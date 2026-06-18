@@ -1,7 +1,7 @@
 #include <atomic>
 #include <cassert>
+#include <cstring>
 #include <utility>
-#include <vector>
 
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -763,10 +763,11 @@ Error<Http3Error> Http3Session<T>::push_data(Stream &stream, Uint8View chunk, bo
     if (!chunk.empty()) {
         // nghttp3's read_data callback is no-copy: it keeps raw pointers into this buffer
         // until the data is acknowledged, and ngtcp2 re-reads them for retransmission.
-        auto owned = std::make_unique<std::vector<uint8_t>>(chunk.data(), chunk.data() + chunk.size());
+        auto owned = std::unique_ptr<uint8_t[]>(new uint8_t[chunk.size()]);
+        std::memcpy(owned.get(), chunk.data(), chunk.size());
         if (0 != evbuffer_add_reference(
-                    stream.data_source.buffer.get(), owned->data(), owned->size(), [](const void *, size_t, void *arg) {
-                        delete static_cast<std::vector<uint8_t> *>(arg);
+                    stream.data_source.buffer.get(), owned.get(), chunk.size(), [](const void *, size_t, void *arg) {
+                        delete[] static_cast<uint8_t *>(arg);
                     }, owned.get())) {
             return make_error(Http3Error{NGTCP2_ERR_NOMEM}, "Couldn't write data in buffer");
         }
