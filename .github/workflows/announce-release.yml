@@ -1,0 +1,81 @@
+name: Announce release
+
+# Reusable workflow that announces a published release for a single downstream
+# product: it opens a tracking issue in the product's repository and posts a
+# release notice to Slack.
+#
+# It is intentionally single-target (one repo / one channel per call) so the
+# caller can drive it from a `strategy.matrix`. Because the issue and Slack jobs
+# below are not themselves matrixed, the Slack job can read the created issue's
+# URL directly from `needs.issue.outputs` -- a matrixed reusable-workflow call
+# in the caller cannot expose per-entry outputs, so the correlation has to live
+# here, one level down.
+#
+# The tracking issue is public, so it only names the version; the changelog is
+# never reproduced in it.
+
+on:
+  workflow_call:
+    inputs:
+      target_repo:
+        type: string
+        required: true
+        description: 'Repository to open the tracking issue in (owner/name)'
+      product:
+        type: string
+        required: true
+        description: 'Human-readable product name (e.g. "VPN client")'
+      version:
+        type: string
+        required: true
+        description: 'Released version without the v prefix (e.g. 1.2.3)'
+      release_url:
+        type: string
+        required: true
+        description: 'HTML URL of the GitHub Release with the changelog'
+      channel:
+        type: string
+        required: true
+        description: 'Slack channel to announce to (e.g. #build-corelibs)'
+      assignees:
+        type: string
+        required: false
+        default: ''
+        description: 'GitHub usernames to assign the issue to, comma- or whitespace-separated'
+      team:
+        type: string
+        required: true
+        description: 'Team name for the kubernetes runner and token scope (e.g. corelibs)'
+    outputs:
+      issue-url:
+        description: 'HTML URL of the created tracking issue'
+        value: ${{ jobs.issue.outputs.issue-url }}
+
+jobs:
+  # Open the tracking issue (cross-repo token minting and labelling are handled
+  # by create-gh-issue.yml).
+  issue:
+    permissions:
+      contents: read
+      id-token: write
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-gh-issue.yml@master
+    with:
+      target_repo: ${{ inputs.target_repo }}
+      title: Update ${{ inputs.product }} to ${{ inputs.version }}
+      body: A new ${{ inputs.product }} version ${{ inputs.version }} has been released. Please integrate it.
+      assignees: ${{ inputs.assignees }}
+      team: ${{ inputs.team }}
+
+  # Announce in Slack, linking the public release notes and the tracking issue.
+  slack:
+    needs: issue
+    runs-on: team-${{ inputs.team }}
+    steps:
+      - name: Post to Slack
+        uses: AdGuardSoftwareLimited/actions/actions/slack@master
+        with:
+          channel: ${{ inputs.channel }}
+          message: |
+            ${{ inputs.product }} ${{ inputs.version }} :released:
+            Changelog: <${{ inputs.release_url }}|release notes>
+            Github link: <${{ needs.issue.outputs.issue-url }}|issue>
