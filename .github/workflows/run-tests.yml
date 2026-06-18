@@ -65,7 +65,7 @@ jobs:
               & conan remote login art "$env:ARTIFACTORY_USER" --password "$env:ARTIFACTORY_API_KEY"
               & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
           - name: Linux
-            runs-on: '["ephemeral","ephemeral-linux","${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-6"]'
+            runs-on: '["ephemeral","ephemeral-linux","${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
             container-image: 'adguard/core-libs:2.10'
             artifact-name: test-results-linux
             test-command: |
@@ -145,8 +145,8 @@ jobs:
       - ephemeral
       - ephemeral-linux
       - ${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}
-      - ephemeral-limit-memory-8192
-      - ephemeral-limit-cpu-6
+      - ephemeral-limit-memory-4096
+      - ephemeral-limit-cpu-4
     container:
       image: adguard/core-libs:2.10
     steps:
