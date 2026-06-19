@@ -54,6 +54,7 @@ jobs:
         with:
           name: conanfiles
           path: conanfiles_build/conanfiles.tar.gz
+          retention-days: 7
 
   # 3. Mirror to the public repo and publish the release (with conanfiles.tar.gz).
   mirror-and-release:
