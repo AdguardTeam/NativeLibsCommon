@@ -763,7 +763,7 @@ Error<Http3Error> Http3Session<T>::push_data(Stream &stream, Uint8View chunk, bo
     if (!chunk.empty()) {
         // nghttp3's read_data callback is no-copy: it keeps raw pointers into this buffer
         // until the data is acknowledged, and ngtcp2 re-reads them for retransmission.
-        auto owned = std::unique_ptr<uint8_t[]>(new uint8_t[chunk.size()]);
+        auto owned = std::make_unique_for_overwrite<uint8_t[]>(chunk.size());
         std::memcpy(owned.get(), chunk.data(), chunk.size());
         if (0 != evbuffer_add_reference(
                     stream.data_source.buffer.get(), owned.get(), chunk.size(), [](const void *, size_t, void *arg) {
