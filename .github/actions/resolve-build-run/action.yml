@@ -1,57 +1,44 @@
-name: Prepare deploy
+name: Resolve build run
 description: >-
-  Resolve the release version from a tag and locate the successful Build run
-  whose artifacts will be deployed.
+  Resolve the successful Build run whose artifacts will be deployed for a
+  release tag.
 
 inputs:
-  ref:
-    description: 'Release tag to deploy (full ref refs/tags/vX.Y.Z or bare vX.Y.Z)'
+  tag:
+    description: 'Release tag to resolve (e.g. v1.2.3), as output by tag-from-changelog'
     required: true
   github-token:
     description: 'Token used to query refs, PRs and workflow runs'
     required: true
+  build-workflow:
+    description: 'Filename of the build workflow whose run produced the deploy artifacts'
+    required: false
+    default: 'build.yml'
 
 outputs:
-  version:
-    description: 'The release version (X.Y.Z[-(beta|rc).N]), without the leading v'
-    value: ${{ steps.prep.outputs.version }}
   build_run_id:
     description: 'ID of the successful Build run that produced the deploy artifacts'
-    value: ${{ steps.prep.outputs.build_run_id }}
+    value: ${{ steps.resolve.outputs.build_run_id }}
 
 runs:
   using: composite
   steps:
-    - name: Resolve version and locate Build run
-      id: prep
+    - name: Resolve build run
+      id: resolve
       uses: actions/github-script@v8
       env:
-        # The tag job creates the release tag; deploy resolves the version
-        # and the originating Build run from it.
-        REF: ${{ inputs.ref }}
+        TAG: ${{ inputs.tag }}
+        BUILD_WORKFLOW: ${{ inputs.build-workflow }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
           const { owner, repo } = context.repo;
+          const tag = process.env.TAG;
 
-          // The deploy is always driven by a release tag (vX.Y.Z[-channel.N]).
-          // REF may be a full ref (refs/tags/vX) or a bare tag (vX).
-          const tag = process.env.REF.replace(/^refs\/tags\//, '');
-          const version = tag.replace(/^v/, '');
-          if (!/^[0-9]+\.[0-9]+\.[0-9]+/.test(version)) {
-            core.setFailed(`Ref '${process.env.REF}' is not a release tag`);
-            return;
-          }
-          core.setOutput('version', version);
-          core.info(`Deploying version ${version} (tag ${tag})`);
-
-          // Resolve the tag to the commit it points at (deref annotated tags).
+          // tag-from-changelog creates a lightweight tag, so the ref points
+          // straight at the commit it tagged.
           const ref = await github.rest.git.getRef({ owner, repo, ref: `tags/${tag}` });
-          let sha = ref.data.object.sha;
-          if (ref.data.object.type === 'tag') {
-            const t = await github.rest.git.getTag({ owner, repo, tag_sha: sha });
-            sha = t.data.object.sha;
-          }
+          const sha = ref.data.object.sha;
 
           // The versioned artifacts come from the release PR's build, which ran
           // on the PR head commit -- not on the squashed commit the tag points
@@ -69,15 +56,16 @@ runs:
           }
 
           // Find the successful Build run that produced the deploy artifacts.
+          const workflow_id = process.env.BUILD_WORKFLOW;
           const { data } = await github.rest.actions.listWorkflowRuns({
             owner, repo,
-            workflow_id: 'build.yml',
+            workflow_id,
             head_sha: buildSha,
             status: 'success',
             per_page: 1,
           });
           if (data.workflow_runs.length === 0) {
-            core.setFailed(`No successful Build library and run tests run found for ${buildSha}`);
+            core.setFailed(`No successful ${workflow_id} run found for ${buildSha}`);
             return;
           }
           core.setOutput('build_run_id', data.workflow_runs[0].id);
