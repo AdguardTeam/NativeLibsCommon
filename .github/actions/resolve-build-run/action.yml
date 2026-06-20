@@ -12,8 +12,7 @@ inputs:
     required: true
   build-workflow:
     description: 'Filename of the build workflow whose run produced the deploy artifacts'
-    required: false
-    default: 'build.yml'
+    required: true
 
 outputs:
   build_run_id:
