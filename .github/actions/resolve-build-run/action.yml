@@ -1,0 +1,71 @@
+name: Resolve build run
+description: >-
+  Resolve the successful Build run whose artifacts will be deployed for a
+  release tag.
+
+inputs:
+  tag:
+    description: 'Release tag to resolve (e.g. v1.2.3), as output by tag-from-changelog'
+    required: true
+  github-token:
+    description: 'Token used to query refs, PRs and workflow runs'
+    required: true
+  build-workflow:
+    description: 'Filename of the build workflow whose run produced the deploy artifacts'
+    required: true
+
+outputs:
+  build_run_id:
+    description: 'ID of the successful Build run that produced the deploy artifacts'
+    value: ${{ steps.resolve.outputs.build_run_id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve build run
+      id: resolve
+      uses: actions/github-script@v8
+      env:
+        TAG: ${{ inputs.tag }}
+        BUILD_WORKFLOW: ${{ inputs.build-workflow }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const { owner, repo } = context.repo;
+          const tag = process.env.TAG;
+
+          // tag-from-changelog creates a lightweight tag, so the ref points
+          // straight at the commit it tagged.
+          const ref = await github.rest.git.getRef({ owner, repo, ref: `tags/${tag}` });
+          const sha = ref.data.object.sha;
+
+          // The versioned artifacts come from the release PR's build, which ran
+          // on the PR head commit -- not on the squashed commit the tag points
+          // at. Recover that head SHA from the PR merged into the tagged commit.
+          let buildSha = sha;
+          const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+            owner, repo, commit_sha: sha,
+          });
+          const pr = prs.find((p) => p.merged_at) || prs[0];
+          if (pr) {
+            buildSha = pr.head.sha;
+            core.info(`Tagged commit came from PR #${pr.number}; using head ${buildSha} for artifacts`);
+          } else {
+            core.info(`No PR associated with ${sha}; looking for a build on the tagged commit itself`);
+          }
+
+          // Find the successful Build run that produced the deploy artifacts.
+          const workflow_id = process.env.BUILD_WORKFLOW;
+          const { data } = await github.rest.actions.listWorkflowRuns({
+            owner, repo,
+            workflow_id,
+            head_sha: buildSha,
+            status: 'success',
+            per_page: 1,
+          });
+          if (data.workflow_runs.length === 0) {
+            core.setFailed(`No successful ${workflow_id} run found for ${buildSha}`);
+            return;
+          }
+          core.setOutput('build_run_id', data.workflow_runs[0].id);
+          core.info(`Using Build run ${data.workflow_runs[0].id}`);
