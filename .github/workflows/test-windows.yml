@@ -1,0 +1,104 @@
+name: Test Windows
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshot:
+    name: Windows screenshot
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on:
+      - ephemeral
+      - ephemeral-vmwin
+      - ${{ vars.BUILD_IMAGE_VERSION_WINDOWS }}
+      - ephemeral-limit-memory-4096
+      - ephemeral-limit-cpu-4
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Wait for graphical session
+        id: session
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Poll "query user" until an Active (graphical) session appears, up to 30 seconds.
+          $deadline = (Get-Date).AddSeconds(30)
+          $sessionId = $null
+          while ((Get-Date) -lt $deadline) {
+            $lines = & query user 2>$null
+            if ($lines) {
+              foreach ($line in ($lines | Select-Object -Skip 1)) {
+                # Columns: USERNAME SESSIONNAME ID STATE ...
+                # An Active session with a session name is a graphical (console/RDP) session.
+                if ($line -match '\s(\d+)\s+Active\b') {
+                  $sessionId = $matches[1]
+                  break
+                }
+              }
+            }
+            if ($sessionId) { break }
+            Start-Sleep -Seconds 2
+          }
+
+          if (-not $sessionId) {
+            Write-Error "No active graphical session found within 30 seconds."
+            & query user 2>&1 | Write-Host
+            exit 1
+          }
+
+          Write-Host "Found graphical session id: $sessionId"
+          "session-id=$sessionId" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Download PsExec
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-WebRequest -Uri "https://download.sysinternals.com/files/PSTools.zip" -OutFile "$env:RUNNER_TEMP\PSTools.zip"
+          Expand-Archive -Path "$env:RUNNER_TEMP\PSTools.zip" -DestinationPath "$env:RUNNER_TEMP\PSTools" -Force
+
+      - name: Take screenshot
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $shotDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          New-Item -ItemType Directory -Force -Path $shotDir | Out-Null
+          $shotPath = Join-Path $shotDir 'screenshot.png'
+
+          # Screenshot script runs inside the graphical session via PsExec.
+          $screenshotScript = @"
+          Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+          `$bounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
+          `$bmp = New-Object System.Drawing.Bitmap(`$bounds.Width, `$bounds.Height)
+          `$gfx = [System.Drawing.Graphics]::FromImage(`$bmp)
+          `$gfx.CopyFromScreen(`$bounds.Location, [System.Drawing.Point]::Empty, `$bounds.Size)
+          `$bmp.Save('$shotPath', [System.Drawing.Imaging.ImageFormat]::Png)
+          `$gfx.Dispose()
+          `$bmp.Dispose()
+          "@
+          $scriptPath = Join-Path $env:RUNNER_TEMP 'take-screenshot.ps1'
+          Set-Content -Path $scriptPath -Value $screenshotScript -Encoding utf8
+
+          $psexec = Join-Path $env:RUNNER_TEMP 'PSTools\PsExec64.exe'
+          & $psexec -accepteula -nobanner -i ${{ steps.session.outputs.session-id }} -s `
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File $scriptPath
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "PsExec failed with exit code $LASTEXITCODE"
+            exit 1
+          }
+
+          if (-not (Test-Path $shotPath)) {
+            Write-Error "Screenshot was not created at $shotPath"
+            exit 1
+          }
+          Write-Host "Screenshot saved to $shotPath"
+
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-screenshot
+          path: artifacts/screenshot.png
+          if-no-files-found: error
