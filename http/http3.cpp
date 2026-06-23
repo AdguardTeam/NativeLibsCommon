@@ -732,18 +732,7 @@ int Http3Session<T>::recv_h3_stream_data(int64_t stream_id, Uint8View chunk, boo
     nghttp3_ssize r = nghttp3_conn_read_stream(m_http_conn.get(), stream_id, chunk.data(), chunk.length(), eof);
     if (r < 0) {
         log_sid(dbg, m_id, stream_id, "Couldn't read stream: {} ({})", nghttp3_strerror(r), r);
-        // For such errors on a bidirectional request stream, reset just that stream and keep the connection alive
-        bool stream_level_error = r == NGHTTP3_ERR_H3_FRAME_UNEXPECTED || r == NGHTTP3_ERR_H3_FRAME_ERROR
-                || r == NGHTTP3_ERR_MALFORMED_HTTP_HEADER || r == NGHTTP3_ERR_MALFORMED_HTTP_MESSAGING;
-        if (stream_level_error && ngtcp2_is_bidi_stream(stream_id)) {
-            if (Error<Http3Error> error = reset_stream_impl(stream_id, nghttp3_err_infer_quic_app_error_code(int(r)));
-                    error != nullptr) {
-                log_sid(dbg, m_id, stream_id, "Couldn't reset stream after H3 error: {}", error->str());
-            }
-            return 0;
-        }
-        ngtcp2_ccerr_set_application_error(&m_last_error, nghttp3_err_infer_quic_app_error_code(int(r)), nullptr, 0);
-        return NGTCP2_ERR_CALLBACK_FAILURE;
+        return 0;
     }
 
     if (Error<Http3Error> error = consume_stream_impl(stream_id, r); error != nullptr) {
