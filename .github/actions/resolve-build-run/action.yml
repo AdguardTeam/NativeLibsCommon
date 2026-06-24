@@ -34,10 +34,16 @@ runs:
           const { owner, repo } = context.repo;
           const tag = process.env.TAG;
 
-          // tag-from-changelog creates a lightweight tag, so the ref points
-          // straight at the commit it tagged.
+          // Resolve the tag to the commit it points at. A lightweight tag's ref
+          // points straight at the commit, but an annotated tag's ref points at
+          // the tag object instead -- dereference it so we hand a real commit SHA
+          // to the PR/commit APIs below (otherwise they 422 with "No commit found").
           const ref = await github.rest.git.getRef({ owner, repo, ref: `tags/${tag}` });
-          const sha = ref.data.object.sha;
+          let sha = ref.data.object.sha;
+          if (ref.data.object.type === 'tag') {
+            const tagObj = await github.rest.git.getTag({ owner, repo, tag_sha: sha });
+            sha = tagObj.data.object.sha;
+          }
 
           // The versioned artifacts come from the release PR's build, which ran
           // on the PR head commit -- not on the squashed commit the tag points
