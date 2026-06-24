@@ -1,0 +1,26 @@
+name: Test download AAR
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  download-aar:
+    name: Download trusttunnel-client AAR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download AAR from GitHub Packages
+        run: |
+          set -e
+          URL="https://maven.pkg.github.com/TrustTunnel/TrustTunnelClient/com/adguard/trusttunnel/1.1.5-beta.4/trusttunnel-client-android-1.1.5-beta.4.aar"
+          curl -fL \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -o trusttunnel-client-android-1.1.5-beta.4.aar \
+            "$URL"
+          ls -l trusttunnel-client-android-1.1.5-beta.4.aar
+
+      - name: Upload AAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: trusttunnel-client-android-1.1.5-beta.4
+          path: trusttunnel-client-android-1.1.5-beta.4.aar
