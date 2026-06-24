@@ -12,8 +12,10 @@ jobs:
       - name: Download AAR from GitHub Packages
         run: |
           set -e
-          URL="https://maven.pkg.github.com/TrustTunnel/TrustTunnelClient/com/adguard/trusttunnel/1.1.5-beta.4/trusttunnel-client-android-1.1.5-beta.4.aar"
-          curl -fL \
+          # Standard Maven layout: <groupId-path>/<artifactId>/<version>/<file>
+          URL="https://maven.pkg.github.com/TrustTunnel/TrustTunnelClient/com/adguard/trusttunnel/trusttunnel-client-android/1.1.5-beta.4/trusttunnel-client-android-1.1.5-beta.4.aar"
+          echo "Downloading $URL"
+          curl -fL --retry 3 \
             -H "Authorization: Bearer ${{ github.token }}" \
             -o trusttunnel-client-android-1.1.5-beta.4.aar \
             "$URL"
