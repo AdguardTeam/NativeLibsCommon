@@ -74,11 +74,11 @@ bool ag::RotatingLogToFile::rotate_files() {
 }
 
 void ag::RotatingLogToFile::log_to_ofstream(std::string_view formatted_message) {
-    m_file_handle.write(formatted_message.data(), formatted_message.size());
+    m_file_handle.write(formatted_message.data(), std::streamsize(formatted_message.size()));
     m_file_handle.flush();
 
     if (m_file_handle.fail()) {
-        std::clog.write(formatted_message.data(), formatted_message.size());
+        std::clog.write(formatted_message.data(), std::streamsize(formatted_message.size()));
         std::clog.flush();
     }
 }

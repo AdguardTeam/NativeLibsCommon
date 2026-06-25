@@ -64,12 +64,12 @@ std::string utf8_to_cesu8(std::string_view utf8) {
                 utf_chars_remaining--;
                 if (utf_chars_remaining == 0) {
                     if (current_uchar <= 0x7ff) {
-                        modified_utf.push_back(0xc0 + ((current_uchar >> 6) & 0x1f));
-                        modified_utf.push_back(0x80 + (current_uchar & 0x3f));
+                        modified_utf.push_back((char) (0xc0 + ((current_uchar >> 6) & 0x1f)));
+                        modified_utf.push_back((char) (0x80 + (current_uchar & 0x3f)));
                     } else if (current_uchar <= 0xffff) {
-                        modified_utf.push_back(0xe0 + ((current_uchar >> 12) & 0x0f));
-                        modified_utf.push_back(0x80 + ((current_uchar >> 6) & 0x3f));
-                        modified_utf.push_back(0x80 + (current_uchar & 0x3f));
+                        modified_utf.push_back((char) (0xe0 + ((current_uchar >> 12) & 0x0f)));
+                        modified_utf.push_back((char) (0x80 + ((current_uchar >> 6) & 0x3f)));
+                        modified_utf.push_back((char) (0x80 + (current_uchar & 0x3f)));
                     } else {
                         // (current_uchar <= 0x10ffff) is always true
                         // Split into CESU-8 surrogate pair
@@ -77,21 +77,21 @@ std::string utf8_to_cesu8(std::string_view utf8) {
                         // 11101101 1010yyyy 10xxxxxx 11101101 1011xxxx 10xxxxxx
                         // yyyy - top five bits minus one
 
-                        modified_utf.push_back(0xed);
-                        modified_utf.push_back(0xa0 + (((current_uchar >> 16) - 1) & 0x0f));
-                        modified_utf.push_back(0x80 + ((current_uchar >> 10) & 0x3f));
+                        modified_utf.push_back((char) 0xed);
+                        modified_utf.push_back((char) (0xa0 + (((current_uchar >> 16) - 1) & 0x0f)));
+                        modified_utf.push_back((char) (0x80 + ((current_uchar >> 10) & 0x3f)));
 
-                        modified_utf.push_back(0xed);
-                        modified_utf.push_back(0xb0 + ((current_uchar >> 6) & 0x0f));
-                        modified_utf.push_back(0x80 + ((current_uchar >> 0) & 0x3f));
+                        modified_utf.push_back((char) 0xed);
+                        modified_utf.push_back((char) (0xb0 + ((current_uchar >> 6) & 0x0f)));
+                        modified_utf.push_back((char) (0x80 + ((current_uchar >> 0) & 0x3f)));
                     }
                 }
                 continue;
             } else {
                 // replacement char
-                modified_utf.push_back(0xef);
-                modified_utf.push_back(0xbf);
-                modified_utf.push_back(0xbd);
+                modified_utf.push_back((char) 0xef);
+                modified_utf.push_back((char) 0xbf);
+                modified_utf.push_back((char) 0xbd);
                 utf_chars_remaining = 0;
             }
         }
@@ -109,9 +109,9 @@ std::string utf8_to_cesu8(std::string_view utf8) {
             utf_chars_remaining = 3;
         } else {
             // replacement char
-            modified_utf.push_back(0xef);
-            modified_utf.push_back(0xbf);
-            modified_utf.push_back(0xbd);
+            modified_utf.push_back((char) 0xef);
+            modified_utf.push_back((char) 0xbf);
+            modified_utf.push_back((char) 0xbd);
             utf_chars_remaining = 0;
         }
     }

@@ -308,7 +308,7 @@ static void on_expiry_update(void *arg, ag::Nanos period) {
     auto *self = (Session *) arg;
     timeval tv{};
     tv.tv_sec = std::chrono::duration_cast<ag::Secs>(period).count();
-    tv.tv_usec = std::chrono::duration_cast<ag::Micros>(period).count() % 1000000;
+    tv.tv_usec = (decltype(tv.tv_usec)) (std::chrono::duration_cast<ag::Micros>(period).count() % 1000000);
     event_add(self->expiry_timer.get(), &tv);
 }
 

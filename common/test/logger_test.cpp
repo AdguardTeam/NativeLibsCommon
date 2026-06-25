@@ -5,9 +5,9 @@
 
 class FileHandler {
 public:
-    FileHandler(std::string_view filename)
-            : m_filename(filename) {
-        m_file = std::fopen(filename.data(), "w");
+    explicit FileHandler(std::string_view filename)
+            : m_filename(filename)
+            , m_file(std::fopen(filename.data(), "w")) {
     }
     ~FileHandler() {
         std::fclose(m_file);
