@@ -4,8 +4,8 @@
  * This header converts every GTEST in compilation unit into co-routine.
  */
 
-#include <gtest/gtest.h>
 #include "common/coro.h"
+#include <gtest/gtest.h>
 
 #undef GTEST_TEST_
 #define GTEST_TEST_(test_suite_name, test_name, parent_class, parent_id)                                               \
@@ -41,39 +41,37 @@
     ag::coro::Task<void> GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::CoTestBody() noexcept
 
 #undef TEST_P
-#define TEST_P(test_suite_name, test_name)                                     \
-  class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                     \
-      : public test_suite_name {                                               \
-   public:                                                                     \
-    GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)() {}                    \
-    void TestBody() override { ag::coro::to_future(CoTestBody()).get(); }      \
-    virtual ag::coro::Task<void> CoTestBody() noexcept;                        \
-                                                                               \
-   private:                                                                    \
-    static int AddToRegistry() {                                               \
-      ::testing::UnitTest::GetInstance()                                       \
-          ->parameterized_test_registry()                                      \
-          .GetTestSuitePatternHolder<test_suite_name>(                         \
-              GTEST_STRINGIFY_(test_suite_name),                               \
-              ::testing::internal::CodeLocation(__FILE__, __LINE__))           \
-          ->AddTestPattern(                                                    \
-              GTEST_STRINGIFY_(test_suite_name), GTEST_STRINGIFY_(test_name),  \
-              new ::testing::internal::TestMetaFactory<GTEST_TEST_CLASS_NAME_( \
-                  test_suite_name, test_name)>(),                              \
-              ::testing::internal::CodeLocation(__FILE__, __LINE__));          \
-      return 0;                                                                \
-    }                                                                          \
-    static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_;               \
-  };                                                                           \
-  int GTEST_TEST_CLASS_NAME_(test_suite_name,                                  \
-                             test_name)::gtest_registering_dummy_ =            \
-      GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::AddToRegistry();     \
-  ag::coro::Task<void> GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::CoTestBody() noexcept
+#define TEST_P(test_suite_name, test_name)                                                                             \
+    class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                                                           \
+            : public test_suite_name {                                                                                 \
+    public:                                                                                                            \
+        GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)() {                                                         \
+        }                                                                                                              \
+        void TestBody() override {                                                                                     \
+            ag::coro::to_future(CoTestBody()).get();                                                                   \
+        }                                                                                                              \
+        virtual ag::coro::Task<void> CoTestBody() noexcept;                                                            \
+                                                                                                                       \
+    private:                                                                                                           \
+        static int AddToRegistry() {                                                                                   \
+            ::testing::UnitTest::GetInstance()                                                                         \
+                    ->parameterized_test_registry()                                                                    \
+                    .GetTestSuitePatternHolder<test_suite_name>(                                                       \
+                            GTEST_STRINGIFY_(test_suite_name), ::testing::internal::CodeLocation(__FILE__, __LINE__))  \
+                    ->AddTestPattern(GTEST_STRINGIFY_(test_suite_name), GTEST_STRINGIFY_(test_name),                   \
+                            new ::testing::internal::TestMetaFactory<GTEST_TEST_CLASS_NAME_(                           \
+                                    test_suite_name, test_name)>(),                                                    \
+                            ::testing::internal::CodeLocation(__FILE__, __LINE__));                                    \
+            return 0;                                                                                                  \
+        }                                                                                                              \
+        static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_;                                                   \
+    };                                                                                                                 \
+    int GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::gtest_registering_dummy_ =                                 \
+            GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::AddToRegistry();                                       \
+    ag::coro::Task<void> GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::CoTestBody() noexcept
 
 #undef GTEST_FATAL_FAILURE_
-#define GTEST_FATAL_FAILURE_(message) \
-  co_return GTEST_MESSAGE_(message, ::testing::TestPartResult::kFatalFailure)
+#define GTEST_FATAL_FAILURE_(message) co_return GTEST_MESSAGE_(message, ::testing::TestPartResult::kFatalFailure)
 
 #undef GTEST_SKIP_
-#define GTEST_SKIP_(message) \
-  co_return GTEST_MESSAGE_(message, ::testing::TestPartResult::kSkip)
+#define GTEST_SKIP_(message) co_return GTEST_MESSAGE_(message, ::testing::TestPartResult::kSkip)

@@ -2,8 +2,8 @@
 
 #include "common/cesu8.h"
 #include "common/socket_address.h"
-#include "common/utils.h"
 #include "common/url.h"
+#include "common/utils.h"
 
 #include <span>
 #include <vector>
@@ -330,13 +330,11 @@ TEST(Utils, WordWrap) {
             " mandatory: if you block them, you may be violating their terms. AdGuard is not responsible for your"
             " compliance with the terms of use of websites you visit using our products. Enable this filter?";
     result = ag::word_wrap(input, 40);
-    expected = {
-            "You are about to enable one or more", "annoyance filters. They block elements",
+    expected = {"You are about to enable one or more", "annoyance filters. They block elements",
             "that are either unrelated to website", "content or related but annoying and",
             "disruptive. Website owners may consider", "these elements mandatory: if you block",
             "them, you may be violating their terms.", "AdGuard is not responsible for your",
-            "compliance with the terms of use of", "websites you visit using our products.", "Enable this filter?"
-    };
+            "compliance with the terms of use of", "websites you visit using our products.", "Enable this filter?"};
     ASSERT_EQ(result, expected);
 }
 
@@ -369,17 +367,17 @@ TEST(Utils, WordWrapQuestions) {
     std::string question = "Do you want to continue? (yes/no): ";
     ASSERT_EQ(question.length(), 35);
 
-    //33 char terminal width, 35 char string ending with space
+    // 33 char terminal width, 35 char string ending with space
     auto result = ag::word_wrap(question, 33);
     decltype(result) expected = {"Do you want to continue?", "(yes/no): "};
     ASSERT_EQ(result, expected);
 
-    //34 char terminal width, 35 char string ending with space
+    // 34 char terminal width, 35 char string ending with space
     result = ag::word_wrap(question, 34);
     expected = {"Do you want to continue? (yes/no):"};
     ASSERT_EQ(result, expected);
 
-    //35 char terminal width, 35 char string ending with space
+    // 35 char terminal width, 35 char string ending with space
     result = ag::word_wrap(question, 35);
     ASSERT_EQ(result[0], question);
 }

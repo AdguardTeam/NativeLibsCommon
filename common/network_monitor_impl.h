@@ -20,11 +20,13 @@ namespace ag::utils {
  * then lower metric is preferred.
  */
 struct RouteEntry {
-    CidrRange prefix;           ///< Destination network prefix
-    uint32_t if_index = 0;      ///< Output interface index
-    uint32_t metric = 0;        ///< Route metric (priority, lower is better)
+    CidrRange prefix;      ///< Destination network prefix
+    uint32_t if_index = 0; ///< Output interface index
+    uint32_t metric = 0;   ///< Route metric (priority, lower is better)
 
-    explicit RouteEntry(CidrRange p) : prefix(std::move(p)) {}
+    explicit RouteEntry(CidrRange p)
+            : prefix(std::move(p)) {
+    }
 
     bool operator<(const RouteEntry &other) const {
         if (prefix.get_prefix_len() != other.prefix.get_prefix_len()) {
@@ -54,8 +56,12 @@ public:
     [[nodiscard]] std::string get_default_if_name() const;
     bool has_default_changed_and_reset();
 
-    [[nodiscard]] const std::vector<RouteEntry> &get_routes_v4() const { return m_routes_v4; }
-    [[nodiscard]] const std::vector<RouteEntry> &get_routes_v6() const { return m_routes_v6; }
+    [[nodiscard]] const std::vector<RouteEntry> &get_routes_v4() const {
+        return m_routes_v4;
+    }
+    [[nodiscard]] const std::vector<RouteEntry> &get_routes_v6() const {
+        return m_routes_v6;
+    }
 
     /**
      * Enable or disable automatic filtering of TUN interfaces (ARPHRD_NONE).
@@ -67,7 +73,7 @@ public:
      * Routes through this interface will not be selected as default.
      * @param name Interface name (e.g., "tun0")
      */
-    void add_ignored_interface(const std::string& name);
+    void add_ignored_interface(const std::string &name);
     /**
      * Clear the list of ignored interfaces.
      */
@@ -89,7 +95,9 @@ public:
      * Set query socket fd directly (for testing with mock sockets).
      * Caller retains ownership of the fd.
      */
-    void set_query_fd(int fd) { m_query_fd = fd; }
+    void set_query_fd(int fd) {
+        m_query_fd = fd;
+    }
 
 private:
     std::vector<RouteEntry> m_routes_v4;
@@ -104,11 +112,11 @@ private:
 
     void sort_and_update_cache();
     static std::optional<RouteEntry> parse_route_msg(const nlmsghdr *nlh);
-    std::optional<uint32_t> find_default_route(const std::vector<RouteEntry>& routes) const;
+    std::optional<uint32_t> find_default_route(const std::vector<RouteEntry> &routes) const;
     [[nodiscard]] bool is_interface_ignored(uint32_t if_index) const;
 
-    std::vector<RouteEntry>& get_routes_by_addr_size(size_t addr_size);
-    const std::vector<RouteEntry>& get_routes_by_addr_size(size_t addr_size) const;
+    std::vector<RouteEntry> &get_routes_by_addr_size(size_t addr_size);
+    const std::vector<RouteEntry> &get_routes_by_addr_size(size_t addr_size) const;
 };
 #endif
 
@@ -151,6 +159,7 @@ public:
     [[nodiscard]] bool is_running() const override;
 
     ~NetworkMonitorImpl() override;
+
 protected:
     const Logger m_logger{"NETWORK_MONITORING"};
 

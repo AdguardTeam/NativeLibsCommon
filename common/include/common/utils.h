@@ -40,24 +40,25 @@
  *              static_assert(has_f<SomeType>, "Failed: SomeType::f does not exists");
  *          }
  */
-#define AG_UTILS_DECLARE_CHECK_EXPRESSION(TRAITS_NAME, ...) \
-namespace detail { \
-template<typename TypeToCheck> \
-struct TRAITS_NAME ## _impl { \
-private: \
-    template<typename T> \
-    static auto test(void*) -> decltype(static_cast<void>(__VA_ARGS__), std::true_type{}); \
-    template<typename> \
-    static std::false_type test(...); \
-public: \
-    /* TODO use std::is_detected since C++20 */ \
-    static constexpr auto value = decltype(test<TypeToCheck>(nullptr)){}; \
-}; \
-} \
-template<typename T> \
-struct TRAITS_NAME ## _type : std::bool_constant<detail::TRAITS_NAME ## _impl<T>::value> {}; \
-template<typename T> \
-inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T>::value;
+#define AG_UTILS_DECLARE_CHECK_EXPRESSION(TRAITS_NAME, ...)                                                            \
+    namespace detail {                                                                                                 \
+    template <typename TypeToCheck>                                                                                    \
+    struct TRAITS_NAME##_impl {                                                                                        \
+    private:                                                                                                           \
+        template <typename T>                                                                                          \
+        static auto test(void *) -> decltype(static_cast<void>(__VA_ARGS__), std::true_type{});                        \
+        template <typename>                                                                                            \
+        static std::false_type test(...);                                                                              \
+                                                                                                                       \
+    public:                                                                                                            \
+        /* TODO use std::is_detected since C++20 */                                                                    \
+        static constexpr auto value = decltype(test<TypeToCheck>(nullptr)){};                                          \
+    };                                                                                                                 \
+    }                                                                                                                  \
+    template <typename T>                                                                                              \
+    struct TRAITS_NAME##_type : std::bool_constant<detail::TRAITS_NAME##_impl<T>::value> {};                           \
+    template <typename T>                                                                                              \
+    inline constexpr bool TRAITS_NAME = TRAITS_NAME##_type<T>::value;
 
 /**
  * Macros to create constexpr value and type to check expression depended from number of parameters
@@ -69,24 +70,25 @@ inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T>::value;
  *              static_assert(can_init<SomeType, 2>, "Failed: Can't init with 2 params SomeType(arg1, arg2)");
  *          }
  */
-#define AG_UTILS_DECLARE_CHECK_EXPRESSION_WITH_N(TRAITS_NAME, ...) \
-namespace detail { \
-template<typename TypeToCheck, size_t N> \
-struct TRAITS_NAME ## _impl { \
-private: \
-    template<typename T, size_t... Is> \
-    static auto test(void*, std::integer_sequence<size_t, Is...>) -> \
-            decltype(static_cast<void>(__VA_ARGS__), std::true_type{}); \
-    template<typename> \
-    static std::false_type test(...); \
-public: \
-    static constexpr auto value = decltype(test<TypeToCheck>(nullptr, std::make_index_sequence<N>())){}; \
-}; \
-} \
-template<typename T, size_t N> \
-struct TRAITS_NAME ## _type : std::bool_constant<detail:: TRAITS_NAME ## _impl<T, N>::value> {}; \
-template<typename T, size_t N> \
-inline constexpr bool TRAITS_NAME = TRAITS_NAME ## _type<T, N>::value;
+#define AG_UTILS_DECLARE_CHECK_EXPRESSION_WITH_N(TRAITS_NAME, ...)                                                     \
+    namespace detail {                                                                                                 \
+    template <typename TypeToCheck, size_t N>                                                                          \
+    struct TRAITS_NAME##_impl {                                                                                        \
+    private:                                                                                                           \
+        template <typename T, size_t... Is>                                                                            \
+        static auto test(void *, std::integer_sequence<size_t, Is...>)                                                 \
+                -> decltype(static_cast<void>(__VA_ARGS__), std::true_type{});                                         \
+        template <typename>                                                                                            \
+        static std::false_type test(...);                                                                              \
+                                                                                                                       \
+    public:                                                                                                            \
+        static constexpr auto value = decltype(test<TypeToCheck>(nullptr, std::make_index_sequence<N>())){};           \
+    };                                                                                                                 \
+    }                                                                                                                  \
+    template <typename T, size_t N>                                                                                    \
+    struct TRAITS_NAME##_type : std::bool_constant<detail::TRAITS_NAME##_impl<T, N>::value> {};                        \
+    template <typename T, size_t N>                                                                                    \
+    inline constexpr bool TRAITS_NAME = TRAITS_NAME##_type<T, N>::value;
 
 /**
  * Macros for fmt::format with compile-time checked FMT_STRING
@@ -104,7 +106,7 @@ std::string generate_uuid();
 /**
  * Check if the `rhs` is a subset of the `lhs`
  */
-template<size_t N>
+template <size_t N>
 bool bitwise_includes(std::bitset<N> lhs, std::bitset<N> rhs) {
     return (lhs & rhs) == rhs;
 }
@@ -112,7 +114,7 @@ bool bitwise_includes(std::bitset<N> lhs, std::bitset<N> rhs) {
 /**
  * Just like `std::remove_if()`, but swaps elements to the tail instead of moving them
  */
-template<typename Iterator, typename Predicate>
+template <typename Iterator, typename Predicate>
 Iterator swap_remove_if(Iterator begin, Iterator end, Predicate p) {
     begin = std::find_if(begin, end, p);
     if (begin != end) {
@@ -140,7 +142,7 @@ static inline std::string to_upper(std::string_view str) {
 static inline std::string to_lower(std::string_view str) {
     std::string lwr;
     lwr.reserve(str.length());
-    std::transform(str.cbegin(), str.cend(), std::back_inserter(lwr), (int (*)(int))std::tolower);
+    std::transform(str.cbegin(), str.cend(), std::back_inserter(lwr), (int (*)(int)) std::tolower);
     return lwr;
 }
 
@@ -149,7 +151,7 @@ static inline std::string to_lower(std::string_view str) {
  * @param str String view
  */
 static inline std::string_view ltrim(std::string_view str) {
-    auto pos1 = std::find_if(str.begin(), str.end(), std::not_fn((int(*)(int))std::isspace));
+    auto pos1 = std::find_if(str.begin(), str.end(), std::not_fn((int (*)(int)) std::isspace));
     str.remove_prefix(std::distance(str.begin(), pos1));
     return str;
 }
@@ -159,7 +161,7 @@ static inline std::string_view ltrim(std::string_view str) {
  * @param str String view
  */
 static inline std::string_view rtrim(std::string_view str) {
-    auto pos2 = std::find_if(str.rbegin(), str.rend(), std::not_fn((int(*)(int))std::isspace));
+    auto pos2 = std::find_if(str.rbegin(), str.rend(), std::not_fn((int (*)(int)) std::isspace));
     str.remove_suffix(std::distance(str.rbegin(), pos2));
     return str;
 }
@@ -195,7 +197,7 @@ static inline constexpr std::string_view::size_type ifind(std::string_view hayst
 
     auto c = std::tolower(needle.front());
     size_t pos = 0;
-    do { // NOLINT(*-avoid-do-while)
+    do {     // NOLINT(*-avoid-do-while)
         do { // NOLINT(*-avoid-do-while)
             if (haystack.length() <= pos || haystack.length() - pos < needle.length()) {
                 return std::string_view::npos;
@@ -210,16 +212,14 @@ static inline constexpr std::string_view::size_type ifind(std::string_view hayst
  * Check if string starts with prefix
  */
 static inline constexpr bool starts_with(std::string_view str, std::string_view prefix) {
-    return str.length() >= prefix.length()
-            && 0 == str.compare(0, prefix.length(), prefix);
+    return str.length() >= prefix.length() && 0 == str.compare(0, prefix.length(), prefix);
 }
 
 /**
  * Check if string ends with suffix
  */
 static inline constexpr bool ends_with(std::string_view str, std::string_view suffix) {
-    return str.length() >= suffix.length()
-            && 0 == str.compare(str.length() - suffix.length(), suffix.length(), suffix);
+    return str.length() >= suffix.length() && 0 == str.compare(str.length() - suffix.length(), suffix.length(), suffix);
 }
 
 /**
@@ -240,13 +240,16 @@ static inline constexpr bool iends_with(std::string_view str, std::string_view s
 /**
  * Split string by delimiter
  */
-std::vector<std::string_view> split_by(std::string_view str, int delim, bool include_empty = false, bool need_trim = true);
-std::vector<std::string_view> split_by(std::string_view str, std::string_view delim, bool include_empty = false, bool need_trim = true);
+std::vector<std::string_view> split_by(
+        std::string_view str, int delim, bool include_empty = false, bool need_trim = true);
+std::vector<std::string_view> split_by(
+        std::string_view str, std::string_view delim, bool include_empty = false, bool need_trim = true);
 
 /**
  * Split string by any character in delimiters
  */
-std::vector<std::string_view> split_by_any_of(std::string_view str, std::string_view delim, bool include_empty = false, bool need_trim = true);
+std::vector<std::string_view> split_by_any_of(
+        std::string_view str, std::string_view delim, bool include_empty = false, bool need_trim = true);
 
 /**
  * Split string by first found delimiter for 2 parts
@@ -270,7 +273,7 @@ std::array<std::string_view, 2> split2_by_any_of(std::string_view str, std::stri
  * @param need_trim Whether need to trim whitespaces
  * @return List of strings
  */
-template<class Predicate>
+template <class Predicate>
 std::vector<std::string_view> split_if(std::string_view str, Predicate p, bool need_trim = true) {
     std::vector<std::string_view> strings;
     while (!str.empty()) {
@@ -283,7 +286,7 @@ std::vector<std::string_view> split_if(std::string_view str, Predicate p, bool n
         if (!part.empty()) {
             strings.push_back(part);
         }
-        str.remove_prefix((std::min)(pos + 1, str.length()));
+        str.remove_prefix((std::min) (pos + 1, str.length()));
     }
     return strings;
 }
@@ -299,7 +302,7 @@ AG_UTILS_DECLARE_CHECK_EXPRESSION(has_reserve, std::declval<T>().reserve(std::de
  * Concatenate parts into a single container with result type R
  * @tparam R Result container type (required)
  */
-template<typename R, typename T>
+template <typename R, typename T>
 static inline R concat(const T &parts) {
     R result;
     if constexpr (has_reserve<R>) {
@@ -317,18 +320,18 @@ static inline R concat(const T &parts) {
 
 namespace detail {
 
-template<typename T>
+template <typename T>
 using IteratorFromBegin = decltype(std::begin(std::declval<T>()));
 
-template<typename T>
+template <typename T>
 using ValueTypeFromBegin = typename std::iterator_traits<IteratorFromBegin<T>>::value_type;
 
-template<typename T, typename U>
+template <typename T, typename U>
 using IsSameValueType = std::is_same<ValueTypeFromBegin<T>, U>;
 
-template<typename T>
-inline constexpr bool is_string_or_string_view = std::disjunction_v<IsSameValueType<T, std::string>,
-                                                                    IsSameValueType<T, std::string_view>>;
+template <typename T>
+inline constexpr bool is_string_or_string_view =
+        std::disjunction_v<IsSameValueType<T, std::string>, IsSameValueType<T, std::string_view>>;
 
 } // namespace detail
 
@@ -336,10 +339,9 @@ inline constexpr bool is_string_or_string_view = std::disjunction_v<IsSameValueT
  * Concatenate parts into a single std::string
  * @param parts Container or C array with std::string or std::string_view
  */
-template<typename T>
-static inline std::enable_if_t<detail::is_string_or_string_view<T>, std::string> concat(const T &parts)
-{
-    return (concat<std::string>)(parts);
+template <typename T>
+static inline std::enable_if_t<detail::is_string_or_string_view<T>, std::string> concat(const T &parts) {
+    return (concat<std::string>) (parts);
 }
 
 /**
@@ -348,13 +350,13 @@ static inline std::enable_if_t<detail::is_string_or_string_view<T>, std::string>
  * @param parts Comma-separated containers or C arrays (possibly with different types)
  * @return Container with type R with copy of data from parts
  */
-template<typename R, typename... Ts>
-static inline std::enable_if_t<sizeof...(Ts) >= 2, R> concat(const Ts&... parts) {
+template <typename R, typename... Ts>
+static inline std::enable_if_t<sizeof...(Ts) >= 2, R> concat(const Ts &...parts) {
     R result;
     if constexpr (has_reserve<R>) {
         result.reserve((... + std::size(parts)));
     }
-    (... , static_cast<void>(result.insert(std::cend(result), std::cbegin(parts), std::cend(parts))));
+    (..., static_cast<void>(result.insert(std::cend(result), std::cbegin(parts), std::cend(parts))));
     return result;
 }
 
@@ -365,7 +367,7 @@ static inline std::enable_if_t<sizeof...(Ts) >= 2, R> concat(const Ts&... parts)
  * @param delimiter String to separate parts
  * @return Joined string
  */
-template<typename Iterator>
+template <typename Iterator>
 std::string join(Iterator begin, Iterator end, std::string_view delimiter) {
     std::string result;
     if (begin != end) {
@@ -396,7 +398,7 @@ static inline uint32_t hash(std::string_view str) {
     // DJB2 with XOR (Daniel J. Bernstein)
     uint32_t hash = 5381;
     for (size_t i = 0; i < str.length(); ++i) {
-        hash = (hash * 33) ^ (uint32_t)str[i];
+        hash = (hash * 33) ^ (uint32_t) str[i];
     }
     return hash;
 }
@@ -429,7 +431,7 @@ template <typename Int, std::enable_if_t<std::is_integral_v<Int>, int> = 0>
 constexpr std::optional<Int> to_integer(std::string_view str, int base = 10) {
     Int result;
     const char *last_in = str.data() + str.size();
-    auto[last_out, ec] = std::from_chars(str.data(), last_in, result, base);
+    auto [last_out, ec] = std::from_chars(str.data(), last_in, result, base);
     if (last_out == last_in && ec == std::errc()) {
         return result;
     }
@@ -438,13 +440,13 @@ constexpr std::optional<Int> to_integer(std::string_view str, int base = 10) {
 
 namespace detail {
 
-template<typename T>
-auto data_from_begin(const T& value) {
+template <typename T>
+auto data_from_begin(const T &value) {
     return &*std::begin(value);
 }
 
-template<typename T>
-static inline constexpr auto make_string_view_impl(const T& value) {
+template <typename T>
+static inline constexpr auto make_string_view_impl(const T &value) {
     using ValueType = ValueTypeFromBegin<T>;
     return std::basic_string_view<ValueType>(detail::data_from_begin(value), std::size(value));
 }
@@ -455,8 +457,8 @@ static inline constexpr auto make_string_view_impl(const T& value) {
  * Create string view from container or C array
  * @param value Value
  */
-template<typename T>
-static inline constexpr auto make_string_view(const T& value) {
+template <typename T>
+static inline constexpr auto make_string_view(const T &value) {
     return detail::make_string_view_impl(value);
 }
 
@@ -465,7 +467,7 @@ static inline constexpr auto make_string_view(const T& value) {
  * @tparam T Value type (can be deduced)
  * @param value Value
  */
-template<typename T>
+template <typename T>
 static inline constexpr auto make_string_view(std::initializer_list<T> value) {
     return detail::make_string_view_impl(value);
 }
@@ -474,7 +476,7 @@ static inline constexpr auto make_string_view(std::initializer_list<T> value) {
  * Create std::array from C array with known size S
  * @param value Value
  */
-template<typename T, size_t S>
+template <typename T, size_t S>
 static inline auto to_array(const T (&value)[S]) {
     // TODO use std::to_array since C++20
     std::array<std::remove_cv_t<T>, S> result;
@@ -486,7 +488,7 @@ static inline auto to_array(const T (&value)[S]) {
  * Create std::array from array with size S and type T
  * @param value Value
  */
-template<size_t S, typename T>
+template <size_t S, typename T>
 static inline auto to_array(const T *value) {
     std::array<std::remove_cv_t<T>, S> result;
     std::copy(value, value + S, result.begin());
@@ -498,8 +500,8 @@ static inline auto to_array(const T *value) {
  * @param condition Condition
  * @param value Value
  */
-template<typename T>
-static inline constexpr auto make_optional_if(bool condition, T&& value) {
+template <typename T>
+static inline constexpr auto make_optional_if(bool condition, T &&value) {
     return condition ? std::make_optional(std::forward<T>(value)) : std::nullopt;
 }
 
@@ -507,7 +509,7 @@ static inline constexpr auto make_optional_if(bool condition, T&& value) {
  * Make unique ptr with std::free deleter
  * @param ptr Pointer to hold
  */
-template<typename T>
+template <typename T>
 static inline AllocatedPtr<T> make_allocated_unique(T *ptr) noexcept {
     return AllocatedPtr<T>{ptr};
 }
@@ -521,7 +523,7 @@ public:
      * Returns elapsed time duration since create object
      * @tparam T Duration type
      */
-    template<typename T>
+    template <typename T>
     T elapsed() const {
         return std::chrono::duration_cast<T>(std::chrono::steady_clock::now() - m_start);
     }
@@ -540,8 +542,8 @@ private:
  * @param vs Function parameters
  * @return Future with result of function
  */
-template<typename F, typename... Ts, typename R = std::invoke_result_t<std::decay_t<F>, std::decay_t<Ts>...>>
-std::future<R> async_detached(F&& f, Ts&&... vs) {
+template <typename F, typename... Ts, typename R = std::invoke_result_t<std::decay_t<F>, std::decay_t<Ts>...>>
+std::future<R> async_detached(F &&f, Ts &&...vs) {
     std::packaged_task<R(std::decay_t<Ts>...)> packaged_task(std::forward<F>(f));
     auto future = packaged_task.get_future();
     std::thread(std::move(packaged_task), std::forward<Ts>(vs)...).detach();
@@ -551,7 +553,7 @@ std::future<R> async_detached(F&& f, Ts&&... vs) {
 namespace detail {
 
 struct ConvertibleToAny {
-    template<typename T>
+    template <typename T>
     operator T() const;
 };
 
@@ -564,14 +566,14 @@ AG_UTILS_DECLARE_CHECK_EXPRESSION_WITH_N(list_initializable_with_n_params, T{(Is
 
 namespace detail {
 
-template<typename T, ssize_t C>
+template <typename T, ssize_t C>
 constexpr ssize_t list_init_params_count_impl(std::false_type) {
     return C - 1;
 }
 
-template<typename T, ssize_t C>
+template <typename T, ssize_t C>
 constexpr ssize_t list_init_params_count_impl(std::true_type) {
-    return (list_init_params_count_impl<T, C + 1>)(list_initializable_with_n_params_type<T, C + 1>{});
+    return (list_init_params_count_impl<T, C + 1>) (list_initializable_with_n_params_type<T, C + 1>{});
 }
 
 } // namespace detail
@@ -580,9 +582,9 @@ constexpr ssize_t list_init_params_count_impl(std::true_type) {
  * Count parameters to list init
  * @return If can't init with no parameters -1, first maximum parameters count to init otherwise
  */
-template<typename T>
-inline constexpr ssize_t list_init_params_count = detail::list_init_params_count_impl<T, 0>(
-        list_initializable_with_n_params_type<T, 0>{});
+template <typename T>
+inline constexpr ssize_t list_init_params_count =
+        detail::list_init_params_count_impl<T, 0>(list_initializable_with_n_params_type<T, 0>{});
 
 /**
  * Calls the supplied function in destructor.
@@ -593,7 +595,9 @@ private:
     std::function<void()> m_f;
 
 public:
-    explicit ScopeExit(std::function<void()> &&f) : m_f{std::move(f)} {}
+    explicit ScopeExit(std::function<void()> &&f)
+            : m_f{std::move(f)} {
+    }
 
     ~ScopeExit() {
         if (m_f) {
@@ -605,8 +609,8 @@ public:
 namespace detail {
 // From boost 1.72
 template <typename SizeT>
-void hash_combine_impl(SizeT& seed, SizeT value) {
-    seed ^= value + 0x9e3779b9 + (seed<<6) + (seed>>2);
+void hash_combine_impl(SizeT &seed, SizeT value) {
+    seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 } // namespace detail
 
@@ -615,7 +619,7 @@ void hash_combine_impl(SizeT& seed, SizeT value) {
  * @param objs std::hash must be specialized for each of these objects
  */
 template <typename... Ts>
-size_t hash_combine(const Ts&... objs) {
+size_t hash_combine(const Ts &...objs) {
     size_t seed = 0;
     (detail::hash_combine_impl(seed, std::hash<std::decay_t<Ts>>{}(objs)), ...);
     return seed;
@@ -780,7 +784,10 @@ struct AutoPod {
 /** String view input stream */
 class StringViewStream : public std::basic_istream<char, std::char_traits<char>> {
 public:
-    explicit StringViewStream(std::string_view v) : basic_istream(&m_buf), m_buf(v) {}
+    explicit StringViewStream(std::string_view v)
+            : basic_istream(&m_buf)
+            , m_buf(v) {
+    }
 
 private:
     class StringViewBuf : public std::streambuf {

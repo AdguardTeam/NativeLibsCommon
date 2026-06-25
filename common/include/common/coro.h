@@ -126,19 +126,17 @@ namespace ag::coro {
  * Line 10: `co_await` of returned object(`Task`) is called. Compiler checks if returned object is `Awaitable`.
  *          Since it is not, `Task::operator co_await()` is applied.
  *          It returns `Awaitable`, which returns `Awaitable::await_ready()` = `false`.
- *          The last means that current coroutine should be suspended and passed to `Awaitable::await_suspend(coroutine_handle)`.
- *          Inside that function, caller is saved inside `Task::Promise` of `coro2()`. Then `coro2()` is resumed.
- *          Go to line 2.
- * Line 2: We see co_return 42. It means that `Promise::return_value(42)` is called. It stores return value.
- *         Then `Promise::final_suspend()` is called. It transfers execution to caller, saved on previous line.
- *         Back to line 10.
- * Line 10: `Awaitable::await_resume()` is called, and it is result of whole `co_await`. Inside `await_resume`,
- *         `final_suspend`ed coroutine is destroyed, and saved value returned to caller.
- * Expression is finally evaluated.
+ *          The last means that current coroutine should be suspended and passed to
+ * `Awaitable::await_suspend(coroutine_handle)`. Inside that function, caller is saved inside `Task::Promise` of
+ * `coro2()`. Then `coro2()` is resumed. Go to line 2. Line 2: We see co_return 42. It means that
+ * `Promise::return_value(42)` is called. It stores return value. Then `Promise::final_suspend()` is called. It
+ * transfers execution to caller, saved on previous line. Back to line 10. Line 10: `Awaitable::await_resume()` is
+ * called, and it is result of whole `co_await`. Inside `await_resume`, `final_suspend`ed coroutine is destroyed, and
+ * saved value returned to caller. Expression is finally evaluated.
  *
  * @tparam Ret return type used in `co_return` inside coroutine.
  */
-template<typename Ret>
+template <typename Ret>
 struct [[nodiscard]] Task {
     struct Promise;
     using promise_type = Promise; //< NOLINT: coroutine trait
@@ -175,7 +173,9 @@ struct [[nodiscard]] Task {
         std::coroutine_handle<> caller{};
         std::optional<Ret> ret;
 
-        std::suspend_always initial_suspend() noexcept { return {}; }
+        std::suspend_always initial_suspend() noexcept {
+            return {};
+        }
 
         void return_value(Ret &&result) {
             ret = std::move(result);
@@ -189,7 +189,9 @@ struct [[nodiscard]] Task {
             struct Awaitable {
                 bool has_caller;
 
-                bool await_ready() noexcept { return !has_caller; }
+                bool await_ready() noexcept {
+                    return !has_caller;
+                }
 
                 std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> h) noexcept {
                     // Pass control to the caller without creating additional stack frame.
@@ -218,17 +220,29 @@ struct [[nodiscard]] Task {
     };
 
     struct SyncPromise : public std::promise<Ret> {
-        std::suspend_never initial_suspend() noexcept { return {}; }
+        std::suspend_never initial_suspend() noexcept {
+            return {};
+        }
 
-        std::suspend_never final_suspend() noexcept { return {}; }
+        std::suspend_never final_suspend() noexcept {
+            return {};
+        }
 
-        void unhandled_exception() { this->set_exception(std::current_exception()); }
+        void unhandled_exception() {
+            this->set_exception(std::current_exception());
+        }
 
-        SyncObject get_return_object() { return {this->get_future()}; }
+        SyncObject get_return_object() {
+            return {this->get_future()};
+        }
 
-        void return_value(Ret &&t) { this->set_value(std::move(t)); }
+        void return_value(Ret &&t) {
+            this->set_value(std::move(t));
+        }
 
-        void return_value(const Ret &t) { this->set_value(t); }
+        void return_value(const Ret &t) {
+            this->set_value(t);
+        }
     };
 
     std::future<Ret> to_future() && {
@@ -238,13 +252,13 @@ struct [[nodiscard]] Task {
     }
 };
 
-template<>
+template <>
 struct [[nodiscard]] Task<void> {
     struct Promise;
     using promise_type = Promise; //< NOLINT: coroutine trait
     std::coroutine_handle<Promise> handle;
 
-    auto operator co_await() const &noexcept {
+    auto operator co_await() const & noexcept {
         struct Awaitable {
             std::coroutine_handle<Promise> handle;
 
@@ -272,7 +286,9 @@ struct [[nodiscard]] Task<void> {
 
         std::coroutine_handle<> caller{};
 
-        std::suspend_always initial_suspend() noexcept { return {}; }
+        std::suspend_always initial_suspend() noexcept {
+            return {};
+        }
 
         void return_void() {
         }
@@ -281,7 +297,9 @@ struct [[nodiscard]] Task<void> {
             struct Awaitable {
                 bool has_caller;
 
-                bool await_ready() noexcept { return !has_caller; }
+                bool await_ready() noexcept {
+                    return !has_caller;
+                }
 
                 std::coroutine_handle<> await_suspend(std::coroutine_handle<Promise> h) noexcept {
                     // Pass control to the caller without creating additional stack frame.
@@ -310,15 +328,25 @@ struct [[nodiscard]] Task<void> {
     };
 
     struct SyncPromise : public std::promise<void> {
-        std::suspend_never initial_suspend() noexcept { return {}; }
+        std::suspend_never initial_suspend() noexcept {
+            return {};
+        }
 
-        std::suspend_never final_suspend() noexcept { return {}; }
+        std::suspend_never final_suspend() noexcept {
+            return {};
+        }
 
-        void unhandled_exception() { this->set_exception(std::current_exception()); }
+        void unhandled_exception() {
+            this->set_exception(std::current_exception());
+        }
 
-        SyncObject get_return_object() { return {this->get_future()}; }
+        SyncObject get_return_object() {
+            return {this->get_future()};
+        }
 
-        void return_void() { this->set_value(); }
+        void return_void() {
+            this->set_value();
+        }
     };
 
     std::future<void> to_future() && {
@@ -346,12 +374,12 @@ inline void run_detached(Task<void> &&t) {
  * @param aw Awaitable coroutine
  * @return `std::future<T>`
  */
-template<typename T>
+template <typename T>
 inline std::future<T> to_future(Task<T> &&t) {
     return std::move(t).to_future();
 }
 
-template<>
+template <>
 inline std::future<void> to_future(Task<void> &&t) {
     return std::move(t).to_future();
 }

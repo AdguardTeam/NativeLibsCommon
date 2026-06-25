@@ -1,24 +1,23 @@
 #include <cerrno>
 #include <cstddef>
 #include <filesystem>
-#include <iostream>
-#include <iterator>
-#include <utility>
-#include <string>
-#include <string_view>
-#include <fmt/core.h>
 #include <fmt/chrono.h>
+#include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <iostream>
+#include <iterator>
+#include <string>
+#include <string_view>
+#include <utility>
 
-#include "common/utils.h"
 #include "common/logger.h"
 #include "common/rotating_log_to_file.h"
+#include "common/utils.h"
 
 #include "common/time_utils.h"
 
-ag::RotatingLogToFile::RotatingLogToFile(
-        std::string log_file_path, size_t file_max_size_bytes, size_t files_count)
+ag::RotatingLogToFile::RotatingLogToFile(std::string log_file_path, size_t file_max_size_bytes, size_t files_count)
         : m_file_max_size_bytes(file_max_size_bytes)
         , m_files_count(files_count)
         , m_log_file_path(std::move(log_file_path)) {
@@ -100,8 +99,8 @@ void ag::RotatingLogToFile::full_log(LogLevel level, std::string_view message) {
     std::string_view level_str = (level >= 0 && level < ENUM_NAMES_NUMBER) ? ENUM_NAMES[level] : "UNKNOWN";
 
     fmt::memory_buffer message_to_log;
-    fmt::format_to(std::back_inserter(message_to_log),
-            "{:%d.%m.%Y %H:%M:%S}.{:06} {:5} [{}] {}\n", tm, us, level_str, utils::gettid(), message);
+    fmt::format_to(std::back_inserter(message_to_log), "{:%d.%m.%Y %H:%M:%S}.{:06} {:5} [{}] {}\n", tm, us, level_str,
+            utils::gettid(), message);
 
     log_to_ofstream({message_to_log.data(), message_to_log.size()});
 }

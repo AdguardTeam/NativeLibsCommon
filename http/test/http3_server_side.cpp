@@ -9,18 +9,18 @@
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #else
-#include <netdb.h>
 #include <fcntl.h>
+#include <netdb.h>
 #endif
 
 #include <event2/event.h>
 #include <event2/util.h>
 #include <gtest/gtest.h>
 #include <openssl/bio.h>
+#include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
-#include <openssl/err.h>
 
 #ifdef OPENSSL_IS_BORINGSSL
 #include <ngtcp2/ngtcp2_crypto_boringssl.h>

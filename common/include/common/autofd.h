@@ -20,6 +20,7 @@ namespace ag {
  */
 class AutoFd {
     evutil_socket_t m_fd = EVUTIL_INVALID_SOCKET;
+
 public:
     /**
      * Default constructor
@@ -136,6 +137,5 @@ public:
      */
     void operator=(const AutoFd &) = delete;
 };
-
 
 } // namespace ag

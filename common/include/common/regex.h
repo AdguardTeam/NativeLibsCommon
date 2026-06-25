@@ -1,12 +1,12 @@
 #pragma once
 
-#include <string_view>
-#include <string>
 #include <pcre2.h>
+#include <string>
+#include <string_view>
 
 #include "common/defs.h"
-#include "common/utils.h"
 #include "common/logger.h"
+#include "common/utils.h"
 
 namespace ag {
 
@@ -27,10 +27,7 @@ struct RegexReplaceOnceSuccess {
     std::string string;
 };
 
-using RegexReplaceOnceResult = std::variant<
-        RegexReplaceOnceSuccess
-        , RegexReplaceError
->;
+using RegexReplaceOnceResult = std::variant<RegexReplaceOnceSuccess, RegexReplaceError>;
 
 /** `regexReplaceAll()` success */
 struct RegexReplaceAllSuccess {
@@ -38,10 +35,7 @@ struct RegexReplaceAllSuccess {
     std::string string;
 };
 
-using RegexReplaceAllResult = std::variant<
-        RegexReplaceAllSuccess
-        , RegexReplaceError
->;
+using RegexReplaceAllResult = std::variant<RegexReplaceAllSuccess, RegexReplaceError>;
 
 struct RegexCompileError {
     /** The regular expression text */
@@ -78,21 +72,16 @@ struct RegexNoMatch {};
 
 class Regex {
 public:
-    using CompileResult = std::variant<
-            Regex
-            , RegexCompileError
-    >;
+    using CompileResult = std::variant<Regex, RegexCompileError>;
 
-    using MatchResult = std::variant<
-            RegexMatch
-            , RegexNoMatch
-            , RegexMatchError
-    >;
+    using MatchResult = std::variant<RegexMatch, RegexNoMatch, RegexMatchError>;
 
     Regex() = delete;
     Regex(Regex &&) = default;
     Regex &operator=(Regex &&) = default;
-    Regex(const Regex &other) { *this = other; }
+    Regex(const Regex &other) {
+        *this = other;
+    }
     Regex &operator=(const Regex &);
     ~Regex() = default;
 
@@ -104,10 +93,7 @@ public:
      * @return see `RegexCompileResult`
      */
     static CompileResult compile(
-            std::string_view regex,
-            uint32_t options = 0,
-            pcre2_compile_context *compile_context = nullptr
-    );
+            std::string_view regex, uint32_t options = 0, pcre2_compile_context *compile_context = nullptr);
 
     /**
      * Match the regular expression
@@ -117,42 +103,30 @@ public:
      * @param mcontext  points a PCRE2 context
      * @return See `MatchResult`
      */
-    [[nodiscard]] MatchResult match(
-            std::string_view text,
-            uint32_t options = 0,
-            size_t start_offset = 0,
-            pcre2_match_context *mcontext = nullptr
-    ) const;
+    [[nodiscard]] MatchResult match(std::string_view text, uint32_t options = 0, size_t start_offset = 0,
+            pcre2_match_context *mcontext = nullptr) const;
 
     /**
-    * Apply the replace expression one time
-    * @param options The regular expression options
-    * @param pattern The string to modify
-    * @param replace_expression The replace expression
-    * @param match_context The match context (optional)
-    * @return see `RegexReplaceOnceResult`
-    */
-    RegexReplaceOnceResult replace(
-            uint32_t options,
-            std::string_view pattern,
-            std::string_view replace_expression,
-            pcre2_match_context *match_context = nullptr
-    ) const;
+     * Apply the replace expression one time
+     * @param options The regular expression options
+     * @param pattern The string to modify
+     * @param replace_expression The replace expression
+     * @param match_context The match context (optional)
+     * @return see `RegexReplaceOnceResult`
+     */
+    RegexReplaceOnceResult replace(uint32_t options, std::string_view pattern, std::string_view replace_expression,
+            pcre2_match_context *match_context = nullptr) const;
 
     /**
-    * Apply the replace expression multiple times until it is applicable
-    * @param options The regular expression options
-    * @param pattern The string to modify
-    * @param replace_expression The replace expression
-    * @param match_context The match context (optional)
-    * @return see `ReplaceAllResult`
-    */
-    RegexReplaceAllResult replace_all(
-            uint32_t options,
-            std::string pattern,
-            std::string_view replace_expression,
-            pcre2_match_context *match_context = nullptr
-    ) const;
+     * Apply the replace expression multiple times until it is applicable
+     * @param options The regular expression options
+     * @param pattern The string to modify
+     * @param replace_expression The replace expression
+     * @param match_context The match context (optional)
+     * @return see `ReplaceAllResult`
+     */
+    RegexReplaceAllResult replace_all(uint32_t options, std::string pattern, std::string_view replace_expression,
+            pcre2_match_context *match_context = nullptr) const;
 
     int callout_enumerate(std::function<int(pcre2_callout_enumerate_block *)> callback) const;
 
@@ -169,18 +143,9 @@ private:
 
 class LazyRegex {
 public:
-    using MatchResult = std::variant<
-            RegexMatch
-            , RegexNoMatch
-            , RegexCompileError
-            , RegexMatchError
-    >;
+    using MatchResult = std::variant<RegexMatch, RegexNoMatch, RegexCompileError, RegexMatchError>;
 
-    explicit LazyRegex(
-            std::string txt,
-            uint32_t options = 0,
-            pcre2_compile_context *compile_context = nullptr
-    );
+    explicit LazyRegex(std::string txt, uint32_t options = 0, pcre2_compile_context *compile_context = nullptr);
 
     LazyRegex() = default;
     LazyRegex(LazyRegex &&) = default;
@@ -203,12 +168,8 @@ public:
      * @param mcontext  points a PCRE2 context
      * @return See `MatchResult`
      */
-    [[nodiscard]] MatchResult match(
-            std::string_view text,
-            uint32_t options = 0,
-            size_t start_offset = 0,
-            pcre2_match_context *mcontext = nullptr
-    ) const;
+    [[nodiscard]] MatchResult match(std::string_view text, uint32_t options = 0, size_t start_offset = 0,
+            pcre2_match_context *mcontext = nullptr) const;
 
 private:
     struct Uncompiled {
@@ -228,14 +189,14 @@ private:
  * the shortcut in the matched text before applying the regular expression.
  * @tparam Regex the underlying regular expression
  */
-template<class Regex>
+template <class Regex>
 class ShortcuttedRegex {
 public:
     ShortcuttedRegex(bool case_sensitive, std::string shortcut, Regex re)
             : m_case_sensitive(case_sensitive)
             , m_shortcut(std::move(shortcut))
-            , m_underlying_regex(std::move(re))
-    {}
+            , m_underlying_regex(std::move(re)) {
+    }
 
     ShortcuttedRegex(const ShortcuttedRegex &) = default;
     ShortcuttedRegex &operator=(const ShortcuttedRegex &) = default;
@@ -243,8 +204,8 @@ public:
     ShortcuttedRegex &operator=(ShortcuttedRegex &&) noexcept = default;
     ~ShortcuttedRegex() = default;
 
-    template<class Result = decltype(std::declval<Regex>().match("")), typename... Ts>
-    Result match(std::string_view text, Ts&&... args) const {
+    template <class Result = decltype(std::declval<Regex>().match("")), typename... Ts>
+    Result match(std::string_view text, Ts &&...args) const {
         if ((this->m_case_sensitive && text.find(this->m_shortcut) == text.npos)
                 || (!this->m_case_sensitive && std::string::npos == utils::ifind(text, this->m_shortcut))) {
             return RegexNoMatch{};
@@ -258,16 +219,15 @@ private:
     Regex m_underlying_regex;
 };
 
-
 class SimpleRegex {
 public:
     explicit SimpleRegex(std::string_view text, uint32_t pcre2_compile_options = PCRE2_CASELESS)
-        : m_re(compile_regex(text, pcre2_compile_options))
-    {}
+            : m_re(compile_regex(text, pcre2_compile_options)) {
+    }
 
     explicit SimpleRegex(Regex re)
-        : m_re(std::move(re))
-    {}
+            : m_re(std::move(re)) {
+    }
 
     ~SimpleRegex() = default;
 
@@ -289,7 +249,9 @@ public:
     /**
      * Check if Regex compiled successfully
      */
-    [[nodiscard]] bool is_valid() const { return m_re.has_value(); }
+    [[nodiscard]] bool is_valid() const {
+        return m_re.has_value();
+    }
 
     /**
      * Match string against Regex

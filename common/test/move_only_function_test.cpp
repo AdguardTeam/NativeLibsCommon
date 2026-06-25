@@ -7,14 +7,18 @@
 #include "common/move_only_function.h"
 
 TEST(MoveOnlyFunction, BasicFunctionality) {
-    ag::MoveOnlyFunction<int(int, int)> func{[](int a, int b) { return a + b; }};
+    ag::MoveOnlyFunction<int(int, int)> func{[](int a, int b) {
+        return a + b;
+    }};
     ASSERT_TRUE(func);
     ASSERT_EQ(7, func(3, 4));
 }
 
 TEST(MoveOnlyFunction, VoidReturnType) {
     int result = 0;
-    ag::MoveOnlyFunction<void(int)> func{[&result](int x) { result = x * 2; }};
+    ag::MoveOnlyFunction<void(int)> func{[&result](int x) {
+        result = x * 2;
+    }};
     ASSERT_TRUE(func);
     func(5);
     ASSERT_EQ(10, result);
@@ -29,7 +33,9 @@ TEST(MoveOnlyFunction, EmptyFunction) {
 }
 
 TEST(MoveOnlyFunction, MoveSemantics) {
-    ag::MoveOnlyFunction<int(int)> func1{[](int x) { return x * 2; }};
+    ag::MoveOnlyFunction<int(int)> func1{[](int x) {
+        return x * 2;
+    }};
     ASSERT_TRUE(func1);
     ASSERT_EQ(10, func1(5));
 
@@ -62,7 +68,8 @@ TEST(MoveOnlyFunction, MovingLargeLambda) {
         std::array<int, LARGE_ARRAY_SIZE> data{};
         std::unique_ptr<int> ptr;
 
-        LargeCapture() : ptr(std::make_unique<int>(42)) {
+        LargeCapture()
+                : ptr(std::make_unique<int>(42)) {
             std::iota(data.begin(), data.end(), 1);
         }
     };
@@ -82,13 +89,13 @@ TEST(MoveOnlyFunction, MovingLargeLambda) {
     // Test moving the large lambda
     ag::MoveOnlyFunction<int()> func2 = std::move(func1);
     ASSERT_TRUE(func2);
-    ASSERT_FALSE(func1);  // func1 should be empty after move
+    ASSERT_FALSE(func1); // func1 should be empty after move
     ASSERT_EQ(expected_sum, func2());
 
     // Test move assignment with large lambda
     ag::MoveOnlyFunction<int()> func3;
     func3 = std::move(func2);
     ASSERT_TRUE(func3);
-    ASSERT_FALSE(func2);  // func2 should be empty after move
+    ASSERT_FALSE(func2); // func2 should be empty after move
     ASSERT_EQ(expected_sum, func3());
 }

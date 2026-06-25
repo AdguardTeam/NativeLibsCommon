@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <chrono>
+#include <cstdint>
 #include <event2/event.h>
 #include <string>
 #include <string_view>
@@ -24,7 +24,7 @@
 
 namespace ag {
 #ifndef __ANDROID__
-enum RetrieveSystemDnsError: uint8_t {
+enum RetrieveSystemDnsError : uint8_t {
     AE_INIT,
 };
 #endif // ifdef __ANDROID__
@@ -79,12 +79,12 @@ enum TransportProtocol {
 
 static constexpr uint32_t PLAIN_DNS_PORT_NUMBER = 53;
 static constexpr std::string_view AG_UNFILTERED_DNS_IPS_V4[] = {
-    "46.243.231.30",
-    "46.243.231.31",
+        "46.243.231.30",
+        "46.243.231.31",
 };
 static constexpr std::string_view AG_UNFILTERED_DNS_IPS_V6[] = {
-    "2a10:50c0::1:ff",
-    "2a10:50c0::2:ff",
+        "2a10:50c0::1:ff",
+        "2a10:50c0::2:ff",
 };
 
 #ifdef _WIN32
@@ -139,9 +139,8 @@ std::optional<std::string> win_get_if_nameserver(const char *if_guid, bool ipv6)
  * @param require_non_empty_port Require non-empty port after colon
  * @return Host, port or error
  */
-Result<std::pair<std::string_view, std::string_view>, NetUtilsError> split_host_port(
-        std::string_view address_string, bool require_ipv6_addr_in_square_brackets = false,
-        bool require_non_empty_port = false);
+Result<std::pair<std::string_view, std::string_view>, NetUtilsError> split_host_port(std::string_view address_string,
+        bool require_ipv6_addr_in_square_brackets = false, bool require_non_empty_port = false);
 
 /**
  * Join host and port into address string
