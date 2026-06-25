@@ -1,0 +1,14 @@
+--- a/src/api.c	2026-06-25 13:18:13
++++ b/src/api.c	2026-06-25 13:18:21
+@@ -36,6 +36,11 @@
+ 
+   parser->type = type;
+   parser->settings = (void*) settings;
++
++  /* AdGuard patch: emulate legacy http-parser leniency used by CoreLibs. */
++  parser->lenient_flags |= LENIENT_HEADERS
++                        | LENIENT_CHUNKED_LENGTH
++                        | LENIENT_OPTIONAL_CR_BEFORE_LF;
+ }
+ 
+ 

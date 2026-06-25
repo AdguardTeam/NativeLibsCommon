@@ -31,7 +31,7 @@ class NativeLibsCommon(ConanFile):
     def requirements(self):
         self.requires("fmt/12.1.0", transitive_headers=True)
         self.requires("libevent/2.1.11@adguard/oss", transitive_headers=True)
-        self.requires("llhttp/9.1.3@adguard/oss", transitive_headers=True)
+        self.requires("llhttp/9.3.0@adguard/oss", transitive_headers=True)
         self.requires("magic_enum/0.9.5", transitive_headers=True)
         self.requires("nghttp2/1.56.0@adguard/oss", transitive_headers=True)
         self.requires("nghttp3/1.0.0@adguard/oss", transitive_headers=True)
