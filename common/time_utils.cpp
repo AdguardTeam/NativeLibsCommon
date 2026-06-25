@@ -31,13 +31,14 @@ tm gmtime_from_system_time(SystemTime timepoint) {
 }
 
 SystemTime system_time_from_gmtime(const tm &tm_info) {
+    tm tmp = tm_info;
     return SystemTime{std::chrono::seconds{
 #if defined(_WIN32)
-            _mkgmtime64(const_cast<tm *>(&tm_info))
+            _mkgmtime64(&tmp)
 #elif defined(ANDROID) && !defined(__LP64__)
-            timegm64(const_cast<tm *>(&tm_info))
+            timegm64(&tmp)
 #elif defined(__LP64__) || _REDIR_TIME64
-            timegm(const_cast<tm *>(&tm_info))
+            timegm(&tmp)
 #else
 #error "Unsupported platform"
 #endif
@@ -132,7 +133,8 @@ size_t validate_gmt_tz(std::string_view s) {
  * @param gmt Is GMT (%z %Z) should be injected
  */
 static std::string inject_microseconds_and_gmt(int64_t us, bool gmt, std::string_view format) {
-    std::string format_string, us_string;
+    std::string format_string;
+    std::string us_string;
     format_string.reserve(format.size() + 10);
 
     enum { DEFAULT, AFTER_PERCENT } state = DEFAULT;

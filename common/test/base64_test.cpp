@@ -41,9 +41,9 @@ TEST(base64, decodeurl) {
     ASSERT_EQ(std::vector<uint8_t>({0xfe}), ag::decode_base64("_g", true));
 }
 
-TEST(base64, encode_outputiter_version) {
+TEST(base64, EncodeOutputIterVersion) {
     std::string_view origin = "Hello, world!";
-    const auto *data = reinterpret_cast<const uint8_t *>(origin.data());
+    const auto *data = (const uint8_t *) origin.data();
     std::string_view expect = "SGVsbG8sIHdvcmxkIQ==";
 
     std::string encoded;
@@ -56,7 +56,7 @@ TEST(base64, encode_outputiter_version) {
     ASSERT_EQ(encoded, expect);
 }
 
-TEST(base64, encode_size) {
+TEST(base64, EncodeSize) {
     ASSERT_EQ(0, ag::encode_base64_size(0, /*urlsafe*/ true));
     ASSERT_EQ(2, ag::encode_base64_size(1, /*urlsafe*/ true));
     ASSERT_EQ(3, ag::encode_base64_size(2, /*urlsafe*/ true));
@@ -82,7 +82,7 @@ TEST(base64, encode_size) {
     ASSERT_EQ(44, ag::encode_base64_size(32, /*urlsafe*/ false));
 }
 
-TEST(base64, encode_url_safe) {
+TEST(base64, EncodeUrlSafe) {
     using P = std::pair<std::string, std::string>;
     for (const auto &[data, exp_enc] : {
                  P{"helloworld", "aGVsbG93b3JsZA"},

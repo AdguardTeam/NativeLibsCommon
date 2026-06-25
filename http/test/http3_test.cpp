@@ -243,7 +243,7 @@ protected:
         auto *self = (Http3Client *) arg;
         timeval tv{};
         tv.tv_sec = std::chrono::duration_cast<ag::Secs>(period).count();
-        tv.tv_usec = std::chrono::duration_cast<ag::Micros>(period).count() % 1000000;
+        tv.tv_usec = (decltype(tv.tv_usec)) (std::chrono::duration_cast<ag::Micros>(period).count() % 1000000);
         event_add(self->expiry_timer.get(), &tv);
     }
 
@@ -258,7 +258,7 @@ protected:
                 this)};
         timeval tv{};
         tv.tv_sec = std::chrono::duration_cast<ag::Secs>(timeout).count();
-        tv.tv_usec = std::chrono::duration_cast<ag::Micros>(timeout).count() % 1000000;
+        tv.tv_usec = (decltype(tv.tv_usec)) (std::chrono::duration_cast<ag::Micros>(timeout).count() % 1000000);
         ASSERT_EQ(0, event_add(timer.get(), &tv));
 
         ag::UniquePtr<event, &event_free> read_event(event_new(

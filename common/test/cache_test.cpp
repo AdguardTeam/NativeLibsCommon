@@ -12,7 +12,7 @@ public:
     }
 
 protected:
-    ag::LruCache<int, std::string> m_cache;
+    ag::LruCache<size_t, std::string> m_cache;
 
     void SetUp() override {
         for (size_t i = 0; i < CACHE_SIZE; ++i) {
@@ -127,7 +127,7 @@ TEST_F(LruCacheTest, UpdateCapacity) {
     ASSERT_EQ(m_cache.size(), CACHE_SIZE / 2);
 
     for (size_t i = 0; i < CACHE_SIZE / 2; ++i) {
-        ASSERT_FALSE(m_cache.get(i)) << i << std::endl;
+        ASSERT_FALSE(m_cache.get(i)) << i << '\n';
     }
 }
 

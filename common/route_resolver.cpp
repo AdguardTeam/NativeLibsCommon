@@ -240,30 +240,30 @@ private:
             switch (dst->sa_family) {
             case AF_INET: {
                 auto *addr = (uint8_t *) &((sockaddr_in *) dst)->sin_addr.s_addr;
-                std::memcpy(&route.address[0], addr, 4);
+                std::memcpy(route.address.data(), addr, 4);
                 if (!netmask) { // Host route
-                    std::memset(&route.netmask[0], 0xff, 4);
+                    std::memset(route.netmask.data(), 0xff, 4);
                     break;
                 }
                 if (netmask->sa_len <= offsetof(sockaddr_in, sin_addr)) { // Default route
                     break;
                 }
                 auto *mask = (uint8_t *) &((sockaddr_in *) netmask)->sin_addr.s_addr;
-                std::memcpy(&route.netmask[0], mask, netmask->sa_len - offsetof(sockaddr_in, sin_addr));
+                std::memcpy(route.netmask.data(), mask, netmask->sa_len - offsetof(sockaddr_in, sin_addr));
                 break;
             }
             case AF_INET6: {
                 auto *addr = &((sockaddr_in6 *) dst)->sin6_addr;
-                std::memcpy(&route.address[0], addr, 16);
+                std::memcpy(route.address.data(), addr, 16);
                 if (!netmask) { // Host route
-                    std::memset(&route.netmask[0], 0xff, 16);
+                    std::memset(route.netmask.data(), 0xff, 16);
                     break;
                 }
                 if (netmask->sa_len <= offsetof(sockaddr_in6, sin6_addr)) { // Default route
                     break;
                 }
                 auto *mask = &((sockaddr_in6 *) netmask)->sin6_addr;
-                std::memcpy(&route.netmask[0], mask, netmask->sa_len - offsetof(sockaddr_in6, sin6_addr));
+                std::memcpy(route.netmask.data(), mask, netmask->sa_len - offsetof(sockaddr_in6, sin6_addr));
                 break;
             }
             default:

@@ -27,7 +27,7 @@ protected:
 
 #if !defined(_WIN32) && defined(__SIZEOF_INT128__)
 static __int128_t number_of_ips(const CidrRange &range) {
-    int pow = range.get_address().size() * 8 - range.get_prefix_len();
+    int pow = (int) (range.get_address().size() * 8 - range.get_prefix_len());
     return ((__int128_t) 1) << pow;
 }
 
@@ -126,7 +126,7 @@ static void test_excluding_ranges(
         const std::vector<CidrRange> &original_ranges, const std::vector<CidrRange> &excluded_ranges) {
     const std::vector<CidrRange> &resulting_ranges = CidrRange::exclude(original_ranges, excluded_ranges);
     for (auto &resulting_range : resulting_ranges) {
-        std::cout << resulting_range.to_string() << std::endl;
+        std::cout << resulting_range.to_string() << '\n';
     }
 
     // Check that list is sorted

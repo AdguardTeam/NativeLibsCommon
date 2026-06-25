@@ -1068,6 +1068,8 @@ void Http3Session<T>::handle_rx_connection_close() {
     }
     case NGTCP2_CCERR_TYPE_VERSION_NEGOTIATION:
     case NGTCP2_CCERR_TYPE_IDLE_CLOSE:
+    case NGTCP2_CCERR_TYPE_DROP_CONN:
+    case NGTCP2_CCERR_TYPE_RETRY:
         break;
     }
 
