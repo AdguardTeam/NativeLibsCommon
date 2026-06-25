@@ -2,4 +2,3 @@ cmake-build-*
 .idea
 .DS_Store
 build/
-CMakeUserPresets.json

@@ -31,12 +31,6 @@ jobs:
 
               & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
 
-              # Export custom Conan recipes so they can be built locally
-              # without requiring a pre-uploaded package in the remote.
-              Get-ChildItem -Directory conan/recipes | ForEach-Object {
-                & conan export $_.FullName --user adguard --channel oss
-              }
-
               # Save vcvars to switch between them
               $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
               $vcvars64 = cmd /c "vcvars64 & set"
@@ -81,12 +75,6 @@ jobs:
               python3 -m pip install conan --upgrade
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
-              # Export custom Conan recipes so they can be built locally
-              # without requiring a pre-uploaded package in the remote.
-              for d in conan/recipes/*/; do
-                conan export "$d" --user adguard --channel oss
-              done
-
               mkdir -p build
               cd build
               cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
@@ -117,12 +105,6 @@ jobs:
 
               python3 -m pip install conan
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
-
-              # Export custom Conan recipes so they can be built locally
-              # without requiring a pre-uploaded package in the remote.
-              for d in conan/recipes/*/; do
-                conan export "$d" --user adguard --channel oss
-              done
 
               ARCH=$(uname -m)
               mkdir -p build
@@ -175,13 +157,6 @@ jobs:
         run: |
           python3 -m pip install conan --upgrade
           conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
-
-          # Export custom Conan recipes so they can be built locally
-          # without requiring a pre-uploaded package in the remote.
-          for d in conan/recipes/*/; do
-            conan export "$d" --user adguard --channel oss
-          done
-
           cd android/NativeLibsCommon
           touch local.properties
           CMAKE_DIR=$(dirname $(dirname $(which cmake)))
