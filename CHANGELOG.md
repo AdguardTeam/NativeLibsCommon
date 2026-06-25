@@ -390,7 +390,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Add missing <optional> include to logger.h
+- Add missing `<optional>` include to logger.h
 
 ## [7.0.19] - 2025-04-17
 
@@ -528,7 +528,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- Fix missing <functional> header
+- Fix missing `<functional>` header
 
 ## [6.1.12] - 2024-08-27
 

@@ -1,0 +1,21 @@
+config:
+  line-length: false
+  no-duplicate-heading:
+    siblings_only: true
+  ul-style:
+    style: dash
+  ul-indent:
+    indent: 4
+  no-inline-html:
+    allowed_elements:
+      - a
+      - p
+      - picture
+      - source
+      - img
+  no-bare-urls: false
+globs:
+  - "**/*.md"
+ignores:
+  - ".specs/**"
+  - "LICENSE.md"
