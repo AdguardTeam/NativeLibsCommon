@@ -47,10 +47,9 @@ class LlhttpParserConan(ConanFile):
             url=f"https://github.com/nodejs/llhttp/archive/refs/tags/release/v{self.version}.tar.gz",
             sha256="1a2b45cb8dda7082b307d336607023aa65549d6f060da1d246b1313da22b685a",
             strip_root=True)
-        # AdGuard patches to match the lenient behaviour of CoreLibs' http-parser.
-        patch(self, patch_file=os.path.join(self.export_sources_folder, "patches", "0001-lenient-defaults.patch"), strip=1)
-        patch(self, patch_file=os.path.join(self.export_sources_folder, "patches", "0002-status-205-no-body.patch"), strip=1)
-        patch(self, patch_file=os.path.join(self.export_sources_folder, "patches", "0003-url-scheme.patch"), strip=1)
+        # AdGuard patches to match CoreLibs' legacy http-parser behaviour.
+        patch(self, patch_file=os.path.join(self.export_sources_folder, "patches", "0001-status-205-no-body.patch"), strip=1)
+        patch(self, patch_file=os.path.join(self.export_sources_folder, "patches", "0002-url-scheme.patch"), strip=1)
 
     def generate(self):
         deps = CMakeDeps(self)

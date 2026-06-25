@@ -32,6 +32,12 @@ Http1Session<T>::Http1Session()
     } else {
         llhttp_init(&m_parser, HTTP_RESPONSE, &m_settings);
     }
+
+    /* AdGuard: emulate legacy http-parser leniency used by CoreLibs. */
+    llhttp_set_lenient_headers(&m_parser, 1);
+    llhttp_set_lenient_chunked_length(&m_parser, 1);
+    llhttp_set_lenient_optional_cr_before_lf(&m_parser, 1);
+
     m_parser.data = this;
 }
 

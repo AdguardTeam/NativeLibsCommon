@@ -1,3 +1,11 @@
+From: AdGuard <dev@adguard.com>
+Subject: [PATCH] Allow '+', '-', '.' and digits in URL schemes
+
+The llhttp URL-scheme state machine only allows alphabetic characters
+in scheme names. CoreLibs/http-parser historically accepted schemes
+such as "adguard-android", "myapp+1" or "x-custom.2". Update the
+state-machine lookup table so that '+', '-', '.', and ASCII digits are
+treated as valid scheme characters (value 3) after the first character.
 --- a/src/llhttp.c	2025-05-03 22:04:09
 +++ b/src/llhttp.c	2026-06-25 17:28:50
 @@ -4283,8 +4283,8 @@
