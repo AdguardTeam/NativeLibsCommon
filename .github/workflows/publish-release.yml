@@ -10,7 +10,7 @@ name: Publish release
 #   4. Exports and uploads the Conan recipes to Artifactory.
 
 on:
-  pull_request:
+  pull_request_target:
     types: [closed]
   workflow_dispatch:
 

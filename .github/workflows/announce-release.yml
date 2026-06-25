@@ -76,6 +76,6 @@ jobs:
         with:
           channel: ${{ inputs.channel }}
           message: |
-            ${{ inputs.product }} ${{ inputs.version }} :released:
-            Changelog: <${{ inputs.release_url }}|release notes>
-            Github link: <${{ needs.issue.outputs.issue-url }}|issue>
+            ${{ inputs.product }} ${{ inputs.version }} :release:d
+            Changelog: ${{ inputs.release_url }}
+            Github link: ${{ needs.issue.outputs.issue-url }}

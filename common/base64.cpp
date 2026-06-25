@@ -47,7 +47,7 @@ static constexpr size_t decode_base64_max_size(size_t len) noexcept {
 static constexpr Base64Table BASE64_TABLE_DEFAULT{"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"};
 static constexpr Base64Table BASE64_TABLE_URL_SAFE = url_safe_base64_table(BASE64_TABLE_DEFAULT);
 // clang-format off
-static constexpr Basis BASIS_DEFAULT{
+static constexpr Basis BASIS_DEFAULT = std::to_array<uint8_t>({
         77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
         77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
         77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 62, 77, 77, 77, 63,
@@ -65,7 +65,7 @@ static constexpr Basis BASIS_DEFAULT{
         77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
         77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
         77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77, 77,
-};
+});
 // clang-format on
 static constexpr Basis BASIS_URL_SAFE = url_safe_basis(BASIS_DEFAULT);
 static constexpr auto PADDING = '=';
