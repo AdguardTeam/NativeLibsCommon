@@ -11,15 +11,20 @@
 #include "common/socket_address.h"
 
 #ifdef _WIN32
-  // The order of includes is important
-  #ifndef WIN32_LEAN_AND_MEAN
-  #  define WIN32_LEAN_AND_MEAN
-  #endif
-  #include <winsock2.h>
-  #include <ws2tcpip.h>
-  #include <iphlpapi.h>
-  #include <netioapi.h>
-  #include <ifdef.h>
+// The order of includes is important, that's why every header in separate block.
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <winsock2.h>
+
+#include <ws2tcpip.h>
+
+#include <iphlpapi.h>
+
+#include <netioapi.h>
+
+#include <ifdef.h>
 #endif
 
 namespace ag {

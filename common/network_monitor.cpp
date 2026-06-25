@@ -640,13 +640,13 @@ void NetworkMonitorImpl::changed_handler() {
     sockaddr_nl sa{};
     iovec iov = {buf, sizeof(buf)};
     msghdr msg = {
-            .msg_name = (void*)&sa,
+            .msg_name = (void *) &sa,
             .msg_namelen = sizeof(sa),
             .msg_iov = &iov,
             .msg_iovlen = 1,
             .msg_control = nullptr,
             .msg_controllen = 0,
-            .msg_flags = 0
+            .msg_flags = 0,
     };
     ssize_t len = recvmsg(m_monitor_sock_fd, &msg, 0);
     if (len < 0) {

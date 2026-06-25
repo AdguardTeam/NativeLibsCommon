@@ -182,9 +182,10 @@ TEST_F(CoroTest, RunDetached) {
 }
 
 TEST_F(CoroTest, ToFuture) {
-    to_future([this]()->coro::Task<void>{
+    to_future([this]() -> coro::Task<void> {
         co_await m_scheduler.sleep(Millis{500});
-    }()).get();
+    }())
+            .get();
     co_return;
 }
 
