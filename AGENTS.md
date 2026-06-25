@@ -61,7 +61,7 @@ For offline builds, or when the AdGuard Conan remote is not configured, run
 | `make export_conan` | Export custom Conan recipes (`conan/recipes`) to the local cache |
 | `make compile_commands` | Generate `compile_commands.json` for IDE / clang-tidy |
 | `make lint` | Run all linters (`lint-cpp` + `lint-md`) |
-| `make lint-cpp` | `clang-format` check + `clang-tidy` |
+| `make lint-cpp` | `clang-format` check + `clangd-tidy` |
 | `make lint-md` | `markdownlint .` |
 | `make lint-fix` | Auto-fix fixable linter issues |
 | `make list-deps-dirs` | List Conan dependency package directories |
