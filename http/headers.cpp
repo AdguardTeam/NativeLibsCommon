@@ -119,9 +119,9 @@ typename Headers::ValueIterator<I>::reference Headers::ValueIterator<I>::operato
 
 template <typename I>
 typename Headers::ValueIterator<I> &Headers::ValueIterator<I>::operator++() {
-    while (++m_current != m_end && !utils::iequals(m_current->name, m_name)) {
-        // do nothing
-    }
+    do {
+        ++m_current;
+    } while (m_current != m_end && !utils::iequals(m_current->name, m_name));
     if (m_current != m_end) {
         m_value = m_current->value;
     } else {

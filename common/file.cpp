@@ -85,7 +85,7 @@ ssize_t read(const Handle f, char *buf, size_t size) {
 }
 
 ssize_t pread(const Handle f, char *buf, size_t size, size_t pos) {
-    return ::pread(f, buf, size, pos);
+    return ::pread(f, buf, size, (off_t) pos);
 }
 
 ssize_t write(const Handle f, const void *buf, size_t size) {
@@ -97,7 +97,7 @@ ssize_t get_position(const Handle f) {
 }
 
 ssize_t set_position(Handle f, size_t pos) {
-    return ::lseek(f, pos, SEEK_SET);
+    return ::lseek(f, (off_t) pos, SEEK_SET);
 }
 
 ssize_t get_size(const Handle f) {
@@ -196,9 +196,9 @@ int for_each_line(const Handle f, LineAction action, void *arg) {
     size_t file_idx = 0;
     size_t line_idx = 0;
     ssize_t r;
-    while (0 < (r = read(f, &buffer[0], buffer.size()))) {
+    while (0 < (r = read(f, buffer.data(), buffer.size()))) {
         for (int i = 0; i < r; ++i) {
-            int c = buffer[i];
+            char c = buffer[i];
             if (c != '\r' && c != '\n') {
                 line.push_back(c);
                 continue;
@@ -231,11 +231,11 @@ std::optional<std::string> read_line(const Handle f, size_t pos) {
 
     std::string line;
     ssize_t r;
-    while (0 < (r = read(f, &buffer[0], CHUNK_SIZE))) {
+    while (0 < (r = read(f, buffer.data(), CHUNK_SIZE))) {
         int from = 0;
         int i;
         for (i = 0; i < r; ++i) {
-            int c = buffer[i];
+            char c = buffer[i];
             if (c == '\r' || c == '\n') {
                 size_t length = i - from;
                 line.append(&buffer[from], length);
@@ -246,7 +246,7 @@ std::optional<std::string> read_line(const Handle f, size_t pos) {
         if (i < r) {
             break;
         } else {
-            line.append(&buffer[0], r);
+            line.append(buffer.data(), r);
         }
     }
 

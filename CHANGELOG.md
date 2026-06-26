@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Keep the QUIC connection alive on stream-level HTTP/3 errors instead of tearing down the whole connection
+- Fix HTTP/3 send-buffer aliasing in `push_data`: hand ngtcp2 a stable owned buffer via `evbuffer_add_reference` so retained pointers stay valid until the data is acknowledged
+
 ### Security
 
 ## [8.1.36] - 2026-06-24

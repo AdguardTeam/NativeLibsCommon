@@ -184,7 +184,7 @@ TEST_F(CoroTest, ToFuture) {
 
 coro::Task<int> coro_that_throws() {
     int x;
-    std::mutex *m = (std::mutex *)(void *)&x;
+    std::mutex *m = (std::mutex *) &x;
     m->lock();
     co_return 42;
 }
