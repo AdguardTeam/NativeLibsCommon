@@ -18,7 +18,7 @@ namespace ag {
  */
 #if __cplusplus >= 202302L
 // Use std::move_only_function if available
-template<typename Signature>
+template <typename Signature>
 using MoveOnlyFunction = std::move_only_function<Signature>;
 #else
 // Trait to detect std::function
@@ -78,8 +78,7 @@ private:
         SboStorage() = default;
 
         template <typename T, typename... MakeArgs>
-        static SboStorage make(MakeArgs &&...args)
-        {
+        static SboStorage make(MakeArgs &&...args) {
             SboStorage box;
             if constexpr (sizeof(T) <= BUFFER_SIZE) {
                 box.m_ptr = new (box.m_buf) T(std::forward<MakeArgs>(args)...);

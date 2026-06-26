@@ -49,12 +49,12 @@ static void append_cert_info(std::string &out, X509 *cert, const char *label) {
     std::string not_after = asn1_time_to_string(X509_get0_notAfter(cert));
 
     char line[800];
-    snprintf(line, sizeof(line), "%s: Subject: %s, Issuer: %s, SHA256: %s, NotBefore: %s, NotAfter: %s",
-            label, subject_buf, issuer_buf, fp_buf, not_before.c_str(), not_after.c_str());
+    snprintf(line, sizeof(line), "%s: Subject: %s, Issuer: %s, SHA256: %s, NotBefore: %s, NotAfter: %s", label,
+            subject_buf, issuer_buf, fp_buf, not_before.c_str(), not_after.c_str());
     out += line;
 }
 
-std::string get_cert_diagnostic_info(X509 *cert, STACK_OF(X509) *chain) {
+std::string get_cert_diagnostic_info(X509 *cert, STACK_OF(X509) * chain) {
     if (cert == nullptr) {
         return {};
     }

@@ -71,8 +71,7 @@ ag::WfpFirewall::WfpFirewall(std::wstring name, uint32_t exclude_pid)
 
     auto register_base_objects =
             [&]() -> WfpFirewallError { // NOLINT(cppcoreguidelines-avoid-capture-default-when-capturing-this)
-        std::wstring name = fmt::format(L"{} provider", m_impl->name);;
-
+        std::wstring name = fmt::format(L"{} provider", m_impl->name);
         FWPM_PROVIDER0 provider{
                 .providerKey = m_impl->provider_key,
                 .displayData =
@@ -85,7 +84,7 @@ ag::WfpFirewall::WfpFirewall(std::wstring name, uint32_t exclude_pid)
             return make_error(FE_WFP_ERROR, AG_FMT("FwpmProviderAdd0 failed with code {:#x}", error));
         }
 
-        name = fmt::format(L"{} sublayer", m_impl->name);;
+        name = fmt::format(L"{} sublayer", m_impl->name);
         FWPM_SUBLAYER0 sublayer{
                 .subLayerKey = m_impl->sublayer_key,
                 .displayData =
@@ -241,7 +240,7 @@ ag::WfpFirewallError ag::WfpFirewall::restrict_dns_to(
                         },
                 };
 
-                std::wstring name = fmt::format(L"{} restrict DNS", m_impl->name);;
+                std::wstring name = fmt::format(L"{} restrict DNS", m_impl->name);
                 FWPM_FILTER0 filter{
                         .displayData =
                                 {
@@ -351,7 +350,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_ipv6() {
     }
     return run_transaction(m_impl->engine_handle,
             [&]() -> WfpFirewallError { // NOLINT(cppcoreguidelines-avoid-capture-default-when-capturing-this)
-                std::wstring name = fmt::format(L"{} block IPv6", m_impl->name);;
+                std::wstring name = fmt::format(L"{} block IPv6", m_impl->name);
                 FWPM_FILTER0 filter{
                         .displayData =
                                 {
@@ -415,7 +414,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                         });
                     }
 
-                    std::wstring name = fmt::format(L"{} block untunneled IPv4", m_impl->name);;
+                    std::wstring name = fmt::format(L"{} block untunneled IPv4", m_impl->name);
                     FWPM_FILTER0 filter{
                             .displayData = {.name = name.data()},
                             .providerKey = &m_impl->provider_key,
@@ -463,7 +462,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                                     },
                     });
 
-                    name = fmt::format(L"{} block untunneled IPv4 (allow tunneled and loopback)", m_impl->name);;
+                    name = fmt::format(L"{} block untunneled IPv4 (allow tunneled and loopback)", m_impl->name);
                     filter.displayData = {.name = name.data()};
                     filter.action = {.type = FWP_ACTION_PERMIT};
                     filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;
@@ -492,7 +491,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                             });
                         }
 
-                        name = fmt::format(L"{} block untunneled IPv4 (allow excluded ports)", m_impl->name);;
+                        name = fmt::format(L"{} block untunneled IPv4 (allow excluded ports)", m_impl->name);
                         filter.displayData = {.name = name.data()};
                         filter.action = {.type = FWP_ACTION_PERMIT};
                         filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;
@@ -532,7 +531,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                         });
                     }
 
-                    std::wstring name = fmt::format(L"{} block untunneled IPv6", m_impl->name);;
+                    std::wstring name = fmt::format(L"{} block untunneled IPv6", m_impl->name);
                     FWPM_FILTER0 filter{
                             .displayData = {.name = name.data()},
                             .providerKey = &m_impl->provider_key,
@@ -580,7 +579,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                                     },
                     });
 
-                    name = fmt::format(L"{} block untunneled IPv6 (allow tunneled and loopback)", m_impl->name);;
+                    name = fmt::format(L"{} block untunneled IPv6 (allow tunneled and loopback)", m_impl->name);
                     filter.displayData = {.name = name.data()};
                     filter.action = {.type = FWP_ACTION_PERMIT};
                     filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;
@@ -609,7 +608,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                             });
                         }
 
-                        name = fmt::format(L"{} block untunneled IPv6 (allow excluded ports)", m_impl->name);;
+                        name = fmt::format(L"{} block untunneled IPv6 (allow excluded ports)", m_impl->name);
                         filter.displayData = {.name = name.data()};
                         filter.action = {.type = FWP_ACTION_PERMIT};
                         filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;

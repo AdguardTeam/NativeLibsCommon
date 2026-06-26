@@ -143,8 +143,8 @@ protected:
 
     explicit Http3Session(const Http3Settings &settings);
 
-    Error<Http3Error> initialize_session(
-            const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl, ngtcp2_cid client_scid, ngtcp2_cid client_dcid);
+    Error<Http3Error> initialize_session(const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl,
+            ngtcp2_cid client_scid, ngtcp2_cid client_dcid);
 
     int input_impl(const QuicNetworkPath &path, Uint8View chunk);
     Error<Http3Error> submit_trailer_impl(uint64_t stream_id, const Headers &headers);

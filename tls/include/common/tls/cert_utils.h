@@ -12,6 +12,6 @@ namespace ag::tls {
  * Subject, Issuer, SHA256 fingerprint, NotBefore, NotAfter.
  * Returns an empty string if cert is null.
  */
-std::string get_cert_diagnostic_info(X509 *cert, STACK_OF(X509) *chain);
+std::string get_cert_diagnostic_info(X509 *cert, STACK_OF(X509) * chain);
 
 } // namespace ag::tls

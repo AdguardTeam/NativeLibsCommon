@@ -36,11 +36,11 @@ typedef SSIZE_T ssize_t;
 namespace std {
 template <>
 struct char_traits<unsigned char> {
-    using char_type = unsigned char; // NOLINT(*-identifier-naming)
-    using int_type = int; // NOLINT(*-identifier-naming)
-    using off_type = streamoff; // NOLINT(*-identifier-naming)
-    using pos_type = streampos; // NOLINT(*-identifier-naming)
-    using state_type = mbstate_t; // NOLINT(*-identifier-naming)
+    using char_type = unsigned char;             // NOLINT(*-identifier-naming)
+    using int_type = int;                        // NOLINT(*-identifier-naming)
+    using off_type = streamoff;                  // NOLINT(*-identifier-naming)
+    using pos_type = streampos;                  // NOLINT(*-identifier-naming)
+    using state_type = mbstate_t;                // NOLINT(*-identifier-naming)
     using comparison_category = strong_ordering; // NOLINT(*-identifier-naming)
 
     static constexpr void assign(char_type &l, const char_type &r) noexcept {
@@ -98,7 +98,7 @@ struct char_traits<unsigned char> {
 namespace ag {
 
 // Functor template for zero-storage static deleters in unique_ptr
-template<auto func>
+template <auto func>
 using Ftor = std::integral_constant<decltype(func), func>;
 
 using SystemClock = std::chrono::system_clock;
@@ -115,13 +115,13 @@ template <typename K, typename V>
 using HashMap = std::unordered_map<K, V>;
 template <typename K>
 using HashSet = std::unordered_set<K>;
-template<size_t S>
+template <size_t S>
 using Uint8Array = std::array<uint8_t, S>;
 
-template<typename T, auto D>
+template <typename T, auto D>
 using UniquePtr = std::unique_ptr<T, Ftor<D>>;
 
-template<typename T>
+template <typename T>
 using AllocatedPtr = UniquePtr<T, &std::free>;
 
 constexpr size_t IPV4_ADDRESS_SIZE = 4;
@@ -134,7 +134,7 @@ using IpAddress = std::variant<std::monostate, Ipv4Address, Ipv6Address>;
 using IfIdVariant = std::variant<std::monostate, uint32_t, std::string>;
 
 // Convenient struct to tie a value and its mutex together
-template<typename T, typename Mutex = std::mutex>
+template <typename T, typename Mutex = std::mutex>
 struct WithMtx {
     T val;
     Mutex mtx;

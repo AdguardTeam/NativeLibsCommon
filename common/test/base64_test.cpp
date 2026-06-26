@@ -10,7 +10,7 @@ static std::string to_str(const std::optional<std::vector<uint8_t>> &vec) {
     if (!vec.has_value()) {
         return "";
     }
-    return  {vec->begin(), vec->end()};
+    return {vec->begin(), vec->end()};
 }
 
 TEST(base64, basic) {
@@ -19,7 +19,7 @@ TEST(base64, basic) {
     auto decoded = ag::decode_base64(encoded, false);
     ASSERT_TRUE(decoded.has_value());
     ASSERT_EQ(expect, to_str(decoded));
-    ASSERT_EQ(ag::encode_to_base64({ (uint8_t *)decoded->data(), decoded->size() }, false), encoded);
+    ASSERT_EQ(ag::encode_to_base64({(uint8_t *) decoded->data(), decoded->size()}, false), encoded);
     ASSERT_FALSE(ag::decode_base64(encoded.substr(0, 5), false).has_value());
 }
 

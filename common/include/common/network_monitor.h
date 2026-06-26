@@ -34,6 +34,6 @@ protected:
 };
 
 std::unique_ptr<NetworkMonitor> create_network_monitor(
-    std::function<void(const std::string &if_name, bool is_connected)>&& cmd_handler);
+        std::function<void(const std::string &if_name, bool is_connected)> &&cmd_handler);
 
-}  // namespace ag::utils
+} // namespace ag::utils

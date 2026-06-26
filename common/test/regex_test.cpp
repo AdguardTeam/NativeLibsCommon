@@ -4,7 +4,6 @@
 
 class RegexTest : public ::testing::Test {
 protected:
-
     void SetUp() override {
     }
 
@@ -55,7 +54,7 @@ TEST_F(RegexTest, RegexTest) {
 
 TEST_F(RegexTest, SimpleRegexTest) {
     // Valid regex
-    ag::SimpleRegex regex {"(abc)(def)?"};
+    ag::SimpleRegex regex{"(abc)(def)?"};
     ASSERT_TRUE(regex.is_valid());
     regex = ag::SimpleRegex("[abc]");
     ASSERT_TRUE(regex.is_valid());

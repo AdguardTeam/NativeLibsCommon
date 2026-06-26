@@ -223,7 +223,7 @@ TEST(LruTimeoutCache, PreservesLaterDeadline) {
     ASSERT_FALSE(cache.get(1));
 
     cache.insert(1, "one", 2h);
-    cache.insert(1, "one", 1h, /*preserve_longer_timeout*/true);
+    cache.insert(1, "one", 1h, /*preserve_longer_timeout*/ true);
     ag::SteadyClock::add_time_shift(1h + 1s);
     ASSERT_TRUE(cache.get(1)); // Access resets the entry timeout.
     ag::SteadyClock::add_time_shift(2h + 1s);
@@ -241,7 +241,7 @@ TEST(LruTimeoutCache, PreservesLaterDeadline) {
     // Check timeout is reset to `max(to, existing.to)`.
     cache.insert(1, "one", 2h);
     ag::SteadyClock::add_time_shift(1h + 1s);
-    cache.insert(1, "one", 1h, /*preserve_longer_timeout*/true);
+    cache.insert(1, "one", 1h, /*preserve_longer_timeout*/ true);
     ag::SteadyClock::add_time_shift(1h + 1s);
     ASSERT_TRUE(cache.get(1)); // Access resets the entry timeout.
     ag::SteadyClock::add_time_shift(2h + 1s);

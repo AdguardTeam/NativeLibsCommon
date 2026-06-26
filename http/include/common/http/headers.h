@@ -507,7 +507,8 @@ struct fmt::formatter<ag::http::Request> {
             auto authority = self.authority();
             bool is_connect = (method == "CONNECT");
             if (is_connect) {
-                fmt::format_to(ctx.out(), "{} {}\r\n", !authority.empty() ? authority : "<empty :authority>", self.version());
+                fmt::format_to(
+                        ctx.out(), "{} {}\r\n", !authority.empty() ? authority : "<empty :authority>", self.version());
             } else {
                 fmt::format_to(ctx.out(), "{} {}\r\n", !path.empty() ? path : "<empty :path>", self.version());
             }

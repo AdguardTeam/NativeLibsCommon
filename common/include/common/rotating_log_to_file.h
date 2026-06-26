@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cstddef>
+#include <fstream>
 #include <mutex>
 #include <string>
 #include <string_view>
-#include <fstream>
 
 #include "logger.h"
 
@@ -60,11 +60,11 @@ private:
     void full_log(LogLevel level, std::string_view message);
     void lite_log(std::string_view message);
 
-    template<typename LogFunc>
+    template <typename LogFunc>
     void log_message(size_t message_size, LogFunc &&func);
 };
 
-template<typename LogFunc>
+template <typename LogFunc>
 void ag::RotatingLogToFile::log_message(size_t message_size, LogFunc &&func) {
     if (m_files_count == 0) {
         return;

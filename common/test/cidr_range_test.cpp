@@ -51,8 +51,10 @@ TEST_F(CidrRangeTest, testUtilMethods) {
 
     ASSERT_EQ("111.112.113.114", CidrRange("111.112.113.114/32").get_address_as_string());
     ASSERT_EQ("111.112.0.0", CidrRange("111.112.113.114/16").get_address_as_string());
-    ASSERT_EQ("2a02:908:1572:6bc0:ca52:61ff:febc:2485", CidrRange("2a02:908:1572:6bc0:ca52:61ff:febc:2485/128").get_address_as_string());
-    ASSERT_EQ("2001:b011:3820:11b9:d65d:64ff:fe0b:a260", CidrRange("2001:b011:3820:11b9:d65d:64ff:fe0b:a260/128").get_address_as_string());
+    ASSERT_EQ("2a02:908:1572:6bc0:ca52:61ff:febc:2485",
+            CidrRange("2a02:908:1572:6bc0:ca52:61ff:febc:2485/128").get_address_as_string());
+    ASSERT_EQ("2001:b011:3820:11b9:d65d:64ff:fe0b:a260",
+            CidrRange("2001:b011:3820:11b9:d65d:64ff:fe0b:a260/128").get_address_as_string());
     ASSERT_EQ("::ffff:83.90.47.30", CidrRange("::ffff:83.90.47.30").get_address_as_string());
 }
 
@@ -207,14 +209,17 @@ TEST_F(CidrRangeTest, DISABLED_CidrRangeSetMicrobenchmark) {
 
     std::vector<CidrRange> input;
     auto h = ag::file::open("cn.txt", ag::file::RDONLY);
-    ag::file::for_each_line(h, [](uint32_t, std::string_view line, void *arg) {
-        CidrRange range{line};
-        if (range.valid()) {
-            auto *ranges = (std::vector<CidrRange> *) arg;
-            ranges->emplace_back(std::move(range));
-        }
-        return true;
-    }, &input);
+    ag::file::for_each_line(
+            h,
+            [](uint32_t, std::string_view line, void *arg) {
+                CidrRange range{line};
+                if (range.valid()) {
+                    auto *ranges = (std::vector<CidrRange> *) arg;
+                    ranges->emplace_back(std::move(range));
+                }
+                return true;
+            },
+            &input);
     ag::file::close(h);
 
     std::vector<CidrRange> complement_v4 = ag::CidrRange::exclude(CidrRange{"0.0.0.0/0"}, input);
@@ -225,10 +230,12 @@ TEST_F(CidrRangeTest, DISABLED_CidrRangeSetMicrobenchmark) {
     using T = std::pair<const std::vector<CidrRange> &, bool>;
     using F = std::tuple<std::string_view, std::function<void(CidrRange)>, std::function<bool(const CidrRange &)>>;
 
-    std::set < CidrRange > stdset;
+    std::set<CidrRange> stdset;
     F stdset_functions{
             "std::set",
-            [&](CidrRange r) { stdset.insert(std::move(r)); },
+            [&](CidrRange r) {
+                stdset.insert(std::move(r));
+            },
             [&](const CidrRange &probe) {
                 return std::any_of(stdset.begin(), stdset.upper_bound(probe), [&probe](const auto &r) {
                     return r.contains(probe);
@@ -239,21 +246,25 @@ TEST_F(CidrRangeTest, DISABLED_CidrRangeSetMicrobenchmark) {
     CidrRangeSet agset;
     F agset_functions{
             "ag::CidrRangeSet",
-            [&](CidrRange r) { agset.insert(std::move(r)); },
-            [&](const CidrRange &probe) { return agset.includes(probe); },
+            [&](CidrRange r) {
+                agset.insert(std::move(r));
+            },
+            [&](const CidrRange &probe) {
+                return agset.includes(probe);
+            },
     };
 
-    for (auto [label, insert, check]: {stdset_functions, agset_functions}) {
+    for (auto [label, insert, check] : {stdset_functions, agset_functions}) {
         fmt::println(stderr, "{}", label);
         t.reset();
-        for (const CidrRange &range: input) {
+        for (const CidrRange &range : input) {
             insert(range);
         }
         fmt::println(stderr, "Inserted {} in {} ms", stdset.size(), t.elapsed<Millis>().count());
 
-        for (auto [vec, included]: {T{input, true}, T{complement_v4, false}, T{complement_v6, false}}) {
+        for (auto [vec, included] : {T{input, true}, T{complement_v4, false}, T{complement_v6, false}}) {
             t.reset();
-            for (const CidrRange &probe: vec) {
+            for (const CidrRange &probe : vec) {
                 ASSERT_EQ(included, check(probe));
             }
             fmt::println(stderr, "{} {} matches in {} ms", vec.size(), included ? "positive" : "negative",

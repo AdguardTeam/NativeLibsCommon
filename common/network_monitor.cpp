@@ -14,10 +14,10 @@
 #endif // _WIN32
 
 #ifdef __APPLE__
-#include <Network/path.h>
-#include <Network/path_monitor.h>
 #include <Network/interface.h>
 #include <Network/nw_object.h>
+#include <Network/path.h>
+#include <Network/path_monitor.h>
 #include <dispatch/dispatch.h>
 #endif // __APPLE__
 
@@ -39,19 +39,19 @@ namespace ag::utils {
 std::string get_interface_name(nw_path_t path) {
     __block std::string if_name;
     nw_path_enumerate_interfaces(path, ^(nw_interface_t iface) {
-        if (std::string name = nw_interface_get_name(iface);
-                !name.starts_with("utun") && !name.starts_with("ipsec")) {
-            if_name = std::move(name);
-            return false;
-        }
-        return true;
+      if (std::string name = nw_interface_get_name(iface); !name.starts_with("utun") && !name.starts_with("ipsec")) {
+          if_name = std::move(name);
+          return false;
+      }
+      return true;
     });
     return if_name;
 }
 #endif // __APPLE__
 
 NetworkMonitorImpl::NetworkMonitorImpl(std::function<void(const std::string &, bool)> cmd_handler)
-: NetworkMonitor(std::move(cmd_handler)) {}
+        : NetworkMonitor(std::move(cmd_handler)) {
+}
 
 void NetworkMonitorImpl::start(event_base *ev_base) {
     dbglog(m_logger, "...");
@@ -76,15 +76,15 @@ void NetworkMonitorImpl::start(event_base *ev_base) {
     dispatch_group_enter(group);
 
     nw_path_monitor_set_update_handler(m_nw_path_monitor, ^(nw_path_t path) {
-        if (m_current_path) {
-            nw_release(m_current_path);
-        }
-        m_current_path = (nw_path_t)nw_retain(path);
-        auto old_first_update_done = m_first_update_done;
-        changed_handler();
-        if (!old_first_update_done && m_first_update_done) {
-            dispatch_group_leave(group);
-        }
+      if (m_current_path) {
+          nw_release(m_current_path);
+      }
+      m_current_path = (nw_path_t) nw_retain(path);
+      auto old_first_update_done = m_first_update_done;
+      changed_handler();
+      if (!old_first_update_done && m_first_update_done) {
+          dispatch_group_leave(group);
+      }
     });
 
     nw_path_monitor_set_queue(m_nw_path_monitor, m_dispatch_queue);
@@ -105,13 +105,15 @@ void NetworkMonitorImpl::start(event_base *ev_base) {
 
     init_routing_table();
 
-    m_monitor_event.reset(event_new(ev_base, m_monitor_sock_fd, EV_READ | EV_PERSIST,
-        [](evutil_socket_t fd, short, void *arg) {
-            auto *monitor = static_cast<NetworkMonitorImpl *>(arg);
-            if (fd == monitor->m_monitor_sock_fd) {
-                monitor->changed_handler();
-            }
-        }, this));
+    m_monitor_event.reset(event_new(
+            ev_base, m_monitor_sock_fd, EV_READ | EV_PERSIST,
+            [](evutil_socket_t fd, short, void *arg) {
+                auto *monitor = static_cast<NetworkMonitorImpl *>(arg);
+                if (fd == monitor->m_monitor_sock_fd) {
+                    monitor->changed_handler();
+                }
+            },
+            this));
 
     event_add(m_monitor_event.get(), nullptr);
 #endif // __linux__
@@ -178,13 +180,12 @@ std::string NetworkMonitorImpl::get_default_interface() {
     infolog(m_logger, "{} {}", (geteuid() == 0) ? '#' : '$', CMD);
     Result result = fsystem(CMD);
     if (result.has_error()) {
-        errlog(m_logger,
-                "Couldn't detect the outbound interface automatically. Please specify it manually. Error: {}",
+        errlog(m_logger, "Couldn't detect the outbound interface automatically. Please specify it manually. Error: {}",
                 result.error()->str());
         return "";
     }
 
-    const auto& output = result.value().output;
+    const auto &output = result.value().output;
     dbglog(m_logger, "Command output: {}", output);
     std::vector parts = split_by(output, ' ');
     auto found = std::ranges::find(parts, "dev");
@@ -239,12 +240,9 @@ bool NetworkMonitorImpl::create_socket() {
         return false;
     }
 
-    sockaddr_nl sa{
-        .nl_family = AF_NETLINK,
-        .nl_groups = RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR
-                | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE
-    };
-    if (bind(m_monitor_sock_fd, (sockaddr*)&sa, sizeof(sa)) < 0) {
+    sockaddr_nl sa{.nl_family = AF_NETLINK,
+            .nl_groups = RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE | RTMGRP_IPV6_ROUTE};
+    if (bind(m_monitor_sock_fd, (sockaddr *) &sa, sizeof(sa)) < 0) {
         errlog(m_logger, "Couldn't bind netlink socket");
         close_socket();
         return false;
@@ -305,8 +303,8 @@ std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh
         switch (rta->rta_type) {
         case RTA_DST:
             if (RTA_PAYLOAD(rta) >= addr_len) {
-                dst_addr.assign(static_cast<uint8_t *>(RTA_DATA(rta)),
-                        static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
+                dst_addr.assign(
+                        static_cast<uint8_t *>(RTA_DATA(rta)), static_cast<uint8_t *>(RTA_DATA(rta)) + addr_len);
             }
             break;
         case RTA_OIF:
@@ -340,16 +338,16 @@ std::optional<RouteEntry> LinuxRoutingTable::parse_route_msg(const nlmsghdr *nlh
     return entry;
 }
 
-std::vector<RouteEntry>& LinuxRoutingTable::get_routes_by_addr_size(size_t addr_size) {
+std::vector<RouteEntry> &LinuxRoutingTable::get_routes_by_addr_size(size_t addr_size) {
     return (addr_size == IPV4_ADDRESS_SIZE) ? m_routes_v4 : m_routes_v6;
 }
 
-const std::vector<RouteEntry>& LinuxRoutingTable::get_routes_by_addr_size(size_t addr_size) const {
+const std::vector<RouteEntry> &LinuxRoutingTable::get_routes_by_addr_size(size_t addr_size) const {
     return (addr_size == IPV4_ADDRESS_SIZE) ? m_routes_v4 : m_routes_v6;
 }
 
-std::optional<uint32_t> LinuxRoutingTable::find_default_route(const std::vector<RouteEntry>& routes) const {
-    auto it = std::ranges::find_if(routes, [this](const RouteEntry& r) {
+std::optional<uint32_t> LinuxRoutingTable::find_default_route(const std::vector<RouteEntry> &routes) const {
+    auto it = std::ranges::find_if(routes, [this](const RouteEntry &r) {
         return r.is_default_route() && r.if_index != 0 && !is_interface_ignored(r.if_index);
     });
     return (it != routes.end()) ? std::optional{it->if_index} : std::nullopt;
@@ -359,7 +357,7 @@ void LinuxRoutingTable::set_ignore_tun_interfaces(bool ignore) {
     m_ignore_tun = ignore;
 }
 
-void LinuxRoutingTable::add_ignored_interface(const std::string& name) {
+void LinuxRoutingTable::add_ignored_interface(const std::string &name) {
     m_ignored_interfaces.insert(name);
 }
 
@@ -501,12 +499,12 @@ void LinuxRoutingTable::handle_new_route(const nlmsghdr *nlh) {
     });
 
     if (it != routes.end()) {
-        dbglog(m_logger, "Route updated: {} via if_index={} metric={}",
-               entry->prefix.to_string(), entry->if_index, entry->metric);
+        dbglog(m_logger, "Route updated: {} via if_index={} metric={}", entry->prefix.to_string(), entry->if_index,
+                entry->metric);
         *it = std::move(*entry);
     } else {
-        dbglog(m_logger, "Route added: {} via if_index={} metric={}",
-               entry->prefix.to_string(), entry->if_index, entry->metric);
+        dbglog(m_logger, "Route added: {} via if_index={} metric={}", entry->prefix.to_string(), entry->if_index,
+                entry->metric);
         routes.push_back(std::move(*entry));
     }
 
@@ -527,8 +525,7 @@ void LinuxRoutingTable::handle_del_route(const nlmsghdr *nlh) {
     });
 
     if (routes.size() < before) {
-        dbglog(m_logger, "Route deleted: {} via if_index={}",
-               entry->prefix.to_string(), entry->if_index);
+        dbglog(m_logger, "Route deleted: {} via if_index={}", entry->prefix.to_string(), entry->if_index);
     }
 
     sort_and_update_cache();
@@ -569,8 +566,7 @@ bool LinuxRoutingTable::reload() {
             return false;
         }
 
-        for (auto *nlh = reinterpret_cast<nlmsghdr *>(buf);
-                NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
+        for (auto *nlh = reinterpret_cast<nlmsghdr *>(buf); NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
             if (nlh->nlmsg_type == NLMSG_DONE) {
                 done = true;
                 break;
@@ -582,8 +578,8 @@ bool LinuxRoutingTable::reload() {
             }
             if (nlh->nlmsg_type == RTM_NEWROUTE) {
                 if (auto entry = parse_route_msg(nlh)) {
-                    auto &routes = (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE)
-                            ? new_routes_v4 : new_routes_v6;
+                    auto &routes =
+                            (entry->prefix.get_address().size() == IPV4_ADDRESS_SIZE) ? new_routes_v4 : new_routes_v6;
                     routes.push_back(std::move(*entry));
                 }
             }
@@ -644,13 +640,13 @@ void NetworkMonitorImpl::changed_handler() {
     sockaddr_nl sa{};
     iovec iov = {buf, sizeof(buf)};
     msghdr msg = {
-            .msg_name = (void*)&sa,
+            .msg_name = (void *) &sa,
             .msg_namelen = sizeof(sa),
             .msg_iov = &iov,
             .msg_iovlen = 1,
             .msg_control = nullptr,
             .msg_controllen = 0,
-            .msg_flags = 0
+            .msg_flags = 0,
     };
     ssize_t len = recvmsg(m_monitor_sock_fd, &msg, 0);
     if (len < 0) {
@@ -660,7 +656,7 @@ void NetworkMonitorImpl::changed_handler() {
 
     bool addr_changed = false;
 
-    for (auto nlh = (nlmsghdr *)buf; NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
+    for (auto nlh = (nlmsghdr *) buf; NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
         switch (nlh->nlmsg_type) {
         case RTM_NEWADDR:
         case RTM_DELADDR:
@@ -710,10 +706,11 @@ void NetworkMonitorImpl::handle_network_change(const std::string &new_if_name, b
 }
 
 NetworkMonitor::NetworkMonitor(std::function<void(const std::string &, bool)> cmd_handler)
-    : m_cmd_handler(std::move(cmd_handler)) {}
+        : m_cmd_handler(std::move(cmd_handler)) {
+}
 
 std::unique_ptr<NetworkMonitor> create_network_monitor(
-    std::function<void(const std::string &if_name, bool is_connected)>&& cmd_handler) {
+        std::function<void(const std::string &if_name, bool is_connected)> &&cmd_handler) {
 
     return std::make_unique<NetworkMonitorImpl>(std::move(cmd_handler));
 }

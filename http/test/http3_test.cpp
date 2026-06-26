@@ -10,8 +10,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #else
-#include <netdb.h>
 #include <fcntl.h>
+#include <netdb.h>
 #endif
 
 #include <event2/event.h>
@@ -545,8 +545,9 @@ TEST_F(Http3Client, FlushLoopContinuesPastControlOnlyPacket) {
         ASSERT_NO_FATAL_FAILURE(wait_readable(ag::Secs{5}));
         ASSERT_NO_FATAL_FAILURE(read_out_socket());
         ASSERT_NO_FATAL_FAILURE(flush_session());
-        responses = int(std::count_if(streams.begin(), streams.end(),
-                [](const auto &kv) { return kv.second.response.has_value(); }));
+        responses = int(std::count_if(streams.begin(), streams.end(), [](const auto &kv) {
+            return kv.second.response.has_value();
+        }));
     }
     for (auto &[id, s] : streams) {
         ASSERT_EQ(s.response->status_code(), 200) << "stream_id=" << id;
@@ -667,15 +668,15 @@ TEST(Http3FlushImpl, AllInitialPacketsSentWithPqClientHello) {
 
     ag::http::Http3Client::Callbacks handler{
             .arg = &ctx,
-            .on_output = [](void *arg, const ag::http::QuicNetworkPath &path, ag::Uint8View chunk) {
-                auto *c = (Ctx *) arg;
-                ++c->output_count;
-                sendto(c->fd, (const char *) chunk.data(), (int) chunk.size(), 0, path.remote, path.remote_len);
-            },
+            .on_output =
+                    [](void *arg, const ag::http::QuicNetworkPath &path, ag::Uint8View chunk) {
+                        auto *c = (Ctx *) arg;
+                        ++c->output_count;
+                        sendto(c->fd, (const char *) chunk.data(), (int) chunk.size(), 0, path.remote, path.remote_len);
+                    },
     };
 
-    ag::Result make_result = ag::http::Http3Client::connect(
-            ag::http::Http3Settings{}, handler,
+    ag::Result make_result = ag::http::Http3Client::connect(ag::http::Http3Settings{}, handler,
             ag::http::QuicNetworkPath{
                     .local = bound_addr.c_sockaddr(),
                     .local_len = bound_addr.c_socklen(),
@@ -691,9 +692,8 @@ TEST(Http3FlushImpl, AllInitialPacketsSentWithPqClientHello) {
     // With PQ groups enabled, ClientHello spans >= 2 Initial packets.
     // Without the fix, only 1 packet would be delivered to on_output.
 #ifdef OPENSSL_IS_BORINGSSL
-    EXPECT_GE(ctx.output_count, 2)
-            << "flush_impl() stopped after the first Initial packet; "
-               "subsequent packets were silently dropped (goto-exit regression)";
+    EXPECT_GE(ctx.output_count, 2) << "flush_impl() stopped after the first Initial packet; "
+                                      "subsequent packets were silently dropped (goto-exit regression)";
 #else
     EXPECT_GE(ctx.output_count, 1);
 #endif

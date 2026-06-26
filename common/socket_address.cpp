@@ -52,7 +52,8 @@ SocketAddress::SocketAddress(const sockaddr *addr) {
 }
 
 SocketAddress::SocketAddress(const SocketAddressStorage &storage)
-        : m_ss(storage) {}
+        : m_ss(storage) {
+}
 
 static SocketAddressStorage make_sockaddr_storage(Uint8View addr, uint16_t port) {
     SocketAddressStorage ss{};

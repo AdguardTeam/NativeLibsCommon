@@ -5,8 +5,8 @@
 
 #include <gtest/gtest.h>
 
-#include "common/defs.h"
 #include "../network_monitor_impl.h"
+#include "common/defs.h"
 
 #ifdef __linux__
 #include <linux/if_link.h>
@@ -21,7 +21,8 @@ class SimulateStatusNetworkMonitor : public utils::NetworkMonitorImpl {
 public:
     explicit SimulateStatusNetworkMonitor(
             std::function<void(const std::string &if_name, bool is_connected)> cmd_handler)
-            : NetworkMonitorImpl(std::move(cmd_handler)) {}
+            : NetworkMonitorImpl(std::move(cmd_handler)) {
+    }
 
     void simulate_status_change(const std::string &new_if_name, bool is_satisfied) {
         handle_network_change(new_if_name, is_satisfied);
@@ -39,11 +40,11 @@ protected:
 #endif
 
     void SetUp() override {
-        m_monitor = std::make_unique<SimulateStatusNetworkMonitor>(
-                [this](const std::string &if_name, bool is_connected) {
-            m_is_connected = is_connected;
-            m_bound_if = if_name;
-        });
+        m_monitor =
+                std::make_unique<SimulateStatusNetworkMonitor>([this](const std::string &if_name, bool is_connected) {
+                    m_is_connected = is_connected;
+                    m_bound_if = if_name;
+                });
 
 #ifdef __linux__
         m_ev_base.reset(event_base_new());
@@ -68,7 +69,6 @@ protected:
 #endif
     }
 };
-
 
 TEST_F(NetworkMonitorTest, GetDefaultInterface) {
     std::string if_name = m_monitor->get_default_interface();
@@ -199,8 +199,7 @@ protected:
         }
 
         void add_attr_u32(uint16_t type, uint32_t value) {
-            auto *rta = reinterpret_cast<rtattr *>(
-                    reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
+            auto *rta = reinterpret_cast<rtattr *>(reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
                     + nlh.nlmsg_len - NLMSG_LENGTH(sizeof(rtmsg)));
             rta->rta_type = type;
             rta->rta_len = RTA_LENGTH(sizeof(uint32_t));
@@ -209,8 +208,7 @@ protected:
         }
 
         void add_attr_addr(uint16_t type, const std::vector<uint8_t> &addr) {
-            auto *rta = reinterpret_cast<rtattr *>(
-                    reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
+            auto *rta = reinterpret_cast<rtattr *>(reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
                     + nlh.nlmsg_len - NLMSG_LENGTH(sizeof(rtmsg)));
             rta->rta_type = type;
             rta->rta_len = RTA_LENGTH(addr.size());
@@ -352,8 +350,7 @@ TEST_F(LinuxRoutingTableTest, MultipleInterfaces) {
 TEST_F(LinuxRoutingTableTest, MalformedMessageTooShortDstAttr) {
     MockRouteMsg msg(AF_INET, 24, RT_TABLE_MAIN, RTN_UNICAST);
     // Manually create malformed RTA_DST with incorrect size
-    auto *rta = reinterpret_cast<rtattr *>(
-            reinterpret_cast<char *>(&msg.rtm) + NLMSG_ALIGN(sizeof(rtmsg)));
+    auto *rta = reinterpret_cast<rtattr *>(reinterpret_cast<char *>(&msg.rtm) + NLMSG_ALIGN(sizeof(rtmsg)));
     rta->rta_type = RTA_DST;
     rta->rta_len = RTA_LENGTH(2); // Only 2 bytes instead of 4 for IPv4
     msg.nlh.nlmsg_len += RTA_ALIGN(rta->rta_len);
@@ -369,8 +366,7 @@ TEST_F(LinuxRoutingTableTest, MalformedMessageTooShortDstAttr) {
 TEST_F(LinuxRoutingTableTest, MalformedMessageTooShortOifAttr) {
     MockRouteMsg msg(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
     // Manually create malformed RTA_OIF with incorrect size
-    auto *rta = reinterpret_cast<rtattr *>(
-            reinterpret_cast<char *>(&msg.rtm) + NLMSG_ALIGN(sizeof(rtmsg)));
+    auto *rta = reinterpret_cast<rtattr *>(reinterpret_cast<char *>(&msg.rtm) + NLMSG_ALIGN(sizeof(rtmsg)));
     rta->rta_type = RTA_OIF;
     rta->rta_len = RTA_LENGTH(2); // Only 2 bytes instead of 4
     msg.nlh.nlmsg_len += RTA_ALIGN(rta->rta_len);
@@ -413,8 +409,12 @@ protected:
     }
 
     void TearDown() override {
-        if (m_fds[0] >= 0) close(m_fds[0]);
-        if (m_fds[1] >= 0) close(m_fds[1]);
+        if (m_fds[0] >= 0) {
+            close(m_fds[0]);
+        }
+        if (m_fds[1] >= 0) {
+            close(m_fds[1]);
+        }
     }
 
     // Helper to construct a mock RTM_NEWLINK Netlink response
@@ -444,9 +444,8 @@ protected:
             size_t nested_total = RTA_ALIGN(kind_rta->rta_len);
 
             // Build outer IFLA_LINKINFO wrapping the nested attribute
-            char *attr_pos = reinterpret_cast<char *>(&ifm)
-                    + NLMSG_ALIGN(sizeof(ifinfomsg))
-                    + nlh.nlmsg_len - NLMSG_LENGTH(sizeof(ifinfomsg));
+            char *attr_pos = reinterpret_cast<char *>(&ifm) + NLMSG_ALIGN(sizeof(ifinfomsg)) + nlh.nlmsg_len
+                    - NLMSG_LENGTH(sizeof(ifinfomsg));
             auto *linkinfo_rta = reinterpret_cast<rtattr *>(attr_pos);
             linkinfo_rta->rta_type = IFLA_LINKINFO;
             linkinfo_rta->rta_len = RTA_LENGTH(nested_total);
@@ -540,8 +539,12 @@ protected:
 
     void TearDown() override {
         m_table.set_query_fd(-1);
-        if (m_fds[0] >= 0) close(m_fds[0]);
-        if (m_fds[1] >= 0) close(m_fds[1]);
+        if (m_fds[0] >= 0) {
+            close(m_fds[0]);
+        }
+        if (m_fds[1] >= 0) {
+            close(m_fds[1]);
+        }
     }
 
     struct MockRouteMsg {
@@ -562,8 +565,7 @@ protected:
         }
 
         void add_attr_u32(uint16_t type, uint32_t value) {
-            auto *rta = reinterpret_cast<rtattr *>(
-                    reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
+            auto *rta = reinterpret_cast<rtattr *>(reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
                     + nlh.nlmsg_len - NLMSG_LENGTH(sizeof(rtmsg)));
             rta->rta_type = type;
             rta->rta_len = RTA_LENGTH(sizeof(uint32_t));
@@ -572,8 +574,7 @@ protected:
         }
 
         void add_attr_addr(uint16_t type, const std::vector<uint8_t> &addr) {
-            auto *rta = reinterpret_cast<rtattr *>(
-                    reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
+            auto *rta = reinterpret_cast<rtattr *>(reinterpret_cast<char *>(&rtm) + NLMSG_ALIGN(sizeof(rtmsg))
                     + nlh.nlmsg_len - NLMSG_LENGTH(sizeof(rtmsg)));
             rta->rta_type = type;
             rta->rta_len = RTA_LENGTH(addr.size());
@@ -605,9 +606,8 @@ protected:
             memcpy(RTA_DATA(kind_rta), kind_data, kind_len);
             size_t nested_total = RTA_ALIGN(kind_rta->rta_len);
 
-            char *attr_pos = reinterpret_cast<char *>(&ifm)
-                    + NLMSG_ALIGN(sizeof(ifinfomsg))
-                    + nlh.nlmsg_len - NLMSG_LENGTH(sizeof(ifinfomsg));
+            char *attr_pos = reinterpret_cast<char *>(&ifm) + NLMSG_ALIGN(sizeof(ifinfomsg)) + nlh.nlmsg_len
+                    - NLMSG_LENGTH(sizeof(ifinfomsg));
             auto *linkinfo_rta = reinterpret_cast<rtattr *>(attr_pos);
             linkinfo_rta->rta_type = IFLA_LINKINFO;
             linkinfo_rta->rta_len = RTA_LENGTH(nested_total);
@@ -653,10 +653,10 @@ TEST_F(LinuxRoutingTableMockFdTest, ReloadFromMockDump) {
     done_hdr.nlmsg_seq = 1;
 
     write_dump({
-        {&r1, r1.nlh.nlmsg_len},
-        {&r2, r2.nlh.nlmsg_len},
-        {&r3, r3.nlh.nlmsg_len},
-        {&done_hdr, done_hdr.nlmsg_len},
+            {&r1, r1.nlh.nlmsg_len},
+            {&r2, r2.nlh.nlmsg_len},
+            {&r3, r3.nlh.nlmsg_len},
+            {&done_hdr, done_hdr.nlmsg_len},
     });
 
     ASSERT_TRUE(m_table.reload());

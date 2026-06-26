@@ -197,7 +197,8 @@ struct ErrorCodeToString<std::errc> {
 using SystemError = Error<std::errc>;
 
 template <typename Enum, typename = std::enable_if_t<std::is_enum_v<Enum>>>
-[[nodiscard]] Error<Enum> make_error_func(SourceLocation source_location, Enum value, ErrorBasePtr next_error = nullptr) {
+[[nodiscard]] Error<Enum> make_error_func(
+        SourceLocation source_location, Enum value, ErrorBasePtr next_error = nullptr) {
     return std::make_shared<ErrorImpl<Enum>>(source_location, value, std::move(next_error));
 }
 
