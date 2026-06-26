@@ -74,6 +74,8 @@ static thread_local uint8_t socket_buffer[2 * 1024];
 // time (before any base is created), so every event_base in the tests becomes safe to wake from another thread.
 [[maybe_unused]] static const int g_evthread_initialized = []() {
 #ifdef _WIN32
+    WSADATA wsa_data = {};
+    WSAStartup(MAKEWORD(2, 2), &wsa_data);
     return evthread_use_windows_threads();
 #else
     return evthread_use_pthreads();
