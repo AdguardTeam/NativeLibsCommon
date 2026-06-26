@@ -14,6 +14,7 @@
 #endif
 
 #include <event2/event.h>
+#include <event2/thread.h>
 #include <event2/util.h>
 #include <gtest/gtest.h>
 #include <openssl/bio.h>
@@ -66,6 +67,18 @@ static const ag::UniquePtr<EVP_PKEY, &EVP_PKEY_free> PRIVATE_KEY = []() {
 
 static ag::Logger logger("!SERV");
 static thread_local uint8_t socket_buffer[2 * 1024];
+
+// The server runs its event_base in a dedicated worker thread, while ServerSide::stop() wakes it up with
+// event_base_loopexit() from the main thread. That cross-thread wakeup only works on a notifiable base, which
+// libevent sets up automatically when threading support is enabled before the base is created. This runs at load
+// time (before any base is created), so every event_base in the tests becomes safe to wake from another thread.
+[[maybe_unused]] static const int g_evthread_initialized = []() {
+#ifdef _WIN32
+    return evthread_use_windows_threads();
+#else
+    return evthread_use_pthreads();
+#endif
+}();
 
 enum ServerSide::State : int {
     STOPPED,
