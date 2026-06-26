@@ -8,7 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Support RFC 10008 HTTP `QUERY` method in llhttp.
+- Add custom Conan recipe for llhttp 9.3.0 with AdGuard-specific patches.
+
 ### Changed
+
+- Bump llhttp from `9.1.3` to `9.3.0`.
+- Apply lenient parsing flags explicitly in `http/http1.cpp` instead of patching llhttp defaults.
+- Treat `205 Reset Content` responses as bodyless via `0001-status-205-no-body.patch`.
+- Allow `+`, `-`, `.`, and digits in URL schemes via `0002-url-scheme.patch`.
 
 ### Deprecated
 
