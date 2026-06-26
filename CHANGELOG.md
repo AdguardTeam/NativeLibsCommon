@@ -18,10 +18,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+### Security
+
+## [8.1.37] - 2026-06-26
+
+### Added
+
+- Support RFC 10008 HTTP `QUERY` method in llhttp.
+- Add custom Conan recipe for llhttp 9.3.0 with AdGuard-specific patches.
+
+### Changed
+
+- Bump llhttp from `9.1.3` to `9.3.0`.
+- Apply lenient parsing flags explicitly in `http/http1.cpp` instead of patching llhttp defaults.
+- Treat `205 Reset Content` responses as bodyless via `0001-status-205-no-body.patch`.
+- Allow `+`, `-`, `.`, and digits in URL schemes via `0002-url-scheme.patch`.
+
+### Fixed
+
 - Keep the QUIC connection alive on stream-level HTTP/3 errors instead of tearing down the whole connection
 - Fix HTTP/3 send-buffer aliasing in `push_data`: hand ngtcp2 a stable owned buffer via `evbuffer_add_reference` so retained pointers stay valid until the data is acknowledged
-
-### Security
 
 ## [8.1.36] - 2026-06-24
 
@@ -1165,7 +1181,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.36...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.37...HEAD
+[8.1.37]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.36...v8.1.37
 [8.1.36]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.35...v8.1.36
 [8.1.35]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.34...v8.1.35
 [8.1.34]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.33...v8.1.34
