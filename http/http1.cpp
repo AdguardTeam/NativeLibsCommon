@@ -17,22 +17,27 @@ static constexpr std::string_view CHUNK_FOOTER = "\r\n";
 
 template <typename T>
 Http1Session<T>::Http1Session()
-        : m_id(g_next_id.fetch_add(1, std::memory_order_relaxed))
-        , m_settings({
-                  .on_message_begin = on_message_begin,
-                  .on_url = on_url,
-                  .on_status = on_status,
-                  .on_header_field = on_header_field,
-                  .on_header_value = on_header_value,
-                  .on_headers_complete = on_headers_complete,
-                  .on_body = on_body,
-                  .on_message_complete = on_message_complete,
-          }) {
+        : m_id(g_next_id.fetch_add(1, std::memory_order_relaxed)) {
+    llhttp_settings_init(&m_settings);
+    m_settings.on_message_begin = on_message_begin;
+    m_settings.on_url = on_url;
+    m_settings.on_status = on_status;
+    m_settings.on_header_field = on_header_field;
+    m_settings.on_header_value = on_header_value;
+    m_settings.on_headers_complete = on_headers_complete;
+    m_settings.on_body = on_body;
+    m_settings.on_message_complete = on_message_complete;
     if constexpr (std::is_same_v<T, Http1Server>) {
         llhttp_init(&m_parser, HTTP_REQUEST, &m_settings);
     } else {
         llhttp_init(&m_parser, HTTP_RESPONSE, &m_settings);
     }
+
+    /* AdGuard: emulate legacy http-parser leniency used by CoreLibs. */
+    llhttp_set_lenient_headers(&m_parser, 1);
+    llhttp_set_lenient_chunked_length(&m_parser, 1);
+    llhttp_set_lenient_optional_cr_before_lf(&m_parser, 1);
+
     m_parser.data = this;
 }
 

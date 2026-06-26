@@ -1,0 +1,18 @@
+From: AdGuard <devteam@adguard.com>
+Subject: [PATCH] Treat 205 Reset Content as a bodyless response
+
+llhttp only treats 1xx, 204 and 304 responses as bodyless, but per
+RFC 7231 section 6.3.6 a 205 Reset Content response must not contain
+a payload body. This matches the historical behaviour of CoreLibs'
+vendored http-parser.
+
+--- a/src/http.c	2026-06-25 13:18:13
++++ b/src/http.c	2026-06-25 13:18:28
+@@ -134,6 +134,7 @@
+   /* See RFC 2616 section 4.4 */
+   if (parser->status_code / 100 == 1 || /* 1xx e.g. Continue */
+       parser->status_code == 204 ||     /* No Content */
++      parser->status_code == 205 ||     /* Reset Content */
+       parser->status_code == 304 ||     /* Not Modified */
+       (parser->flags & F_SKIPBODY)) {     /* response to a HEAD request */
+     return 0;

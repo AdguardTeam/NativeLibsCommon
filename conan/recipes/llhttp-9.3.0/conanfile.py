@@ -1,6 +1,6 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import copy, get, rmdir
+from conan.tools.files import copy, get, patch, rmdir
 import os
 
 required_conan_version = ">=1.53.0"
@@ -10,7 +10,7 @@ required_conan_version = ">=1.53.0"
 # possibly causing accidental linking against the dynamic library.
 class LlhttpParserConan(ConanFile):
     name = "llhttp"
-    version = "9.1.3"
+    version = "9.3.0"
     description = "http request/response parser for c"
     topics = ("http", "parser")
     url = "https://github.com/conan-io/conan-center-index"
@@ -26,6 +26,8 @@ class LlhttpParserConan(ConanFile):
         "shared": False,
         "fPIC": True,
     }
+
+    exports_sources = "patches/*.patch"
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -43,8 +45,11 @@ class LlhttpParserConan(ConanFile):
     def source(self):
         get(self,
             url=f"https://github.com/nodejs/llhttp/archive/refs/tags/release/v{self.version}.tar.gz",
-            sha256="49405a7bcb4312b29b91408ee1395de3bc3b29e3bdd10380dc4eb8210912f295",
+            sha256="1a2b45cb8dda7082b307d336607023aa65549d6f060da1d246b1313da22b685a",
             strip_root=True)
+        # AdGuard patches to match CoreLibs' legacy http-parser behaviour.
+        patch(self, patch_file=os.path.join(self.export_sources_folder, "patches", "0001-status-205-no-body.patch"), strip=1)
+        patch(self, patch_file=os.path.join(self.export_sources_folder, "patches", "0002-url-scheme.patch"), strip=1)
 
     def generate(self):
         deps = CMakeDeps(self)
