@@ -63,7 +63,7 @@ struct rt_msghdr2 {
 #endif
 
 // Routing socket alignment requirements
-#define ROUNDUP(a) ((a) > 0 ? (1 + (((a) -1) | (sizeof(uint32_t) - 1))) : sizeof(uint32_t))
+#define ROUNDUP(a) ((a) > 0 ? (1 + (((a) - 1) | (sizeof(uint32_t) - 1))) : sizeof(uint32_t))
 
 namespace ag {
 

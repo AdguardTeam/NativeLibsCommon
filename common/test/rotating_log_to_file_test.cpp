@@ -1,9 +1,9 @@
-#include <gtest/gtest.h>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+#include <gtest/gtest.h>
 
-#include "common/utils.h"
 #include "common/rotating_log_to_file.h"
+#include "common/utils.h"
 
 class RotatingLogToFileTest : public ::testing::Test {
 protected:
@@ -27,15 +27,14 @@ protected:
         if (!file.is_open()) {
             return "";
         }
-        std::string content((std::istreambuf_iterator<char>(file)),
-                (std::istreambuf_iterator<char>()));
+        std::string content((std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>()));
         return content;
     }
 };
 
 TEST_F(RotatingLogToFileTest, TestLogFileCreation) {
     m_max_files = 1;
-    size_t max_file_size = 10 * 1024;  // 10 KB
+    size_t max_file_size = 10 * 1024; // 10 KB
 
     ag::RotatingLogToFile logger(m_log_file, max_file_size, m_max_files);
 

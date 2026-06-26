@@ -61,7 +61,7 @@ Result<std::pair<std::string_view, std::string_view>, utils::NetUtilsError> util
                 if (require_ipv6_addr_in_square_brackets) {
                     return make_error(NetUtilsError::AE_IPV6_MISSING_BRACKETS);
                 } else {
-                    return std::make_pair(address_string, std::string_view {});
+                    return std::make_pair(address_string, std::string_view{});
                 }
             }
             auto port = address_string.substr(pos + 1);
@@ -72,7 +72,7 @@ Result<std::pair<std::string_view, std::string_view>, utils::NetUtilsError> util
             }
         }
     }
-    return std::make_pair(address_string, std::string_view {});
+    return std::make_pair(address_string, std::string_view{});
 }
 
 std::string utils::join_host_port(std::string_view host, std::string_view port) {
@@ -251,13 +251,13 @@ static DWORD get_default_route_ifs(
         if (SocketAddress((sockaddr *) &table_v4->Table[i].DestinationPrefix.Prefix.Ipv4).is_any()
                 && table_v4->Table[i].DestinationPrefix.PrefixLength == 0) {
             net_ifs_v4.insert(table_v4->Table[i].InterfaceIndex);
-                }
+        }
     }
     for (size_t i = 0; i < table_v6->NumEntries; i++) {
         if (SocketAddress((sockaddr *) &table_v6->Table[i].DestinationPrefix.Prefix.Ipv6).is_any()
                 && table_v6->Table[i].DestinationPrefix.PrefixLength == 0) {
             net_ifs_v6.insert(table_v6->Table[i].InterfaceIndex);
-                }
+        }
     }
     dbglog(g_logger, "Default route interfaces: ipv4 = {}, ipv6 = {}", net_ifs_v4, net_ifs_v6);
     return error;
@@ -478,7 +478,7 @@ Result<SystemDnsServers, RetrieveSystemDnsError> utils::retrieve_system_dns_serv
         }
 
         servers.main.emplace_back(SystemDnsServer{
-            .address = sock_addr.host_str(),
+                .address = sock_addr.host_str(),
         });
     }
 
@@ -510,11 +510,11 @@ Result<SystemDnsServers, RetrieveSystemDnsError> utils::retrieve_system_dns_serv
         }
 
 #if defined __linux__
-        static const std::array UNFILTERED_IPS {
-            SocketAddress{AG_UNFILTERED_DNS_IPS_V4[0], PLAIN_DNS_PORT_NUMBER},
-            SocketAddress{AG_UNFILTERED_DNS_IPS_V4[1], PLAIN_DNS_PORT_NUMBER},
-            SocketAddress{AG_UNFILTERED_DNS_IPS_V6[0], PLAIN_DNS_PORT_NUMBER},
-            SocketAddress{AG_UNFILTERED_DNS_IPS_V6[1], PLAIN_DNS_PORT_NUMBER},
+        static const std::array UNFILTERED_IPS{
+                SocketAddress{AG_UNFILTERED_DNS_IPS_V4[0], PLAIN_DNS_PORT_NUMBER},
+                SocketAddress{AG_UNFILTERED_DNS_IPS_V4[1], PLAIN_DNS_PORT_NUMBER},
+                SocketAddress{AG_UNFILTERED_DNS_IPS_V6[0], PLAIN_DNS_PORT_NUMBER},
+                SocketAddress{AG_UNFILTERED_DNS_IPS_V6[1], PLAIN_DNS_PORT_NUMBER},
         };
         if (addr.is_loopback() || std::ranges::find(UNFILTERED_IPS, addr) != UNFILTERED_IPS.end()) {
             warnlog(g_logger, "Skipping potential route loop address: {}", addr);
@@ -548,8 +548,7 @@ Result<SystemDnsServers, RetrieveSystemDnsError> utils::retrieve_system_dns_serv
             line_view.remove_prefix(NAMESERVER.size());
         }
         line_view = ltrim(line_view);
-        line_view = line_view.substr(0,
-                std::distance(line_view.begin(), std::ranges::find_if(line_view, isspace)));
+        line_view = line_view.substr(0, std::distance(line_view.begin(), std::ranges::find_if(line_view, isspace)));
         SocketAddress addr{line_view, PLAIN_DNS_PORT_NUMBER};
 
         if (!addr.valid()) {
@@ -558,11 +557,11 @@ Result<SystemDnsServers, RetrieveSystemDnsError> utils::retrieve_system_dns_serv
         }
 
 #if defined __linux__
-        static const std::array UNFILTERED_IPS {
-            SocketAddress{AG_UNFILTERED_DNS_IPS_V4[0], PLAIN_DNS_PORT_NUMBER},
-            SocketAddress{AG_UNFILTERED_DNS_IPS_V4[1], PLAIN_DNS_PORT_NUMBER},
-            SocketAddress{AG_UNFILTERED_DNS_IPS_V6[0], PLAIN_DNS_PORT_NUMBER},
-            SocketAddress{AG_UNFILTERED_DNS_IPS_V6[1], PLAIN_DNS_PORT_NUMBER},
+        static const std::array UNFILTERED_IPS{
+                SocketAddress{AG_UNFILTERED_DNS_IPS_V4[0], PLAIN_DNS_PORT_NUMBER},
+                SocketAddress{AG_UNFILTERED_DNS_IPS_V4[1], PLAIN_DNS_PORT_NUMBER},
+                SocketAddress{AG_UNFILTERED_DNS_IPS_V6[0], PLAIN_DNS_PORT_NUMBER},
+                SocketAddress{AG_UNFILTERED_DNS_IPS_V6[1], PLAIN_DNS_PORT_NUMBER},
         };
         if (addr.is_loopback() || std::ranges::find(UNFILTERED_IPS, addr) != std::end(UNFILTERED_IPS)) {
             warnlog(g_logger, "Skipping potential route loop address: {}", addr);

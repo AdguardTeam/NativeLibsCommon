@@ -9,10 +9,12 @@
 
 namespace ag::parallel {
 
-template<typename R>
+template <typename R>
 struct AnyOfCondSharedState : public std::enable_shared_from_this<AnyOfCondSharedState<R>> {
-    template<typename Func, typename = std::enable_if_t<std::is_assignable_v<std::function<bool(const R &)>, Func>>>
-    AnyOfCondSharedState(Func &&cond) : check_cond(std::forward<Func>(cond)) {}
+    template <typename Func, typename = std::enable_if_t<std::is_assignable_v<std::function<bool(const R &)>, Func>>>
+    AnyOfCondSharedState(Func &&cond)
+            : check_cond(std::forward<Func>(cond)) {
+    }
 
     std::function<bool(const R &)> check_cond;
     std::mutex mutex{};
@@ -46,7 +48,7 @@ struct AnyOfCondSharedState : public std::enable_shared_from_this<AnyOfCondShare
     }
 };
 
-template<typename R>
+template <typename R>
 struct AnyOfCondAwaitable {
     // For some inexplicable reason, we are forced to declare a constructor because
     // otherwise MSCV does not correctly manage the lifetime of this structure
@@ -88,7 +90,7 @@ struct AnyOfCondAwaitable {
  * @return Awaitable with return type std::optional<R>. Optional is set if at least one coroutine was
  * finished and matched condition.
  */
-template<typename R, typename ...Aws>
+template <typename R, typename... Aws>
 auto any_of_cond(std::function<bool(const R &)> check_cond, Aws &&...aws) {
     // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     AnyOfCondAwaitable<R> ret{std::move(check_cond)};
@@ -108,7 +110,7 @@ concept Void = std::is_void_v<R>;
  * @tparam R Return type of every awaitable in parameters.
  * @return Awaitable with return type R.
  */
-template<NonVoid R, typename Aw, typename ...Aws>
+template <NonVoid R, typename Aw, typename... Aws>
 auto any_of(Aw &&aw, Aws &&...aws) {
     // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     auto any_of_cond_awaitable = any_of_cond<R>(nullptr, std::forward<Aw>(aw), std::forward<Aws>(aws)...);
@@ -127,7 +129,7 @@ auto any_of(Aw &&aw, Aws &&...aws) {
  * Return type of awaitables in parameters may be any.
  * @return Awaitable with void return type.
  */
-template<Void R, typename ...Aws>
+template <Void R, typename... Aws>
 auto any_of(Aws &&...aws) {
     // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     auto any_of_cond_awaitable = any_of<bool>([](Aws &&a) -> coro::Task<bool> {
@@ -143,7 +145,7 @@ auto any_of(Aws &&...aws) {
     return await_and_transform_result;
 }
 
-template<typename R>
+template <typename R>
 struct AllOfSharedState {
     std::mutex mutex{};
     std::coroutine_handle<> suspended_handle{};
@@ -166,7 +168,7 @@ struct AllOfSharedState {
     };
 };
 
-template<typename R>
+template <typename R>
 struct AllOfAwaitable {
     std::shared_ptr<AllOfSharedState<R>> state;
 
@@ -200,7 +202,7 @@ struct AllOfAwaitable {
  * @tparam R Return type of every awaitable in parameters.
  * @return Awaitable with return type R
  */
-template<NonVoid R, typename ...Aws>
+template <NonVoid R, typename... Aws>
 auto all_of(Aws &&...aws) {
     // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     AllOfAwaitable<R> ret = {.state = std::make_shared<AllOfSharedState<R>>()};
@@ -213,7 +215,7 @@ auto all_of(Aws &&...aws) {
  * Return type of awaitables in parameters may be any.
  * @return Awaitable with void return type.
  */
-template<Void R, typename ...Awaitables>
+template <Void R, typename... Awaitables>
 auto all_of(Awaitables &&...awaitables) {
     // Execute this immediately to copy/move all awaitables into shared state - parameters may be temporary
     auto all_of_awaitable = all_of<bool>([](Awaitables &&a) -> coro::Task<bool> {

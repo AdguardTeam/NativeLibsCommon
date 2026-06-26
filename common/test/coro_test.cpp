@@ -1,15 +1,17 @@
 #include <map>
 
+#include "common/defs.h"
 #include "common/gtest_coro.h"
 #include "common/parallel.h"
-#include "common/defs.h"
 #include "common/utils.h"
 
 namespace ag::test {
 
 struct Scheduler {
     Scheduler() {
-        thread = std::thread([this]{ this->thread_worker(); });
+        thread = std::thread([this] {
+            this->thread_worker();
+        });
     }
     ~Scheduler() {
         if (std::unique_lock l{mutex}) {
@@ -61,13 +63,19 @@ struct Scheduler {
         struct Awaitable { // NOLINT: awaitable trait
             Scheduler *self;
             Millis millis;
-            bool await_ready() { return false; }
+            bool await_ready() {
+                return false;
+            }
             void await_suspend(std::coroutine_handle<> h) {
                 self->schedule(h, millis);
             }
-            void await_resume() {}
+            void await_resume() {
+            }
 
-            Awaitable(Scheduler *self, Millis timeout) : self{self}, millis{timeout} {}
+            Awaitable(Scheduler *self, Millis timeout)
+                    : self{self}
+                    , millis{timeout} {
+            }
 
             // This is to test all_of/any_of with temporary non-copyable non-movable awaitables.
             // RVO must be applied to move this awaitable shared state, else code will not compile.
@@ -117,10 +125,14 @@ TEST_F(CoroTest, Test) {
 TEST_F(CoroTest, ParallelTest) {
     int x = co_await parallel::any_of<int>(coro1(), coro2());
     ASSERT_EQ(42, x);
-    auto is_odd = [](int x) { return (x % 2) != 0; };
+    auto is_odd = [](int x) {
+        return (x % 2) != 0;
+    };
     auto y = co_await parallel::any_of_cond<int>(is_odd, coro1(), coro2());
     ASSERT_EQ(43, y.value());
-    auto never = [](int /*x*/) { return false; };
+    auto never = [](int /*x*/) {
+        return false;
+    };
     auto z = co_await parallel::any_of_cond<int>(never, coro1(), coro2());
     ASSERT_FALSE(z.has_value());
     std::unique_ptr<int> x_ptr = co_await parallel::any_of<std::unique_ptr<int>>(coro4(), coro5());
@@ -155,16 +167,10 @@ TEST_F(CoroTest, Sleep) {
     co_await m_scheduler.sleep(SLEEP_TIME);
     ASSERT_GE(timer.elapsed<Millis>(), SLEEP_TIME);
     timer.reset();
-    co_await parallel::all_of<void>(
-            m_scheduler.sleep(SLEEP_TIME),
-            m_scheduler.sleep(SLEEP_TIME * 2)
-    );
+    co_await parallel::all_of<void>(m_scheduler.sleep(SLEEP_TIME), m_scheduler.sleep(SLEEP_TIME * 2));
     ASSERT_GE(timer.elapsed<Millis>(), SLEEP_TIME * 2);
     timer.reset();
-    co_await parallel::any_of<void>(
-            m_scheduler.sleep(SLEEP_TIME),
-            m_scheduler.sleep(SLEEP_TIME * 2)
-    );
+    co_await parallel::any_of<void>(m_scheduler.sleep(SLEEP_TIME), m_scheduler.sleep(SLEEP_TIME * 2));
     auto elapsed = timer.elapsed<Millis>();
     ASSERT_GE(elapsed, SLEEP_TIME);
     ASSERT_LE(elapsed, SLEEP_TIME * 2);
@@ -176,9 +182,10 @@ TEST_F(CoroTest, RunDetached) {
 }
 
 TEST_F(CoroTest, ToFuture) {
-    to_future([this]()->coro::Task<void>{
+    to_future([this]() -> coro::Task<void> {
         co_await m_scheduler.sleep(Millis{500});
-    }()).get();
+    }())
+            .get();
     co_return;
 }
 

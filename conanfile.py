@@ -67,6 +67,7 @@ class NativeLibsCommon(ConanFile):
 
     def generate(self):
         tc = CMakeToolchain(self)
+        tc.user_presets_path = False
         tc.generate()
         deps = CMakeDeps(self)
         deps.generate()

@@ -250,17 +250,16 @@ TEST_F(Http1Client, PostBodyDoesNotFinishStreamPrematurely) {
     ASSERT_TRUE(result.has_value()) << result.error()->str();
     uint32_t stream_id = result.value();
 
-    ASSERT_NO_FATAL_FAILURE(check_no_error(
-         m_client.send_body(stream_id, {(uint8_t*)BODY.data(), BODY.size()}, true)));
+    ASSERT_NO_FATAL_FAILURE(
+            check_no_error(m_client.send_body(stream_id, {(uint8_t *) BODY.data(), BODY.size()}, true)));
 
     ASSERT_EQ(m_streams.size(), 0) << "Client stream must not finish after sending request body";
 
-    static constexpr std::string_view RESP =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Length: 18\r\n\r\n"
-        R"({"key":"value123"})";
-    ASSERT_NO_FATAL_FAILURE(check_result(
-        m_client.input({(uint8_t*)RESP.data(), RESP.size()}), ag::http::Http1Client::InputOk{}));
+    static constexpr std::string_view RESP = "HTTP/1.1 200 OK\r\n"
+                                             "Content-Length: 18\r\n\r\n"
+                                             R"({"key":"value123"})";
+    ASSERT_NO_FATAL_FAILURE(
+            check_result(m_client.input({(uint8_t *) RESP.data(), RESP.size()}), ag::http::Http1Client::InputOk{}));
 
     ASSERT_EQ(m_streams.size(), 1);
     const auto &stream = m_streams.begin()->second;

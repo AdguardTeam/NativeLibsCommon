@@ -20,4 +20,4 @@ std::string utf8_to_cesu8(std::string_view utf8);
  */
 size_t cesu8_len(std::string_view utf8);
 
-}
+} // namespace ag

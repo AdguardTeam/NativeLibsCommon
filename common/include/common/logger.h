@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string>
-#include <string_view>
 #include <functional>
 #include <optional>
+#include <string>
+#include <string_view>
 
 #include <fmt/chrono.h>
 #include <fmt/format.h>
@@ -18,7 +18,7 @@ enum LogLevel {
     LOG_LEVEL_WARN,
     LOG_LEVEL_INFO,
     LOG_LEVEL_DEBUG,
-    LOG_LEVEL_TRACE
+    LOG_LEVEL_TRACE,
 };
 
 /**
@@ -35,8 +35,8 @@ public:
      */
     explicit Logger(std::string_view name, std::optional<LogLevel> log_level_override = std::nullopt)
             : m_name(name)
-            , m_log_level_override(log_level_override)
-    {}
+            , m_log_level_override(log_level_override) {
+    }
 
     /**
      * Log message
@@ -54,13 +54,13 @@ public:
      */
 #if _MSC_VER >= 1938
     template <typename... Ts>
-    inline void log(LogLevel level, fmt::string_view fmt, Ts&&... args) const {
+    inline void log(LogLevel level, fmt::string_view fmt, Ts &&...args) const {
         vlog(level, fmt, fmt::make_format_args(args...));
     }
 #else
     template <typename... Ts>
     [[clang::optnone]]
-    inline void log(LogLevel level, ag::StrictFormatString<Ts...> fmt, Ts&&... args) const {
+    inline void log(LogLevel level, ag::StrictFormatString<Ts...> fmt, Ts &&...args) const {
         vlog(level, fmt::string_view(fmt), fmt::make_format_args(args...));
     }
 #endif
@@ -104,7 +104,9 @@ public:
          * Create functor with file name to open
          * @param file File
          */
-        explicit LogToFile(FILE *file) : m_file(file) {}
+        explicit LogToFile(FILE *file)
+                : m_file(file) {
+        }
 
         void operator()(LogLevel level, std::string_view message);
 
@@ -124,8 +126,15 @@ private:
 #define errlog(l, fmt_, ...) (l).log(::ag::LOG_LEVEL_ERROR, ("{}: " fmt_), ::fmt::string_view{__func__}, ##__VA_ARGS__)
 #define warnlog(l, fmt_, ...) (l).log(::ag::LOG_LEVEL_WARN, ("{}: " fmt_), ::fmt::string_view{__func__}, ##__VA_ARGS__)
 #define infolog(l, fmt_, ...) (l).log(::ag::LOG_LEVEL_INFO, ("{}: " fmt_), ::fmt::string_view{__func__}, ##__VA_ARGS__)
-#define dbglog(l, fmt_, ...) do { if ((l).is_enabled(::ag::LOG_LEVEL_DEBUG)) (l).log(::ag::LOG_LEVEL_DEBUG, ("{}: " fmt_), ::fmt::string_view{__func__}, ##__VA_ARGS__); } while(0)
-#define tracelog(l, fmt_, ...) do { if ((l).is_enabled(::ag::LOG_LEVEL_TRACE)) (l).log(::ag::LOG_LEVEL_TRACE, ("{}: " fmt_), ::fmt::string_view{__func__}, ##__VA_ARGS__); } while(0)
+#define dbglog(l, fmt_, ...)                                                                                           \
+    do {                                                                                                               \
+        if ((l).is_enabled(::ag::LOG_LEVEL_DEBUG))                                                                     \
+            (l).log(::ag::LOG_LEVEL_DEBUG, ("{}: " fmt_), ::fmt::string_view{__func__}, ##__VA_ARGS__);                \
+    } while (0)
+#define tracelog(l, fmt_, ...)                                                                                         \
+    do {                                                                                                               \
+        if ((l).is_enabled(::ag::LOG_LEVEL_TRACE))                                                                     \
+            (l).log(::ag::LOG_LEVEL_TRACE, ("{}: " fmt_), ::fmt::string_view{__func__}, ##__VA_ARGS__);                \
+    } while (0)
 
 } // namespace ag
-

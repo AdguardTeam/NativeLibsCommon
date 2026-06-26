@@ -2,11 +2,11 @@
 
 #include <cassert>
 #include <chrono>
+#include <functional>
 #include <list>
 #include <map>
 #include <mutex>
 #include <unordered_map>
-#include <functional>
 
 #include "common/clock.h"
 
@@ -351,7 +351,7 @@ private:
  * starting from the time it was added to the cache.
  * Complexity of adding and erasing a single element is O(1).
  */
-template<typename Key, typename Val>
+template <typename Key, typename Val>
 class TimeoutCache {
 private:
     struct Entry {
@@ -360,7 +360,10 @@ private:
         SteadyClock::time_point expires;
 
         Entry(Key key, Val value, SteadyClock::time_point expires)
-                : key(std::move(key)), value(std::move(value)), expires(expires) {}
+                : key(std::move(key))
+                , value(std::move(value))
+                , expires(expires) {
+        }
     };
 
     std::list<Entry> m_entries; // Newer entries go to the front
@@ -375,7 +378,8 @@ public:
      * @param maxSize maximum number of entries, 0 means unlimited
      */
     explicit TimeoutCache(std::chrono::nanoseconds timeout, size_t maxSize = 0)
-            : TIMEOUT{timeout}, CAPACITY{maxSize} {
+            : TIMEOUT{timeout}
+            , CAPACITY{maxSize} {
     }
 
     void insert(Key key, Val value) {

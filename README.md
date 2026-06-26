@@ -1,10 +1,10 @@
 # Native libs common stuff
 
-#### Prerequisites
+## Prerequisites
 
-* Conan C++ package manager 2.0.4 or higher
-* CMake 3.24 or higher
-* GCC 9 or higher / Clang 8 or higher
+- Conan C++ package manager 2.0.4 or higher
+- CMake 3.24 or higher
+- GCC 9 or higher / Clang 8 or higher
 
 ## Build
 
@@ -45,7 +45,7 @@ Currently, it contains Conan recipes for AdGuard libs
 
 ## Testing
 
-#### Build All Tests
+### Build All Tests
 
 ```shell
 # Configure the project (if not done already)
@@ -55,14 +55,14 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build --target tests
 ```
 
-#### Run All Tests
+### Run All Tests
 
 ```shell
 # Run all tests using CTest
 ctest --test-dir build --verbose
 ```
 
-#### Run Specific Tests
+### Run Specific Tests
 
 ```shell
 # Run a specific test executable directly
@@ -101,7 +101,6 @@ If you want to upload exported only recipes to conan remote repository, use foll
 conan upload -r $REMOTE_NAME -c '*' --only-recipe
 ```
 
-
 ## Testing changes as a dependency
 
 To test local changes in the library when it is used as a Conan package dependency,
@@ -114,7 +113,7 @@ do the following:
 Replace `native_libs_common/1.0.0@adguard/oss` with `native_libs_common/<commit_hash>@adguard/oss`.
 5) Re-run the cmake command.
    Note:
-    * If you have already exported the library in this way, the cached version must be purged: `conan remove -f native_libs_common/<commit_hash>`.
+    - If you have already exported the library in this way, the cached version must be purged: `conan remove -f native_libs_common/<commit_hash>`.
 
 ## Code style
 
@@ -122,21 +121,23 @@ Replace `native_libs_common/1.0.0@adguard/oss` with `native_libs_common/<commit_
 
 1. Indentation is 4 spaces (imported files may have another indent).
 2. Code must be commented enough in terms of control flow. All public and big static methods should have a description in Doxygen format (`/** */`)
-3. Formatting rules. We use CLion basic rules. They are based on LLVM and Apple rules, and applies 4 spaces indentation by default. 
+3. Formatting rules. We use CLion basic rules. They are based on LLVM and Apple rules, and applies 4 spaces indentation by default.
    But there are also rules not related to indentation:
     - Binary operator are always separated by spaces from their operands (x + y)
     - Screen width: 120 symbols (not 80)
     - In function definition, operator block is started on function line `int main(int argc, char **argv) {`.
       However, `int func() try {` is prohibited.
       If it makes harder to read the code, next line may be empty:
-      ```
+
+      ```c++
           int very_long_function_definition(
                   int foo1234567890, int bar9876543210, int baz9999999999, 
                   int x4242424242, int y1010101010, int z0101010101) noexcept {
 
               do_smth();
           }
-      ```     
+      ```
+
     - In loops and ifs, operator block is started on function line too. Single-line branches should be in operator braces too.
 4. Identifier prefixes other than `p_`, `m_`, `g_` and `_` is prohibited
 5. Don't use `p` prefix unless it is really needed. In most cases type of identifier says what is it.
@@ -147,6 +148,7 @@ Replace `native_libs_common/1.0.0@adguard/oss` with `native_libs_common/<commit_
 No new C code please.
 
 ### C++
+
 1. Language standard - C++20 (-std=c++20)
 2. Class prefixes - use namespaces instead.
 3. Namespaces - root namespace is ag::, max depth is 2 (plus may be ::test).
@@ -169,7 +171,7 @@ No new C code please.
 
 Code example:
 
-```
+```c++
 #pragma once
 
 #include <string>
@@ -188,7 +190,7 @@ namespace ag::utils {
 
 ```
 
-```
+```c++
 #include <string>
 
 #include "common/utils.h"
@@ -207,6 +209,7 @@ namespace ag::utils {
 ```
 
 ### Doxygen comments
+
 - All public methods and functions should be documented.
 - Use Javadoc style with an `autobrief` feature.
 - `autobrief` means that the first statement of a long description automatically becomes a brief description.
@@ -219,7 +222,8 @@ namespace ag::utils {
 - Descriptions should start with a capital letter.
 
 Examples:
-```
+
+```c++
 /**
  * Sum of x and y.
  * This function is usually used to get sum of x and y.

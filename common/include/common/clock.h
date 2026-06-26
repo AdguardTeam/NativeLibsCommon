@@ -1,9 +1,8 @@
 #pragma once
 
 #include <chrono>
-#include <utility>
 #include <optional>
-
+#include <utility>
 
 namespace ag {
 
@@ -46,25 +45,25 @@ private:
     static duration m_time_shift;
 };
 
-template<class T, T DEFAULT_VALUE>
+template <class T, T DEFAULT_VALUE>
 class ExpiringValue {
 public:
     using Duration = std::chrono::nanoseconds;
 
     ExpiringValue(T v, Duration d)
-        : m_value(std::move(v))
-        , m_expire_timestamp(SteadyClock::now() + d)
-        , m_duration(d)
-    {}
+            : m_value(std::move(v))
+            , m_expire_timestamp(SteadyClock::now() + d)
+            , m_duration(d) {
+    }
 
     explicit ExpiringValue(Duration d)
-        : m_value(DEFAULT_VALUE)
-        , m_duration(d)
-    {}
+            : m_value(DEFAULT_VALUE)
+            , m_duration(d) {
+    }
 
     ExpiringValue()
-        : m_value(DEFAULT_VALUE)
-    {}
+            : m_value(DEFAULT_VALUE) {
+    }
 
     ExpiringValue(const ExpiringValue &other) = default;
     ExpiringValue &operator=(const ExpiringValue &other) = default;
@@ -78,8 +77,7 @@ public:
     }
 
     [[nodiscard]] bool is_timed_out() const {
-        return m_expire_timestamp.has_value()
-               && SteadyClock::now() > m_expire_timestamp.value();
+        return m_expire_timestamp.has_value() && SteadyClock::now() > m_expire_timestamp.value();
     }
 
     const T &get() const {

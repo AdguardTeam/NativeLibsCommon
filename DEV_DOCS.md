@@ -16,6 +16,7 @@ Function is considered a coroutine if contains one of keywords `co_await`, `co_r
 - `co_yield` passes one value to yield handler and `co_await`'s while it is processed.
 
 Here is some coroutine:
+
 ```c++
 ReturnType test_coro(int param) {
     // Just return param
@@ -25,6 +26,7 @@ ReturnType test_coro(int param) {
 
 We see `co_return` in function body, so it is coroutine.
 Compiler rewrites coroutine body as:
+
 ```c++
 ReturnType test_coro(int param) {
     // Allocated on real stack frame:
@@ -51,17 +53,19 @@ ReturnType test_coro(int param) {
     }
 }
 ```
+
 Note that there are coroutine keywords, and they are rewritten too in next passes.
 
 But let's read from start. First, coroutine function is returning some value.
-It is "return object" - external interface to a running coroutine. It may do nothing but it SHOULD contain one type alias - `ReturnType::promise_type`. 
+It is "return object" - external interface to a running coroutine. It may do nothing but it SHOULD contain one type alias - `ReturnType::promise_type`.
 
 #### Promise type
 
-Promise is an implementation of all calls to `promise` class in generated code above. 
+Promise is an implementation of all calls to `promise` class in generated code above.
 C++ devs may someway customize it for their own needs.
 
 It has the following interface:
+
 ```c++
 struct Promise {
     ReturnType get_return_object();
@@ -71,6 +75,7 @@ struct Promise {
     void unhandled_exception();
 };
 ```
+
 `get_return_object` is function for receiving return object from promise.
 
 `initial_suspend` is awaitable object that is usually one of two types - `std::suspend_always` or `std::suspend_never`.
@@ -92,6 +97,7 @@ Okay, but one thing is unclear yet - what is `Awaitable`.
 
 `Awaitable` is something that passed to `co_await`.
 It has the following interface:
+
 ```c++
 struct Awaitable {
     bool await_ready();
@@ -99,15 +105,17 @@ struct Awaitable {
     Ret await_resume();
 };
 ```
+
 It is usually a handle of some "paused" or "completed" async operation.
 First `co_await` asks if operation is paused or completed using `await_ready()`. True means "complete", false is "paused".
 
-If it is paused, current coroutine should be suspended. 
+If it is paused, current coroutine should be suspended.
 `co_await` implementation suspends current coroutine and calls `await_suspend(caller)`.
 
 After completion of awaitable operation, or if async operation was already completed, `await_resume()` is called. Value returned from `await_resume()` is result of whole `co_await` expression.
 
 In example above, expression `co_await some_expression()` is rewritten as:
+
 ```c++
     auto temporary = some_expression();
     auto awaitable = temporary.operator co_await();
@@ -233,6 +241,7 @@ struct Task {
 ### How coroutines chaining work in our example
 
 Let's see the following code:
+
 ```c++
   1: Task<int> coro2() {
   2:     co_return 42;
@@ -242,31 +251,31 @@ Let's see the following code:
  11: int x = co_await coro2();
 ```
 
-- Line 10. 
-  - Starting to evaluate `co_await coro2()`. 
-  - First, `coro2()` is called. Go to line 1.
-- Line 1: 
-  - Coroutine frame is created
-  - `Task::Promise` is created on coroutine stack.
-  - `Promise::initial_suspend()` returns `std::suspend_always`. So, `coro2()` as coroutine is suspended.
-  - `coro2()` as function returns `Promise::get_return_object()`, where Task object is created.
-  - Back to line 10.
-- Line 10: 
-  - `co_await` of returned object(`Task`) is called. Compiler checks if returned object is `Awaitable`.
+- Line 10.
+    - Starting to evaluate `co_await coro2()`.
+    - First, `coro2()` is called. Go to line 1.
+- Line 1:
+    - Coroutine frame is created
+    - `Task::Promise` is created on coroutine stack.
+    - `Promise::initial_suspend()` returns `std::suspend_always`. So, `coro2()` as coroutine is suspended.
+    - `coro2()` as function returns `Promise::get_return_object()`, where Task object is created.
+    - Back to line 10.
+- Line 10:
+    - `co_await` of returned object(`Task`) is called. Compiler checks if returned object is `Awaitable`.
          Since it is not, `Task::operator co_await()` is applied.
 
-  - It returns `Awaitable`, which returns `Awaitable::await_ready()` = `false`.
+    - It returns `Awaitable`, which returns `Awaitable::await_ready()` = `false`.
   
-  - The last means that current coroutine should be suspended and passed to `Awaitable::await_suspend(coroutine_handle)`.
-         
-  - Inside that function, caller is saved inside `Task::Promise` of `coro2()`. Then `coro2()` is resumed. Go to line 2.
+    - The last means that current coroutine should be suspended and passed to `Awaitable::await_suspend(coroutine_handle)`.
 
-- Line 2: 
-  - We see `co_return 42`. It means that `Promise::return_value(42)` is called. It stores return value.
-  - Then `Promise::final_suspend()` is called. It transfers execution to caller, saved on previous line.
+    - Inside that function, caller is saved inside `Task::Promise` of `coro2()`. Then `coro2()` is resumed. Go to line 2.
+
+- Line 2:
+    - We see `co_return 42`. It means that `Promise::return_value(42)` is called. It stores return value.
+    - Then `Promise::final_suspend()` is called. It transfers execution to caller, saved on previous line.
         Back to line 10.
-- Line 10: 
-  - `Awaitable::await_resume()` is called, and it is result of whole `co_await`. Inside `await_resume`,
+- Line 10:
+    - `Awaitable::await_resume()` is called, and it is result of whole `co_await`. Inside `await_resume`,
         `final_suspend`ed coroutine is destroyed, and saved value returned to caller.
 
 Expression is finally evaluated.
