@@ -86,7 +86,7 @@ conan remote add --index 0 $REMOTE_NAME https://$ARTIFACTORY_HOST/artifactory/ap
 We customized some packages, so they need to be exported to local conan repository.
 
 ```shell
-./scripts/export_conan.py
+./scripts/export_conan.sh
 ```
 
 If you want to upload built binaries and recipes to conan remote repository, use following command:
@@ -103,17 +103,24 @@ conan upload -r $REMOTE_NAME -c '*' --only-recipe
 
 ## Testing changes as a dependency
 
-To test local changes in the library when it is used as a Conan package dependency,
-do the following:
+To test local changes in the library when it is used as a Conan package
+dependency, export a recipe and point the dependent project at it. Use
+`conan export` (not `conan create`) so the package is built later with the
+dependent project's target profile rather than the default one.
 
 1) If the default `vcs_url` in `<root>/conanfile.py` is not suitable, change it accordingly.
-2) Commit the changes you wish to test.
-3) Execute `./script/export_conan.py local`. This script will export the package, assigning the last commit hash as its version.
-4) In the project that depends on `native_libs_common`, update the version to `<commit_hash>` (where `<commit_hash>` is the hash of the target commit):
-Replace `native_libs_common/1.0.0@adguard/oss` with `native_libs_common/<commit_hash>@adguard/oss`.
-5) Re-run the cmake command.
-   Note:
-    - If you have already exported the library in this way, the cached version must be purged: `conan remove -f native_libs_common/<commit_hash>`.
+2) Export the current working tree as version `local` (the recipe stages the
+   git-tracked working tree, so no commit or push is required):
+
+   ```shell
+   conan export . --version local
+   ```
+
+3) In the dependent project, replace `native_libs_common/1.0.0@adguard/oss` with
+   `native_libs_common/local`.
+4) Re-run the cmake command; the package is built with that project's profile.
+   Note: after further changes, purge the cached copy before re-exporting:
+   `conan remove -c "native_libs_common/local"`.
 
 ## Code style
 
