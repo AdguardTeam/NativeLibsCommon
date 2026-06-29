@@ -95,6 +95,20 @@ struct Http3Settings {
      * A duration during which sender allows quiescent.
      */
     ag::Micros max_idle_timeout = DEFAULT_MAX_IDLE_TIMEOUT;
+    /**
+     * The maximum connection-level flow control window when window auto-tuning is enabled.
+     * Auto-tuning is enabled only if this is nonzero; the window starts at `initial_max_data`
+     * and scales up to this value based on the bandwidth-delay product. Zero disables it.
+     */
+    uint64_t max_window = 0;
+    /**
+     * The maximum stream-level flow control window when window auto-tuning is enabled.
+     * Auto-tuning is enabled only if this is nonzero; the window starts at the relevant
+     * `initial_max_stream_data_*` and scales up to this value based on the bandwidth-delay
+     * product. This lets a single long-lived stream that multiplexes many logical connections
+     * grow past the small initial stream window. Zero disables it.
+     */
+    uint64_t max_stream_window = 0;
 };
 
 struct QuicNetworkPath {
@@ -140,6 +154,8 @@ protected:
     Error<Http3Error> consume_stream_impl(uint64_t stream_id, size_t length);
     Error<Http3Error> handle_expiry_impl();
     Error<Http3Error> flush_impl();
+
+    [[nodiscard]] size_t get_stream_send_capacity_impl(uint64_t stream_id) const;
 
     struct DataSource {
         UniquePtr<evbuffer, &evbuffer_free> buffer;
@@ -592,6 +608,14 @@ public:
      * @return raw SSL* owned by this client.
      */
     [[nodiscard]] SSL *get_ssl() const;
+    /**
+     * Get the number of bytes that can be submitted to the given stream right now
+     * without violating the current QUIC flow-control window (both stream- and
+     * connection-level), accounting for data already buffered but not yet sent.
+     * Use it to apply backpressure to producers feeding the stream.
+     * @return remaining send capacity in bytes, or 0 if the stream does not exist.
+     */
+    [[nodiscard]] size_t get_stream_send_capacity(uint64_t stream_id) const;
 
 private:
     friend class Http3Session<Http3Client>;

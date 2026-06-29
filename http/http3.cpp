@@ -609,6 +609,8 @@ Error<Http3Error> Http3Session<T>::initialize_session(const QuicNetworkPath &pat
         quic_settings.log_printf = log_quic;
     }
     quic_settings.max_tx_udp_payload_size = m_settings.max_tx_udp_payload_size;
+    quic_settings.max_window = m_settings.max_window;
+    quic_settings.max_stream_window = m_settings.max_stream_window;
 
     ngtcp2_transport_params transport_params;
     ngtcp2_transport_params_default(&transport_params);
@@ -946,6 +948,26 @@ loop_exit:
     }
 
     return {};
+}
+
+template <typename T>
+size_t Http3Session<T>::get_stream_send_capacity_impl(uint64_t stream_id) const {
+    // Remaining QUIC flow-control window: the lesser of the stream- and connection-level limits.
+    // For an unknown stream `ngtcp2_conn_get_max_stream_data_left` returns 0, so capacity becomes 0.
+    uint64_t capacity = std::min(ngtcp2_conn_get_max_stream_data_left(m_quic_conn.get(), int64_t(stream_id)),
+            ngtcp2_conn_get_max_data_left(m_quic_conn.get()));
+
+    // Subtract data already submitted but not yet handed to the transport, so the reported
+    // capacity bounds the inner send buffer to a single flow-control window.
+    if (auto iter = m_streams.find(stream_id);
+            iter != m_streams.end() && iter->second.data_source.buffer != nullptr) {
+        const DataSource &ds = iter->second.data_source;
+        size_t buffered = evbuffer_get_length(ds.buffer.get());
+        size_t unsent = buffered > ds.read_offset ? buffered - ds.read_offset : 0;
+        capacity = unsent >= capacity ? 0 : capacity - unsent;
+    }
+
+    return capacity;
 }
 
 template <typename T>
@@ -1454,6 +1476,10 @@ ngtcp2_conn_info Http3Client::get_stats() const {
 
 SSL *Http3Client::get_ssl() const {
     return m_ssl.get();
+}
+
+size_t Http3Client::get_stream_send_capacity(uint64_t stream_id) const {
+    return get_stream_send_capacity_impl(stream_id);
 }
 
 } // namespace ag::http

@@ -486,6 +486,32 @@ TEST_F(Http3Client, Upload) {
     }
 }
 
+TEST_F(Http3Client, StreamSendCapacity) {
+    // An unknown stream has no send capacity.
+    EXPECT_EQ(0u, session->get_stream_send_capacity(12345678));
+
+    // Open a request stream we can send a body on (no eof keeps the write side open).
+    ag::http::Request request(ag::http::HTTP_3_0, "POST", UPLOAD_REQUEST_PATH);
+    request.authority(SERVER_NAME);
+    request.scheme("https");
+    ag::Result request_result = session->submit_request(request, false);
+    ASSERT_TRUE(request_result.has_value()) << request_result.error()->str();
+    uint64_t stream_id = request_result.value();
+    streams[stream_id] = {};
+
+    // A freshly opened stream has a non-zero flow-control send window.
+    size_t capacity = session->get_stream_send_capacity(stream_id);
+    ASSERT_GT(capacity, 0u);
+
+    // Buffer a body exactly as large as the window, but do not flush it into the wire.
+    // The not-yet-sent data must be subtracted from the reported capacity, leaving zero.
+    std::vector<uint8_t> chunk(capacity);
+    ag::Error<ag::http::Http3Error> error = session->submit_body(stream_id, {chunk.data(), chunk.size()}, false);
+    ASSERT_EQ(error, nullptr) << error->str();
+
+    EXPECT_EQ(0u, session->get_stream_send_capacity(stream_id));
+}
+
 TEST_F(Http3Client, MaxStreamsNumberDontLeak) {
     ag::http::Request request(ag::http::HTTP_3_0, "GET", "/");
     request.authority(SERVER_NAME);
