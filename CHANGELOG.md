@@ -8,8 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Add HTTP/3 flow-control window auto-tuning and get_stream_send_capacity
-
 ### Changed
 
 ### Deprecated
@@ -19,6 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 ### Security
+
+## [8.1.38] - 2026-06-29
+
+### Added
+
+- Add HTTP/3 flow-control window auto-tuning and get_stream_send_capacity
 
 ## [8.1.37] - 2026-06-26
 
@@ -1181,7 +1185,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.37...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.38...HEAD
+[8.1.38]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.37...v8.1.38
 [8.1.37]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.36...v8.1.37
 [8.1.36]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.35...v8.1.36
 [8.1.35]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.34...v8.1.35
