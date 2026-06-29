@@ -12,7 +12,7 @@ Coroutine is a function that can pause execution in several suspension points.
 Function is considered a coroutine if contains one of keywords `co_await`, `co_return` or `co_yield`.
 
 - `co_await` suspends coroutine while some async operation completes, and passes it as completion handler to that async operation.
-- `co_return` sets return value of coroutine and completes execution of coroutine body (but coroutine promise may have additinal actions to do).
+- `co_return` sets return value of coroutine and completes execution of coroutine body (but coroutine promise may have additional actions to do).
 - `co_yield` passes one value to yield handler and `co_await`'s while it is processed.
 
 Here is some coroutine:
