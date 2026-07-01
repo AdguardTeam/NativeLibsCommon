@@ -1,0 +1,78 @@
+name: Markdown to Slack mrkdwn
+description: >-
+  Convert Markdown (e.g. a changelog) to Slack mrkdwn using the
+  markdown-to-mrkdwn Python package, on a runner that only permits
+  `docker build` -- no pip/uv/python on the host and no `docker run`.
+
+# The team-<team> runners have no pip/uv/python installed, and policy allows
+# only `docker build` (not `docker run`). So the conversion happens inside a
+# build using the astral uv image, and the single result file is exported to
+# the host via BuildKit's `--output type=local` from a `scratch` stage. The
+# Dockerfile is streamed on stdin (`-f -`), so nothing extra lives in the repo.
+# If the build fails for any reason, the action falls back to the raw Markdown
+# so a message is always produced.
+
+inputs:
+  markdown:
+    description: 'Markdown source to convert'
+    required: true
+  uv-image:
+    description: 'astral uv base image providing uv + Python'
+    required: false
+    default: 'ghcr.io/astral-sh/uv:python3.14-alpine'
+
+outputs:
+  mrkdwn:
+    description: 'The Slack mrkdwn conversion (or the raw Markdown input if conversion failed)'
+    value: ${{ steps.convert.outputs.mrkdwn }}
+
+runs:
+  using: composite
+  steps:
+    - name: Convert Markdown to Slack mrkdwn
+      id: convert
+      shell: bash
+      env:
+        MARKDOWN: ${{ inputs.markdown }}
+        UV_IMAGE: ${{ inputs.uv-image }}
+      run: |
+        set -euo pipefail
+
+        builddir="$(mktemp -d)"
+        printf '%s' "$MARKDOWN" > "$builddir/input.md"
+
+        # The heredoc body is flush with the run-block indentation so that,
+        # after YAML dedents it, the Dockerfile lines and terminators land at
+        # column 0. The delimiter is quoted so the shell does not touch the
+        # body; the base image is parameterised via a Dockerfile ARG instead.
+        if DOCKER_BUILDKIT=1 docker build \
+            --build-arg "UV_IMAGE=$UV_IMAGE" \
+            --target export \
+            --output "type=local,dest=$builddir/out" \
+            -f - "$builddir" <<'DOCKERFILE'
+        # syntax=docker/dockerfile:1
+        ARG UV_IMAGE
+        FROM ${UV_IMAGE} AS build
+        WORKDIR /w
+        COPY input.md .
+        RUN uv run --no-project --with markdown-to-mrkdwn python - <<'PY'
+        import pathlib
+        from markdown_to_mrkdwn import SlackMarkdownConverter
+        src = pathlib.Path("input.md").read_text()
+        pathlib.Path("mrkdwn.txt").write_text(SlackMarkdownConverter().convert(src))
+        PY
+        FROM scratch AS export
+        COPY --from=build /w/mrkdwn.txt /mrkdwn.txt
+        DOCKERFILE
+        then
+          mrkdwn="$(cat "$builddir/out/mrkdwn.txt")"
+        else
+          echo "Conversion failed; falling back to raw Markdown" >&2
+          mrkdwn="$MARKDOWN"
+        fi
+
+        {
+          echo "mrkdwn<<MRKDWN_EOF"
+          echo "$mrkdwn"
+          echo "MRKDWN_EOF"
+        } >> "$GITHUB_OUTPUT"
