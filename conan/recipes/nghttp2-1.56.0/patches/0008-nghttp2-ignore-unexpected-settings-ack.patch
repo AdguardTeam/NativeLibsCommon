@@ -1,0 +1,20 @@
+diff --git a/lib/nghttp2_session.c b/lib/nghttp2_session.c
+--- a/lib/nghttp2_session.c
++++ b/lib/nghttp2_session.c
+@@ -4740,8 +4740,14 @@ int nghttp2_session_on_settings_received(nghttp2_session *session,
+     settings = session->inflight_settings_head;
+ 
+     if (!settings) {
+-      return session_handle_invalid_connection(
+-          session, frame, NGHTTP2_ERR_PROTO, "SETTINGS: unexpected ACK");
++// Ignore unexpected SETTINGS ACK.
++// Some servers (e.g., alba.co.kr/nginx) send duplicate ACK frames in violation
++// of RFC 7540 section 6.5. Instead of terminating the connection, we silently
++// ignore the extra ACK.
++//
++//  return session_handle_invalid_connection(
++//      session, frame, NGHTTP2_ERR_PROTO, "SETTINGS: unexpected ACK");
++      return session_call_on_frame_received(session, frame);
+     }
+ 
+     rv = nghttp2_session_update_local_settings(session, settings->iv,

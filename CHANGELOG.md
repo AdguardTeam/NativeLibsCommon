@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Ignore duplicate HTTP/2 `SETTINGS` ACK frames from non-conforming servers (e.g., `www.alba.co.kr`) instead of terminating the connection with `PROTOCOL_ERROR`.
+
 ### Deprecated
 
 ### Removed
