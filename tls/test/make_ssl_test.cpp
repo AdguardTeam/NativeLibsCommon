@@ -51,10 +51,10 @@ TEST(MakeSsl, Ja4Profiles) {
         const char *expected;
     };
     const Case cases[] = {
-            {ag::tls::TlsClientProfile::CHROME, "Chrome", "t13d1516h2_8daaf6152771_d8a2da3f94cd"},
-            {ag::tls::TlsClientProfile::SAFARI, "Safari", "t13d2013h2_a09f3c656075_7f0f34a4126d"},
-            {ag::tls::TlsClientProfile::FIREFOX, "Firefox", "t13d1717h2_5b57614c22b0_3cbfd9057e0d"},
-            {ag::tls::TlsClientProfile::OKHTTP, "OkHttp", "t13d1613h2_46e7e9700bed_eca864cca44a"},
+            {ag::tls::TlsClientProfile::CHROME, "Chrome149", "t13d1516h2_8daaf6152771_d8a2da3f94cd"},
+            {ag::tls::TlsClientProfile::SAFARI, "Safari26", "t13d2013h2_a09f3c656075_7f0f34a4126d"},
+            {ag::tls::TlsClientProfile::FIREFOX, "Firefox151", "t13d1717h2_5b57614c22b0_3cbfd9057e0d"},
+            {ag::tls::TlsClientProfile::OKHTTP, "OkHttp5", "t13d1613h2_46e7e9700bed_eca864cca44a"},
             // Library-default ClientHello (no mimicry). Informational: tracks the BoringSSL version.
             {ag::tls::TlsClientProfile::DEFAULT, "Default", ""},
     };
