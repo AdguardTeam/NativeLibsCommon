@@ -56,7 +56,7 @@ struct SslInitParameters {
 
     /** Custom ClientRandom. */
     Uint8View tls_client_random;
-    /** Mask selecting which ClientRandom bytes are fixed vs randomized. */
+    /** Mask selecting which ClientRandom bits are fixed vs randomized. */
     Uint8View tls_client_random_mask;
     /** Opaque per-endpoint data. */
     Uint8View endpoint_data;
