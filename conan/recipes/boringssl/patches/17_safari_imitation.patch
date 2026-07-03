@@ -1,0 +1,67 @@
+diff --git a/ssl/ssl_cipher.cc b/ssl/ssl_cipher.cc
+--- a/ssl/ssl_cipher.cc
++++ b/ssl/ssl_cipher.cc
+@@ -287,6 +287,18 @@
+       SSL_HANDSHAKE_MAC_SHA256,
+     },
+ 
++    // Cipher C008
++    {
++     TLS1_TXT_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA,
++     "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA",
++     TLS1_CK_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA,
++     SSL_kECDHE,
++     SSL_aECDSA,
++     SSL_3DES,
++     SSL_SHA1,
++     SSL_HANDSHAKE_MAC_DEFAULT,
++    },
++
+     // Cipher C009
+     {
+      TLS1_TXT_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+@@ -311,6 +323,18 @@
+      SSL_HANDSHAKE_MAC_DEFAULT,
+     },
+ 
++    // Cipher C012
++    {
++     TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA,
++     "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
++     TLS1_CK_ECDHE_RSA_WITH_DES_192_CBC3_SHA,
++     SSL_kECDHE,
++     SSL_aRSA_SIGN,
++     SSL_3DES,
++     SSL_SHA1,
++     SSL_HANDSHAKE_MAC_DEFAULT,
++    },
++
+     // Cipher C013
+     {
+      TLS1_TXT_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+@@ -1167,6 +1191,9 @@
+       TLS1_CK_PSK_WITH_AES_128_CBC_SHA & 0xffff,
+       TLS1_CK_RSA_WITH_AES_256_SHA & 0xffff,
+       TLS1_CK_PSK_WITH_AES_256_CBC_SHA & 0xffff,
++      // ECDHE-3DES suites re-added for Safari ClientHello imitation.
++      TLS1_CK_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA & 0xffff,
++      TLS1_CK_ECDHE_RSA_WITH_DES_192_CBC3_SHA & 0xffff,
+       SSL3_CK_RSA_DES_192_CBC3_SHA & 0xffff,
+   };
+ 
+diff --git a/ssl/ssl_privkey.cc b/ssl/ssl_privkey.cc
+--- a/ssl/ssl_privkey.cc
++++ b/ssl/ssl_privkey.cc
+@@ -597,9 +597,9 @@
+ }
+ 
+ static bool set_sigalg_prefs(Array<uint16_t> *out, Span<const uint16_t> prefs) {
+-  if (!sigalgs_unique(prefs)) {
+-    return false;
+-  }
++  // Allow duplicated signature algorithms so browser-imitation
++  // profiles (e.g. Safari) can advertise them verbatim.
++  (void) sigalgs_unique;
+ 
+   // Check for invalid algorithms, and filter out |SSL_SIGN_RSA_PKCS1_MD5_SHA1|.
+   Array<uint16_t> filtered;
