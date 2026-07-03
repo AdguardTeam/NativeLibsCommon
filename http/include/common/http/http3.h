@@ -109,6 +109,13 @@ struct Http3Settings {
      * grow past the small initial stream window. Zero disables it.
      */
     uint64_t max_stream_window = 0;
+    /**
+     * The QUIC version the client offers, as one of the `NGTCP2_PROTO_VER_*` constants
+     * (e.g. `NGTCP2_PROTO_VER_V1`, `NGTCP2_PROTO_VER_V2`). This setting applies only to the
+     * client; the server always answers with the version the client chose. Zero selects the
+     * default version (`NGTCP2_PROTO_VER_V1`).
+     */
+    uint32_t quic_version = 0;
 };
 
 struct QuicNetworkPath {
@@ -144,7 +151,7 @@ protected:
     explicit Http3Session(const Http3Settings &settings);
 
     Error<Http3Error> initialize_session(const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl,
-            ngtcp2_cid client_scid, ngtcp2_cid client_dcid);
+            ngtcp2_cid client_scid, ngtcp2_cid client_dcid, uint32_t client_chosen_version);
 
     int input_impl(const QuicNetworkPath &path, Uint8View chunk);
     Error<Http3Error> submit_trailer_impl(uint64_t stream_id, const Headers &headers);

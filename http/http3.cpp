@@ -492,7 +492,7 @@ static void log_http3(const char *format, va_list args) {
 
 template <typename T>
 Error<Http3Error> Http3Session<T>::initialize_session(const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl,
-        ngtcp2_cid client_scid, ngtcp2_cid client_dcid) {
+        ngtcp2_cid client_scid, ngtcp2_cid client_dcid, uint32_t client_chosen_version) {
     if (ssl == nullptr) {
         return make_error(Http3Error{NGTCP2_ERR_INTERNAL}, "SSL handle mustn't be null");
     }
@@ -648,7 +648,7 @@ Error<Http3Error> Http3Session<T>::initialize_session(const QuicNetworkPath &pat
         transport_params.stateless_reset_token_present = true;
 
         if (int status = ngtcp2_conn_server_new(&quic_conn, &client_scid, &server_scid, &path_storage.path,
-                    NGTCP2_PROTO_VER_V1, &quic_callbacks, &quic_settings, &transport_params, nullptr, this);
+                    client_chosen_version, &quic_callbacks, &quic_settings, &transport_params, nullptr, this);
                 status != NGTCP2_NO_ERROR) {
             return make_error(Http3Error{status}, "Couldn't create quic connection");
         }
@@ -666,7 +666,7 @@ Error<Http3Error> Http3Session<T>::initialize_session(const QuicNetworkPath &pat
         }
 
         if (int status = ngtcp2_conn_client_new(&quic_conn, &client_dcid, &client_scid, &path_storage.path,
-                    NGTCP2_PROTO_VER_V1, &quic_callbacks, &quic_settings, &transport_params, nullptr, this);
+                    client_chosen_version, &quic_callbacks, &quic_settings, &transport_params, nullptr, this);
                 status != NGTCP2_NO_ERROR) {
             return make_error(Http3Error{status}, "Couldn't create quic connection");
         }
@@ -1171,7 +1171,8 @@ Result<std::unique_ptr<Http3Server>, Http3Error> Http3Server::accept(const Http3
     }
 
     auto self = std::make_unique<Http3Server>(PrivateAccess{}, settings, handler);
-    auto error = self->initialize_session(path, std::move(ssl), hd.scid, hd.dcid);
+    // Answer with the exact QUIC version the client chose, rather than a fixed one.
+    auto error = self->initialize_session(path, std::move(ssl), hd.scid, hd.dcid, hd.version);
     if (error != nullptr) {
         return error;
     }
@@ -1336,7 +1337,8 @@ Http3Client::Http3Client(PrivateAccess, const Http3Settings &settings, const Cal
 Result<std::unique_ptr<Http3Client>, Http3Error> Http3Client::connect(const Http3Settings &settings,
         const Callbacks &handler, const QuicNetworkPath &path, ag::UniquePtr<SSL, &SSL_free> ssl) {
     auto self = std::make_unique<Http3Client>(PrivateAccess{}, settings, handler);
-    auto error = self->initialize_session(path, std::move(ssl), {}, {});
+    uint32_t client_chosen_version = settings.quic_version != 0 ? settings.quic_version : NGTCP2_PROTO_VER_V1;
+    auto error = self->initialize_session(path, std::move(ssl), {}, {}, client_chosen_version);
     if (error != nullptr) {
         return error;
     }

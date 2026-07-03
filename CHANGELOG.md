@@ -8,7 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Add `Http3Settings::quic_version` to let the HTTP/3 client choose the offered QUIC version
+
 ### Changed
+
+- HTTP/3 server now answers with the QUIC version chosen by the client instead of a fixed one
 
 ### Deprecated
 
