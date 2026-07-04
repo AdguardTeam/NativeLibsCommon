@@ -1,10 +1,14 @@
 name: Publish snapshot
 
 # Manually-triggered snapshot publish. Unlike publish-release.yml it does not
-# tag, mirror, or create a GitHub release: it only exports and uploads the Conan
-# recipes to Artifactory at the current `git describe` version (e.g.
-# 8.1.38-2-g8bf30f3). Use it to make an intermediate commit installable from
-# Conan without cutting a release.
+# tag or create a GitHub release: it only mirrors the current commit to the
+# public repo and exports/uploads the Conan recipes to Artifactory at the
+# current `git describe` version (e.g. 8.1.38-2-g8bf30f3). Use it to make an
+# intermediate commit installable from Conan without cutting a release.
+#
+# Mirroring must happen first: the recipe's source() clones the public repo and
+# checks out the snapshot commit, so that commit has to exist there before the
+# uploaded recipe can be built.
 
 on:
   workflow_dispatch:
@@ -13,8 +17,20 @@ permissions:
   contents: read
 
 jobs:
-  # Export and upload the Conan recipes to Artifactory at the snapshot version.
+  # 1. Mirror the current commit to the public repo so the snapshot commit is
+  #    fetchable when the recipe's source() clones and checks it out. Reuses the
+  #    repo's mirror.yml, which already pins team and target_repo.
+  mirror:
+    uses: ./.github/workflows/mirror.yml
+    permissions:
+      actions: write
+      contents: read
+      id-token: write
+    secrets: inherit
+
+  # 2. Export and upload the Conan recipes to Artifactory at the snapshot version.
   upload-conan-recipes:
+    needs: mirror
     environment: conan-artifactory
     runs-on: team-corelibs
     steps:
