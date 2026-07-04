@@ -8,11 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Add `Http3Settings::quic_version` to let the HTTP/3 client choose the offered QUIC version
-
 ### Changed
-
-- HTTP/3 server now answers with the QUIC version chosen by the client instead of a fixed one
 
 ### Deprecated
 
@@ -21,6 +17,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 ### Security
+
+## [8.1.39] - 2026-07-04
+
+### Added
+
+- Add `Http3Settings::quic_version` to let the HTTP/3 client choose the offered QUIC version
+
+### Changed
+
+- HTTP/3 server now answers with the QUIC version chosen by the client instead of a fixed one
 
 ## [8.1.38] - 2026-06-29
 
@@ -1189,7 +1195,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.38...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.39...HEAD
+[8.1.39]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.38...v8.1.39
 [8.1.38]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.37...v8.1.38
 [8.1.37]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.36...v8.1.37
 [8.1.36]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.35...v8.1.36
