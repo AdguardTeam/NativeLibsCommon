@@ -31,7 +31,7 @@ jobs:
   # 2. Export and upload the Conan recipes to Artifactory at the snapshot version.
   upload-conan-recipes:
     needs: mirror
-    environment: conan-artifactory
+    environment: conan-artifactory-dev
     runs-on: team-corelibs
     steps:
       - name: Checkout
