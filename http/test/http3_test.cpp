@@ -78,6 +78,8 @@ protected:
     std::map<uint64_t, Stream> streams;
     std::unique_ptr<ag::http::Http3Client> session;
     bool handshake_completed = false;
+    // Settings the fixture connects with. Derived fixtures may tweak this before SetUp runs.
+    ag::http::Http3Settings client_settings{};
 
     void SetUp() override {
         ag::Logger::set_log_level(ag::LOG_LEVEL_TRACE);
@@ -149,7 +151,7 @@ protected:
         bound_addr = ag::utils::get_local_address(fd).value();
         infolog(logger, "Bound address: {}", bound_addr.str());
 
-        ag::Result make_result = ag::http::Http3Client::connect(ag::http::Http3Settings{}, handler,
+        ag::Result make_result = ag::http::Http3Client::connect(client_settings, handler,
                 ag::http::QuicNetworkPath{
                         .local = bound_addr.c_sockaddr(),
                         .local_len = bound_addr.c_socklen(),
@@ -306,7 +308,24 @@ protected:
     }
 };
 
-TEST_F(Http3Client, Exchange) {
+// Runs the client flow with a specific offered QUIC version. Zero uses the library default
+// (`NGTCP2_PROTO_VER_V1`). The handshake in SetUp only completes if the server honours the
+// client-chosen version, so a passing exchange proves the version setting is applied end-to-end.
+class Http3ClientVersioned : public Http3Client, public ::testing::WithParamInterface<uint32_t> {
+protected:
+    void SetUp() override {
+        client_settings.quic_version = GetParam();
+        Http3Client::SetUp();
+    }
+};
+
+INSTANTIATE_TEST_SUITE_P(QuicVersion, Http3ClientVersioned,
+        ::testing::Values(uint32_t{0}, NGTCP2_PROTO_VER_V2),
+        [](const ::testing::TestParamInfo<uint32_t> &info) {
+            return info.param == 0 ? "Default" : "V2";
+        });
+
+TEST_P(Http3ClientVersioned, Exchange) {
     ag::http::Request request(ag::http::HTTP_3_0, "GET", "/");
     request.authority(SERVER_NAME);
     request.scheme("https");
