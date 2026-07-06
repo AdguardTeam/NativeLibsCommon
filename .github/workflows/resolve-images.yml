@@ -1,0 +1,34 @@
+name: Resolve build image labels
+
+on:
+  workflow_call:
+    outputs:
+      corelibs-builder:
+        description: Ephemeral runner image label for the corelibs-builder
+        value: ${{ jobs.resolve.outputs.corelibs-builder }}
+      macos:
+        description: Ephemeral runner image label for the macOS builder
+        value: ${{ jobs.resolve.outputs.macos }}
+      windows:
+        description: Ephemeral runner image label for the Windows builder
+        value: ${{ jobs.resolve.outputs.windows }}
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve build image labels
+    runs-on: [team-corelibs]
+    outputs:
+      corelibs-builder: ${{ env.CORELIBS_BUILDER }}
+      macos: ${{ env.MACOS }}
+      windows: ${{ env.WINDOWS }}
+    steps:
+      - name: Resolve image labels from cistate
+        uses: AdGuardSoftwareLimited/actions/actions/kv-multi@master
+        with:
+          get: |
+            CORELIBS_BUILDER=build-images/corelibs-builder
+            MACOS=build-images/macos
+            WINDOWS=build-images/windows
