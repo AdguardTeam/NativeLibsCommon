@@ -21,11 +21,12 @@ jobs:
     name: Resolve build image labels
     runs-on: [team-corelibs]
     outputs:
-      corelibs-builder: ${{ env.CORELIBS_BUILDER }}
-      macos: ${{ env.MACOS }}
-      windows: ${{ env.WINDOWS }}
+      corelibs-builder: ${{ steps.kv.outputs.CORELIBS_BUILDER }}
+      macos: ${{ steps.kv.outputs.MACOS }}
+      windows: ${{ steps.kv.outputs.WINDOWS }}
     steps:
       - name: Resolve image labels from cistate
+        id: kv
         uses: AdGuardSoftwareLimited/actions/actions/kv-multi@master
         with:
           get: |
