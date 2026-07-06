@@ -71,7 +71,7 @@ jobs:
               & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
           - name: Linux
             runs-on: '["ephemeral","ephemeral-linux","${{ needs.resolve-images.outputs.corelibs-builder }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
-            container-image: 'adguard/core-libs:2.10'
+            container-image: 'adguard/core-libs:2.11'
             artifact-name: test-results-linux
             test-command: |
               set -e
@@ -154,7 +154,7 @@ jobs:
       - ephemeral-limit-memory-4096
       - ephemeral-limit-cpu-4
     container:
-      image: adguard/core-libs:2.10
+      image: adguard/core-libs:2.11
     steps:
       - name: Checkout
         uses: actions/checkout@v6
