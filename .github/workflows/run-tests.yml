@@ -27,7 +27,7 @@ jobs:
       matrix:
         include:
           - name: Win
-            runs-on: '["ephemeral","ephemeral-vmwin","${{ needs.resolve-images.outputs.windows }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
+            runs-on: '["ephemeral","ephemeral-vmwin","${{ needs.resolve-images.outputs.windows }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4","ephemeral-run-id-${{ github.run_id }}"]'
             container-image: ''
             shell: powershell
             artifact-name: test-results-windows
@@ -70,7 +70,7 @@ jobs:
               & conan remote login art "$env:ARTIFACTORY_USER" --password "$env:ARTIFACTORY_API_KEY"
               & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
           - name: Linux
-            runs-on: '["ephemeral","ephemeral-linux","${{ needs.resolve-images.outputs.corelibs-builder }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
+            runs-on: '["ephemeral","ephemeral-linux","${{ needs.resolve-images.outputs.corelibs-builder }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4","ephemeral-run-id-${{ github.run_id }}"]'
             container-image: 'adguard/core-libs:2.11'
             artifact-name: test-results-linux
             test-command: |
@@ -97,7 +97,7 @@ jobs:
               conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
               conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
           - name: Mac
-            runs-on: '["ephemeral","ephemeral-mac","${{ needs.resolve-images.outputs.macos }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
+            runs-on: '["ephemeral","ephemeral-mac","${{ needs.resolve-images.outputs.macos }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4","ephemeral-run-id-${{ github.run_id }}"]'
             container-image: ''
             artifact-name: test-results-macos
             test-command: |
@@ -153,6 +153,7 @@ jobs:
       - ${{ needs.resolve-images.outputs.corelibs-builder }}
       - ephemeral-limit-memory-4096
       - ephemeral-limit-cpu-4
+      - ephemeral-run-id-${{ github.run_id }}
     container:
       image: adguard/core-libs:2.11
     steps:
