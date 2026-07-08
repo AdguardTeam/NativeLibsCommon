@@ -10,8 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Ignore duplicate HTTP/2 `SETTINGS` ACK frames from non-conforming servers (e.g., `www.alba.co.kr`) instead of terminating the connection with `PROTOCOL_ERROR`.
-
 ### Deprecated
 
 ### Removed
@@ -19,6 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 ### Security
+
+## [8.1.40] - 2026-07-08
+
+### Changed
+
+- Ignore duplicate HTTP/2 `SETTINGS` ACK frames from non-conforming servers (e.g., `www.alba.co.kr`) instead of terminating the connection with `PROTOCOL_ERROR`.
 
 ## [8.1.39] - 2026-07-04
 
@@ -1197,7 +1201,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.39...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.40...HEAD
+[8.1.40]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.39...v8.1.40
 [8.1.39]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.38...v8.1.39
 [8.1.38]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.37...v8.1.38
 [8.1.37]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.36...v8.1.37
