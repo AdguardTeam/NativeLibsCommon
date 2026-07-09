@@ -21,7 +21,10 @@ static std::string client_hello_ja4(ag::tls::TlsClientProfile profile) {
     ag::tls::SslInitParameters params;
     params.profile = profile;
     params.protocol = ag::tls::SslProtocol::TLS;
-    params.alpn_protos = {H2_ALPN, std::size(H2_ALPN)};
+    // The default `openssl s_client` sends no ALPN; the browser/OkHttp profiles do.
+    if (profile != ag::tls::TlsClientProfile::OPENSSL_DEFAULT) {
+        params.alpn_protos = {H2_ALPN, std::size(H2_ALPN)};
+    }
     params.sni = "example.org";
     params.post_quantum = true;
 
@@ -55,6 +58,8 @@ TEST(MakeSsl, Ja4Profiles) {
             {ag::tls::TlsClientProfile::SAFARI, "Safari26", "t13d2013h2_a09f3c656075_7f0f34a4126d"},
             {ag::tls::TlsClientProfile::FIREFOX, "Firefox151", "t13d1717h2_5b57614c22b0_3cbfd9057e0d"},
             {ag::tls::TlsClientProfile::OKHTTP, "OkHttp5", "t13d1613h2_46e7e9700bed_eca864cca44a"},
+            // Reference captured from `openssl s_client -servername ... ` (OpenSSL 3.6.2).
+            {ag::tls::TlsClientProfile::OPENSSL_DEFAULT, "OpenSSL3.6", "t13d301100_1d37bd780c83_8e6e362c5eac"},
             // Library-default ClientHello (no mimicry). Informational: tracks the BoringSSL version.
             {ag::tls::TlsClientProfile::DEFAULT, "Default", ""},
     };

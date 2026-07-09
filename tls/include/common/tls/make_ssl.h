@@ -18,7 +18,8 @@ using SslPtr = UniquePtr<SSL, &SSL_free>;
  * TLS ClientHello fingerprint profile.
  *
  * `CHROME`, `SAFARI` and `FIREFOX` reproduce the respective browser ClientHello (matching JA4);
- * `OKHTTP` reproduces the OkHttp Android HTTP client.
+ * `OKHTTP` reproduces the OkHttp Android HTTP client;
+ * `OPENSSL_DEFAULT` reproduces the default OpenSSL 3.x ClientHello (matching JA4);
  * `DEFAULT` applies no mimicry and emits the plain BoringSSL/OpenSSL library-default ClientHello.
  */
 enum class TlsClientProfile {
@@ -26,6 +27,7 @@ enum class TlsClientProfile {
     SAFARI,  ///< Safari-like ClientHello
     FIREFOX, ///< Firefox-like ClientHello
     OKHTTP,  ///< OkHttp (Android) client
+    OPENSSL_DEFAULT, ///< OpenSSL default ClientHello
     DEFAULT, ///< No mimicry — library defaults
 };
 

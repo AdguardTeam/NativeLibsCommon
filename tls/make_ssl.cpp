@@ -49,6 +49,16 @@ const char *cipher_list_for(TlsClientProfile profile) {
             "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:"
             "ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:"
             "AES128-SHA:AES256-SHA:DES-CBC3-SHA";
+    // Pinned to OpenSSL 3.x — update alongside OPENSSL_SIGALGS if the reference changes.
+    static const char *const OPENSSL =
+            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:"
+            "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:"
+            "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256:"
+            "ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:DHE-RSA-AES256-SHA256:"
+            "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA256:"
+            "ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES256-SHA:"
+            "ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:"
+            "AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA256:AES128-SHA256:AES256-SHA:AES128-SHA";
     // clang-format on
     switch (profile) {
     case TlsClientProfile::SAFARI:
@@ -57,6 +67,8 @@ const char *cipher_list_for(TlsClientProfile profile) {
         return FIREFOX;
     case TlsClientProfile::OKHTTP:
         return OKHTTP;
+    case TlsClientProfile::OPENSSL_DEFAULT:
+        return OPENSSL;
     case TlsClientProfile::CHROME:
     case TlsClientProfile::DEFAULT:
         break;
@@ -75,6 +87,12 @@ std::pair<const uint16_t *, size_t> groups_for(TlsClientProfile profile) {
             SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1,
             SSL_GROUP_SECP521R1, SSL_GROUP_FFDHE2048, SSL_GROUP_FFDHE3072};
     static constexpr uint16_t OKHTTP[] = {SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1};
+    // Approximates OpenSSL's supported_groups. OpenSSL also advertises x448,
+    // which BoringSSL does not implement; supported_groups is not part of JA4,
+    // so this only affects byte-exact / JA3 matching.
+    static constexpr uint16_t OPENSSL[] = {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519,
+            SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1, SSL_GROUP_SECP521R1, SSL_GROUP_FFDHE2048,
+            SSL_GROUP_FFDHE3072};
     switch (profile) {
     case TlsClientProfile::SAFARI:
         return {SAFARI, std::size(SAFARI)};
@@ -82,6 +100,8 @@ std::pair<const uint16_t *, size_t> groups_for(TlsClientProfile profile) {
         return {FIREFOX, std::size(FIREFOX)};
     case TlsClientProfile::OKHTTP:
         return {OKHTTP, std::size(OKHTTP)};
+    case TlsClientProfile::OPENSSL_DEFAULT:
+        return {OPENSSL, std::size(OPENSSL)};
     case TlsClientProfile::CHROME:
     case TlsClientProfile::DEFAULT:
         break;
@@ -116,10 +136,31 @@ std::pair<const uint16_t *, size_t> sigalgs_for(TlsClientProfile profile) {
         return {OKHTTP, std::size(OKHTTP)};
     case TlsClientProfile::CHROME:
     case TlsClientProfile::DEFAULT:
+    // OPENSSL uses OPENSSL_SIGALGS via SSL_set_raw_verify_algorithm_prefs, not
+    // this table; handled here only for switch exhaustiveness.
+    case TlsClientProfile::OPENSSL_DEFAULT:
         break;
     }
     return {CHROME, std::size(CHROME)};
 }
+
+// OpenSSL `s_client` default signature_algorithms, verbatim and in order, so
+// the JA4_c signature-algorithm component matches. Many of these codepoints
+// (ML-DSA 0x0904-0906, brainpool 0x081a-081c, rsa_pss_pss 0x0809-080b, ed448
+// 0x0808, and legacy SHA-224/DSA) are unknown to BoringSSL; they are advertised
+// but never selected. Pinned to OpenSSL 3.x — update alongside the OPENSSL
+// cipher list if the reference OpenSSL version changes.
+constexpr uint16_t OPENSSL_SIGALGS[] = {
+        0x0905, 0x0906, 0x0904, // ML-DSA (mldsa65, mldsa87, mldsa44)
+        0x0403, 0x0503, 0x0603, // ecdsa_secp256r1/384r1/521r1
+        0x0807, 0x0808,         // ed25519, ed448
+        0x081a, 0x081b, 0x081c, // ecdsa_brainpoolP256r1/384r1/512r1_tls13
+        0x0809, 0x080a, 0x080b, // rsa_pss_pss_sha256/384/512
+        0x0804, 0x0805, 0x0806, // rsa_pss_rsae_sha256/384/512
+        0x0401, 0x0501, 0x0601, // rsa_pkcs1_sha256/384/512
+        0x0303, 0x0301, 0x0302, // ecdsa_sha224, rsa_pkcs1_sha224, dsa_sha224
+        0x0402, 0x0502, 0x0602, // dsa_sha256/384/512
+};
 
 int DecompressBrotliCert(
         SSL *ssl, CRYPTO_BUFFER **out, size_t uncompressed_len, const uint8_t *in, size_t in_len) {
@@ -255,6 +296,11 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
             SSL_set_options(ssl.get(), SSL_OP_NO_TICKET);
         }
 
+        // OpenSSL advertises the (empty) encrypt_then_mac extension (RFC 7366).
+        if (profile == TlsClientProfile::OPENSSL_DEFAULT) {
+            SSL_set_encrypt_then_mac(ssl.get(), 1);
+        }
+
         if (!SSL_set_strict_cipher_list(ssl.get(), cipher_list_for(profile))) {
             return "Failed to set strict cipher list";
         }
@@ -282,16 +328,26 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
         }
 
         if (!quic) {
-            // signed_certificate_timestamp: sent by the browser profiles, not by OkHttp.
+            // signed_certificate_timestamp: sent by the browser profiles, not by OkHttp/OpenSSL.
             if (browser) {
                 SSL_enable_signed_cert_timestamps(ssl.get());
             }
-            if (SSL_set_tlsext_status_type(ssl.get(), TLSEXT_STATUSTYPE_ocsp) != 1) {
+            // OCSP status_request: sent by the browsers and OkHttp, but not by
+            // the default `openssl s_client`.
+            if (profile != TlsClientProfile::OPENSSL_DEFAULT
+                    && SSL_set_tlsext_status_type(ssl.get(), TLSEXT_STATUSTYPE_ocsp) != 1) {
                 return "Failed to set OCSP status extension";
             }
-            auto [sigalgs, sigalgs_len] = sigalgs_for(profile);
-            if (!SSL_set_verify_algorithm_prefs(ssl.get(), sigalgs, sigalgs_len)) {
-                return "Failed to set signature algorithms";
+            if (profile == TlsClientProfile::OPENSSL_DEFAULT) {
+                // Advertise OpenSSL's signature_algorithms verbatim so JA4_c matches,
+                // including codepoints BoringSSL cannot itself sign/verify with.
+                SSL_set_raw_verify_algorithm_prefs(
+                        ssl.get(), OPENSSL_SIGALGS, std::size(OPENSSL_SIGALGS));
+            } else {
+                auto [sigalgs, sigalgs_len] = sigalgs_for(profile);
+                if (!SSL_set_verify_algorithm_prefs(ssl.get(), sigalgs, sigalgs_len)) {
+                    return "Failed to set signature algorithms";
+                }
             }
         }
     }
