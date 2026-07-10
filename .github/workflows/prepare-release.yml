@@ -53,7 +53,10 @@ jobs:
       - name: Increment last component
         id: bump
         if: inputs.version == ''
-        uses: ./.github/actions/next-version-simple
+        # Full remote ref, not a local ./ path: when this reusable workflow is
+        # called from another repo, the checkout above is the CALLER's tree
+        # (whose CHANGELOG.md we read), which does not contain this action.
+        uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/next-version-simple@master
         with:
           current_version: ${{ steps.current.outputs.version }}
 
