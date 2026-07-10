@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Windows: `win_detect_active_if()` no longer compares interface metrics across address families, which on dual-stack hosts could pin an IPv6-only-default interface for IPv4 sockets and break all IPv4 connections. It now prefers the interface with an IPv4 default route, falling back to the IPv6 one (AG-56159).
+
 ### Security
 
 ## [8.1.41] - 2026-07-10
