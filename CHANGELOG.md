@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- ngtcp2 build with quictls on MIPS.
+
 ### Security
 
 ## [8.1.40] - 2026-07-08
