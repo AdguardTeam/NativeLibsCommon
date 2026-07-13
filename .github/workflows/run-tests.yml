@@ -70,35 +70,32 @@ jobs:
               & conan remote login art "$env:ARTIFACTORY_USER" --password "$env:ARTIFACTORY_API_KEY"
               & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
           - name: Linux
-            runs-on: '["ephemeral","ephemeral-linux","${{ needs.resolve-images.outputs.corelibs-builder }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
-            container-image: 'adguard/core-libs:2.11'
+            runs-on: '["team-corelibs"]'
+            container-image: ''
+            shell: bash
             artifact-name: test-results-linux
             test-command: |
-              set -e
-              set -x
+              set -euxo pipefail
 
-              python3 -m pip install conan --upgrade
-              conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+              rm -rf build
+              export CONAN_REPO_URL='${{ vars.CONAN_REPO_URL }}'
+              DOCKER_BUILDKIT=1 docker build --progress=plain \
+                --secret id=conan_repo_url,env=CONAN_REPO_URL \
+                --secret id=artifactory_user,env=ARTIFACTORY_USER \
+                --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
+                --target native-tests-output \
+                --output type=local,dest=build \
+                -f Dockerfile.build .
 
-              mkdir -p build
-              cd build
-              cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
-                -DCMAKE_C_COMPILER=clang \
-                -DCMAKE_CXX_COMPILER=clang++ \
-                -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-                -DSANITIZE=yes \
-                ..
-              ninja tests
-              ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
+              test "$(cat build/test-status)" -eq 0
             finally-script: |
-              set -e
-              set -x
-
-              conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
-              conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
+              # Conan upload is performed inside Dockerfile.build so it also
+              # runs when the test command itself fails.
+              true
           - name: Mac
             runs-on: '["ephemeral","ephemeral-mac","${{ needs.resolve-images.outputs.macos }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
             container-image: ''
+            shell: bash
             artifact-name: test-results-macos
             test-command: |
               set -e
@@ -146,31 +143,22 @@ jobs:
   android-build:
     name: Android build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    needs: resolve-images
-    runs-on:
-      - ephemeral
-      - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
-      - ephemeral-limit-memory-4096
-      - ephemeral-limit-cpu-4
-    container:
-      image: adguard/core-libs:2.11
+    runs-on: team-corelibs
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Build Android library
+        env:
+          CONAN_REPO_URL: ${{ vars.CONAN_REPO_URL }}
+          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ARTIFACTORY_API_KEY: ${{ secrets.ARTIFACTORY_API_KEY }}
         run: |
-          python3 -m pip install conan --upgrade
-          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
-          cd android/NativeLibsCommon
-          touch local.properties
-          CMAKE_DIR=$(dirname $(dirname $(which cmake)))
-          echo cmake.dir=$CMAKE_DIR >> local.properties
-          ./gradlew :lib:assembleRelease
+          set -euxo pipefail
 
-      - name: Upload to Conan
-        if: always()
-        run: |
-          conan remote login art "${{ secrets.ARTIFACTORY_USER }}" --password "${{ secrets.ARTIFACTORY_API_KEY }}"
-          conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
+          DOCKER_BUILDKIT=1 docker build --progress=plain \
+            --secret id=conan_repo_url,env=CONAN_REPO_URL \
+            --secret id=artifactory_user,env=ARTIFACTORY_USER \
+            --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
+            --target android-build \
+            -f Dockerfile.build .
