@@ -1,6 +1,6 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import patch, copy
+from conan.tools.files import patch, copy, get
 from os.path import join
 import os
 
@@ -19,8 +19,13 @@ class Ngtcp2Conan(ConanFile):
             del self.options.fPIC
 
     def source(self):
-        self.run("git clone https://github.com/ngtcp2/ngtcp2.git source_subfolder")
-        self.run(f"cd source_subfolder && git checkout v{self.version}")
+        get(
+            self,
+            f"https://github.com/ngtcp2/ngtcp2/releases/download/v{self.version}/ngtcp2-{self.version}.tar.gz",
+            sha256="063d80531acac0ddbbc1b9d12829a824edc2abe8dba2e632fd1ce15cfd5632f9",
+            destination="source_subfolder",
+            strip_root=True,
+        )
         # Apply all patches from the `patches` directory
         patches_path = os.path.join("patches")
         patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])

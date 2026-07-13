@@ -354,13 +354,17 @@ uint32_t utils::win_detect_active_if() {
     // handle ipv6
     auto [index_v6, min_metric_v6] = get_min_metric_if(net_ifs_v6, true);
     dbglog(g_logger, "min_metric_v6 = {} with if_index = {}", min_metric_v6, index_v6);
-    // both checks failed
-    if (min_metric_v4 == min_metric_v6 && min_metric_v4 == NL_MAX_METRIC_COMPONENT) {
-        errlog(g_logger, "Both metric checks failed");
-        return 0;
-    }
-    if (min_metric_v4 < min_metric_v6) {
+    // A default IPv4 route already guarantees IPv4 connectivity on `index_v4`, and likewise a default
+    // IPv6 route guarantees IPv6 connectivity on `index_v6`. Comparing metrics across address families
+    // is meaningless: on dual-stack hosts it can pin an IPv6-only-default interface (lower metric) for
+    // IPv4 sockets, so GetBestRoute2() then fails for IPv4 destinations and every IPv4 endpoint
+    // connection breaks (AG-56159). Prefer the IPv4 default-route interface; fall back to the IPv6 one
+    // only when there is no usable IPv4 default route.
+    if (index_v4 != 0) {
         return index_v4;
+    }
+    if (index_v6 == 0) {
+        errlog(g_logger, "No default-route interface found");
     }
     return index_v6;
 }
