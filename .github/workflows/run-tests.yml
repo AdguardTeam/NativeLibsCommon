@@ -96,6 +96,7 @@ jobs:
                 fi
                 echo 'BuildKit stopped gracefully; retrying the build once.' >&2
                 rm -rf build
+                sleep 15
                 run_build
               fi
               rm -f "$build_log"
@@ -155,7 +156,8 @@ jobs:
 
   android-build:
     name: Android build
-    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    if: always() && github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    needs: tests
     runs-on: team-corelibs
     steps:
       - name: Checkout
@@ -185,6 +187,7 @@ jobs:
               exit 1
             fi
             echo 'BuildKit stopped gracefully; retrying the build once.' >&2
+            sleep 15
             run_build
           fi
           rm -f "$build_log"
