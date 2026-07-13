@@ -11,64 +11,66 @@ FROM build AS native-tests
 
 RUN --mount=type=secret,id=conan_repo_url,required=true \
     --mount=type=secret,id=artifactory_user \
-    --mount=type=secret,id=artifactory_api_key \
-    set -u; \
-    conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true; \
-    if [ -s /run/secrets/artifactory_user ] && [ -s /run/secrets/artifactory_api_key ]; then \
-        conan remote login art "$(cat /run/secrets/artifactory_user)" \
-            --password "$(cat /run/secrets/artifactory_api_key)"; \
-    fi; \
-    mkdir -p build results; \
-    : > /src/results/junit.xml; \
-    test_status=0; \
-    cd build; \
-    cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
-        -DCMAKE_C_COMPILER=clang \
-        -DCMAKE_CXX_COMPILER=clang++ \
-        -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-        -DSANITIZE=yes \
-        .. || test_status=$?; \
-    if [ "$test_status" -eq 0 ]; then ninja tests || test_status=$?; fi; \
-    if [ "$test_status" -eq 0 ]; then \
-        ctest --output-junit /src/results/junit.xml -D ExperimentalTest --no-compress-output || test_status=$?; \
-    fi; \
-    upload_status=0; \
-    if [ -s /run/secrets/artifactory_user ] && [ -s /run/secrets/artifactory_api_key ]; then \
-        conan upload -r art -c "*" || upload_status=$?; \
-    fi; \
-    if [ "$test_status" -eq 0 ] && [ "$upload_status" -ne 0 ]; then \
-        test_status=$upload_status; \
-    fi; \
-    printf '%s\n' "$test_status" > /src/results/test-status; \
-    exit 0
+    --mount=type=secret,id=artifactory_api_key <<END
+set -u
 
-FROM scratch AS native-tests-output
-
-COPY --from=native-tests /src/results/junit.xml /junit.xml
-COPY --from=native-tests /src/results/test-status /test-status
+conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
+mkdir -p build results
+: > /src/results/junit.xml
+test_status=0
+cd build
+cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+    -DSANITIZE=yes \
+    .. || test_status=$?
+if [ "$test_status" -eq 0 ]; then ninja -j2 tests || test_status=$?; fi
+if [ "$test_status" -eq 0 ]; then
+    ctest --output-junit /src/results/junit.xml -D ExperimentalTest --no-compress-output || test_status=$?
+fi
+upload_status=0
+if [ -s /run/secrets/artifactory_user ] && [ -s /run/secrets/artifactory_api_key ]; then
+    conan remote login art "$(cat /run/secrets/artifactory_user)" \
+        --password "$(cat /run/secrets/artifactory_api_key)" || upload_status=$?
+    if [ "$upload_status" -eq 0 ]; then conan upload -r art -c "*" || upload_status=$?; fi
+fi
+if [ "$test_status" -eq 0 ] && [ "$upload_status" -ne 0 ]; then
+    test_status=$upload_status
+fi
+printf '%s\n' "$test_status" > /src/results/test-status
+exit 0
+END
 
 FROM build AS android-build
 
 RUN --mount=type=secret,id=conan_repo_url,required=true \
     --mount=type=secret,id=artifactory_user \
-    --mount=type=secret,id=artifactory_api_key \
-    set -u; \
-    conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true; \
-    if [ -s /run/secrets/artifactory_user ] && [ -s /run/secrets/artifactory_api_key ]; then \
-        conan remote login art "$(cat /run/secrets/artifactory_user)" \
-            --password "$(cat /run/secrets/artifactory_api_key)"; \
-    fi; \
-    cd android/NativeLibsCommon; \
-    touch local.properties; \
-    cmake_dir=$(dirname "$(dirname "$(which cmake)")"); \
-    printf 'cmake.dir=%s\n' "$cmake_dir" >> local.properties; \
-    build_status=0; \
-    ./gradlew :lib:assembleRelease || build_status=$?; \
-    upload_status=0; \
-    if [ -s /run/secrets/artifactory_user ] && [ -s /run/secrets/artifactory_api_key ]; then \
-        conan upload -r art -c "*" || upload_status=$?; \
-    fi; \
-    if [ "$build_status" -eq 0 ] && [ "$upload_status" -ne 0 ]; then \
-        build_status=$upload_status; \
-    fi; \
-    exit "$build_status"
+    --mount=type=secret,id=artifactory_api_key <<END
+set -u
+
+conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
+cd android/NativeLibsCommon
+touch local.properties
+cmake_dir=$(dirname "$(dirname "$(which cmake)")")
+printf 'cmake.dir=%s\n' "$cmake_dir" >> local.properties
+build_status=0
+./gradlew :lib:assembleRelease || build_status=$?
+upload_status=0
+if [ -s /run/secrets/artifactory_user ] && [ -s /run/secrets/artifactory_api_key ]; then
+    conan remote login art "$(cat /run/secrets/artifactory_user)" \
+        --password "$(cat /run/secrets/artifactory_api_key)" || upload_status=$?
+    if [ "$upload_status" -eq 0 ]; then
+        conan upload -r art -c "*" || upload_status=$?
+    fi
+fi
+if [ "$build_status" -eq 0 ] && [ "$upload_status" -ne 0 ]; then
+    build_status=$upload_status
+fi
+exit "$build_status"
+END
+
+FROM scratch AS native-tests-output
+
+COPY --from=native-tests /src/results/junit.xml /junit.xml
+COPY --from=native-tests /src/results/test-status /test-status
