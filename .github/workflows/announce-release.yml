@@ -1,30 +1,34 @@
 name: Announce release
 
-# Reusable workflow that announces a published release for a single downstream
-# product: it opens a tracking issue in the product's repository and posts a
-# release notice to Slack.
+# Reusable workflow that announces a published release for a product: it opens a
+# tracking issue in each downstream app repository and posts a single Block Kit
+# message to Slack. Callers differ only by `product`, `channel` and `targets`
+# (the repo/assignee list) -- everything else is shared here, so core-libs,
+# dns-libs, vpn-client and their release branches (e.g. stable-0.20) reuse it
+# without copy-pasting the announce jobs.
 #
-# It is intentionally single-target (one repo / one channel per call) so the
-# caller can drive it from a `strategy.matrix`. Because the issue and Slack jobs
-# below are not themselves matrixed, the Slack job can read the created issue's
-# URL directly from `needs.issue.outputs` -- a matrixed reusable-workflow call
-# in the caller cannot expose per-entry outputs, so the correlation has to live
-# here, one level down.
+# Why fixed `issue-N` jobs instead of a `strategy.matrix`:
+#   * Octopass gates its OIDC token to the create-gh-issue.yml reusable workflow
+#     (it checks job_workflow_ref), so the issues MUST be opened through that
+#     workflow -- we cannot mint a token and create issues inline.
+#   * A matrixed reusable-workflow call cannot expose per-entry outputs, so the
+#     Slack job could not collect every issue URL for one aggregated message.
+# Named jobs sidestep both: each calls create-gh-issue.yml (OIDC-approved) and
+# the Slack job reads each `needs.issue-N.outputs.issue-url` directly. The list
+# is capped at 4 apps (enough for iOS/Mac/Windows/Android); extend with more
+# `issue-N` jobs if a product ships to more platforms.
 #
-# The tracking issue is public, so it only names the version; the changelog is
-# never reproduced in it.
+# The tracking issues live in public app repos, so they carry the changelog with
+# the `- (Private)` paragraphs stripped (see filter-private-changelog). The full
+# changelog still goes to the internal Slack message and the GitHub Release.
 
 on:
   workflow_call:
     inputs:
-      target_repo:
-        type: string
-        required: true
-        description: 'Repository to open the tracking issue in (owner/name)'
       product:
         type: string
         required: true
-        description: 'Human-readable product name (e.g. "VPN client")'
+        description: 'Human-readable product name (e.g. "CoreLibs", "DnsLibs", "VPN client")'
       version:
         type: string
         required: true
@@ -33,49 +37,182 @@ on:
         type: string
         required: true
         description: 'HTML URL of the GitHub Release with the changelog'
+      changelog:
+        type: string
+        required: true
+        description: 'Release changelog in Markdown (from tag-from-changelog)'
       channel:
         type: string
         required: true
         description: 'Slack channel to announce to (e.g. #build-corelibs)'
-      assignees:
+      targets:
         type: string
-        required: false
-        default: ''
-        description: 'GitHub usernames to assign the issue to, comma- or whitespace-separated'
+        required: true
+        description: >-
+          JSON array (max 4) of downstream apps to open a tracking issue in,
+          each `{"repo": "owner/name", "assignee": "gh-user", "platform": "Android"}`.
+          `assignee` and `platform` are optional; `platform` defaults to the repo
+          name and is used for the Slack link text. (Not a GitHub issue label --
+          the issues are always labelled `automatic` by create-gh-issue.)
       team:
         type: string
         required: true
         description: 'Team name for the kubernetes runner and token scope (e.g. corelibs)'
-    outputs:
-      issue-url:
-        description: 'HTML URL of the created tracking issue'
-        value: ${{ jobs.issue.outputs.issue-url }}
 
 jobs:
-  # Open the tracking issue (cross-repo token minting and labelling are handled
-  # by create-gh-issue.yml).
-  issue:
+  # Strip `- (Private)` paragraphs once; every tracking issue attaches the result.
+  public-changelog:
+    name: Filter private changelog
+    runs-on: team-${{ inputs.team }}
+    outputs:
+      changelog-text: ${{ steps.filter.outputs.changelog }}
+    steps:
+      - name: Strip private entries
+        id: filter
+        uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/filter-private-changelog@master
+        with:
+          changelog: ${{ inputs.changelog }}
+
+  # One tracking issue per target. Each is gated on the Nth entry of `targets`
+  # existing, so a caller with fewer apps simply leaves the tail jobs skipped.
+  # The body carries a link to the release changelog plus the public changelog.
+  issue-1:
+    if: ${{ fromJSON(inputs.targets)[0] != null }}
+    needs: public-changelog
     permissions:
       contents: read
       id-token: write
     uses: AdGuardSoftwareLimited/actions/.github/workflows/create-gh-issue.yml@master
     with:
-      target_repo: ${{ inputs.target_repo }}
+      target_repo: ${{ fromJSON(inputs.targets)[0].repo }}
       title: Update ${{ inputs.product }} to ${{ inputs.version }}
-      body: A new ${{ inputs.product }} version ${{ inputs.version }} has been released. Please integrate it.
-      assignees: ${{ inputs.assignees }}
-      team: ${{ inputs.team }}
+      body: |
+        A new ${{ inputs.product }} version ${{ inputs.version }} has been released. Please integrate it.
 
-  # Announce in Slack, linking the public release notes and the tracking issue.
+        Changelog: ${{ inputs.release_url }}
+
+        ## Changelog
+
+        ${{ needs.public-changelog.outputs.changelog-text }}
+      assignees: ${{ fromJSON(inputs.targets)[0].assignee }}
+      team: ${{ inputs.team }}
+    secrets: inherit
+
+  issue-2:
+    if: ${{ fromJSON(inputs.targets)[1] != null }}
+    needs: public-changelog
+    permissions:
+      contents: read
+      id-token: write
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-gh-issue.yml@master
+    with:
+      target_repo: ${{ fromJSON(inputs.targets)[1].repo }}
+      title: Update ${{ inputs.product }} to ${{ inputs.version }}
+      body: |
+        A new ${{ inputs.product }} version ${{ inputs.version }} has been released. Please integrate it.
+
+        Changelog: ${{ inputs.release_url }}
+
+        ## Changelog
+
+        ${{ needs.public-changelog.outputs.changelog-text }}
+      assignees: ${{ fromJSON(inputs.targets)[1].assignee }}
+      team: ${{ inputs.team }}
+    secrets: inherit
+
+  issue-3:
+    if: ${{ fromJSON(inputs.targets)[2] != null }}
+    needs: public-changelog
+    permissions:
+      contents: read
+      id-token: write
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-gh-issue.yml@master
+    with:
+      target_repo: ${{ fromJSON(inputs.targets)[2].repo }}
+      title: Update ${{ inputs.product }} to ${{ inputs.version }}
+      body: |
+        A new ${{ inputs.product }} version ${{ inputs.version }} has been released. Please integrate it.
+
+        Changelog: ${{ inputs.release_url }}
+
+        ## Changelog
+
+        ${{ needs.public-changelog.outputs.changelog-text }}
+      assignees: ${{ fromJSON(inputs.targets)[2].assignee }}
+      team: ${{ inputs.team }}
+    secrets: inherit
+
+  issue-4:
+    if: ${{ fromJSON(inputs.targets)[3] != null }}
+    needs: public-changelog
+    permissions:
+      contents: read
+      id-token: write
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-gh-issue.yml@master
+    with:
+      target_repo: ${{ fromJSON(inputs.targets)[3].repo }}
+      title: Update ${{ inputs.product }} to ${{ inputs.version }}
+      body: |
+        A new ${{ inputs.product }} version ${{ inputs.version }} has been released. Please integrate it.
+
+        Changelog: ${{ inputs.release_url }}
+
+        ## Changelog
+
+        ${{ needs.public-changelog.outputs.changelog-text }}
+      assignees: ${{ fromJSON(inputs.targets)[3].assignee }}
+      team: ${{ inputs.team }}
+    secrets: inherit
+
+  # Announce to Slack as one Block Kit message: header, the full changelog, then
+  # the changelog + every opened issue link at the end. Skipped issue jobs leave
+  # an empty URL, which the link builder drops.
   slack:
-    needs: issue
+    needs: [public-changelog, issue-1, issue-2, issue-3, issue-4]
+    # Run even if some targets were skipped (skipped != failure), but not if any
+    # issue job or the changelog filter actually failed.
+    if: ${{ always() && !cancelled() && !contains(needs.*.result, 'failure') }}
     runs-on: team-${{ inputs.team }}
     steps:
+      - name: Build links list
+        id: links
+        shell: bash
+        env:
+          RELEASE_URL: ${{ inputs.release_url }}
+          TARGETS: ${{ inputs.targets }}
+          U1: ${{ needs.issue-1.outputs.issue-url }}
+          U2: ${{ needs.issue-2.outputs.issue-url }}
+          U3: ${{ needs.issue-3.outputs.issue-url }}
+          U4: ${{ needs.issue-4.outputs.issue-url }}
+        run: |
+          set -euo pipefail
+
+          # Changelog link first, then one link per opened issue, in target order,
+          # labelled from the target's `label` (or the repo name) + " issue".
+          links="$(jq -c -n \
+            --arg curl "$RELEASE_URL" \
+            --argjson targets "$TARGETS" \
+            --arg u1 "$U1" --arg u2 "$U2" --arg u3 "$U3" --arg u4 "$U4" \
+            '
+            [ { label: "Changelog", url: $curl } ]
+            + ( [ $u1, $u2, $u3, $u4 ]
+                | to_entries
+                | map(select(.value != "" and $targets[.key] != null)
+                      | { label: (($targets[.key].platform // ($targets[.key].repo | split("/") | last))
+                                  + " integration issue"),
+                          url: .value }) )
+            ')"
+
+          {
+            echo "links<<LINKS_EOF"
+            echo "$links"
+            echo "LINKS_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Post to Slack
-        uses: AdGuardSoftwareLimited/actions/actions/slack@master
+        uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/announce-release-slack@master
         with:
           channel: ${{ inputs.channel }}
-          message: |
-            ${{ inputs.product }} ${{ inputs.version }} :release:d
-            Changelog: ${{ inputs.release_url }}
-            Github link: ${{ needs.issue.outputs.issue-url }}
+          title: ${{ inputs.product }} ${{ inputs.version }} :release:d
+          changelog: ${{ inputs.changelog }}
+          links: ${{ steps.links.outputs.links }}
