@@ -157,7 +157,7 @@ jobs:
 
   android-build:
     name: Android build
-    if: always() && github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    if: ${{ always() && github.repository == 'AdGuardSoftwareLimited/native-libs-common' }}
     needs: tests
     runs-on: team-corelibs
     steps:
