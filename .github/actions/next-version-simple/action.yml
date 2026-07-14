@@ -1,0 +1,49 @@
+name: Next Version (simple)
+description: Calculate the next version by incrementing the trailing numeric component of the current version
+
+# The "simple" counterpart to the next-version action: it does not model the
+# beta -> rc -> release ladder or major/minor/patch parts. It just increments
+# the last number, which is the patch for a plain release series and the
+# prerelease counter for a prerelease. Everything before that number is kept
+# verbatim.
+#
+#   1.2.9        -> 1.2.10
+#   1.2.0-beta.9 -> 1.2.0-beta.10
+#   1.2.0-rc.5   -> 1.2.0-rc.6
+#   8.1.40       -> 8.1.41
+
+inputs:
+  current_version:
+    description: 'Current version whose trailing numeric component is incremented'
+    required: true
+
+outputs:
+  version:
+    description: 'The calculated new version'
+    value: ${{ steps.calc.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Calculate new version
+      id: calc
+      shell: bash
+      env:
+        CURRENT_VERSION: ${{ inputs.current_version }}
+      run: |
+        set -euo pipefail
+
+        # The version must end in a number so there is something to increment.
+        if [[ ! "$CURRENT_VERSION" =~ [0-9]+$ ]]; then
+          echo "::error::Version does not end in a numeric component: $CURRENT_VERSION"
+          exit 1
+        fi
+
+        # Split into everything-before + the trailing run of digits, then bump
+        # the number (10# forces base-10 so leading zeros are not read as octal).
+        NUM="${BASH_REMATCH[0]}"
+        PREFIX="${CURRENT_VERSION%"$NUM"}"
+        NEW_VERSION="${PREFIX}$((10#$NUM + 1))"
+
+        echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+        echo "Calculated version: $NEW_VERSION"

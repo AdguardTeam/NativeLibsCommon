@@ -4,29 +4,83 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Proposed version (without leading v)'
-        required: true
+        description: 'Proposed version (without leading v). Leave empty to increment the last component of the latest version (1.2.9 -> 1.2.10, 1.2.0-beta.9 -> 1.2.0-beta.10).'
+        required: false
         type: string
   workflow_call:
     inputs:
       version:
-        description: 'Proposed version (without leading v)'
-        required: true
+        description: 'Proposed version (without leading v). Leave empty to increment the last component of the latest version (1.2.9 -> 1.2.10, 1.2.0-beta.9 -> 1.2.0-beta.10).'
+        required: false
         type: string
 
 permissions:
   contents: read
 
 jobs:
+  # Resolve the version to release. When the caller leaves `version` empty, the
+  # latest released version from CHANGELOG.md is bumped by the next-version-simple
+  # action (1.2.9 -> 1.2.10, 1.2.0-beta.9 -> 1.2.0-beta.10). The changelog's first
+  # released entry is the same "current version" that create-release-pr.yml uses.
+  resolve-version:
+    if: github.repository_owner == 'AdGuardSoftwareLimited'
+    runs-on: team-corelibs
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Read current version from changelog
+        id: current
+        if: inputs.version == ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Latest released version = first "## [x.y.z...]" header in the
+          # changelog (skips "## [Unreleased]", which does not start with a digit).
+          current=$(grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+[^]]*\]' CHANGELOG.md \
+            | head -1 | sed -E 's/^## \[(.*)\]$/\1/')
+
+          if [ -z "$current" ]; then
+            echo "::error::No released version found in CHANGELOG.md; pass a version explicitly." >&2
+            exit 1
+          fi
+
+          echo "version=$current" >> "$GITHUB_OUTPUT"
+
+      - name: Increment last component
+        id: bump
+        if: inputs.version == ''
+        # Full remote ref, not a local ./ path: when this reusable workflow is
+        # called from another repo, the checkout above is the CALLER's tree
+        # (whose CHANGELOG.md we read), which does not contain this action.
+        uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/next-version-simple@master
+        with:
+          current_version: ${{ steps.current.outputs.version }}
+
+      - name: Pick resolved version
+        id: pick
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.version }}
+          BUMPED: ${{ steps.bump.outputs.version }}
+        run: |
+          set -euo pipefail
+          version="${REQUESTED:-$BUMPED}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Resolved release version: $version"
+
   # Changelog patch, branch, commit, and PR (via Octopass) are all handled by
   # the shared reusable workflow.
   create-pr:
-    if: github.repository_owner == 'AdGuardSoftwareLimited'
+    needs: resolve-version
     uses: AdGuardSoftwareLimited/actions/.github/workflows/create-release-pr.yml@master
     permissions:
       contents: write
       pull-requests: write
       id-token: write
     with:
-      tag: v${{ inputs.version }}
+      tag: v${{ needs.resolve-version.outputs.version }}
       team: corelibs

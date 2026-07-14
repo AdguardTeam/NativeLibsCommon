@@ -1,0 +1,18 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -167,5 +167,9 @@
+   # Until OpenSSL gains mainline support for QUIC, check for a patched version.
+   if(ENABLE_OPENSSL)
+     cmake_push_check_state()
++    # Detect QUIC support from the OpenSSL headers only; build the probe as a static
++    # library so cross-compile toolchains need not link the whole OpenSSL closure.
++    set(_ngtcp2_saved_try_compile_target_type "${CMAKE_TRY_COMPILE_TARGET_TYPE}")
++    set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+     set(CMAKE_REQUIRED_INCLUDES   "${OPENSSL_INCLUDE_DIR}")
+     set(CMAKE_REQUIRED_LIBRARIES  "${OPENSSL_LIBRARIES}")
+@@ -182,4 +186,5 @@
+       check_symbol_exists("LIBRESSL_VERSION_NUMBER" "openssl/opensslv.h" HAVE_LIBRESSL_VERSION_NUMBER)
+     endif()
++    set(CMAKE_TRY_COMPILE_TARGET_TYPE "${_ngtcp2_saved_try_compile_target_type}")
+     cmake_pop_check_state()
+   endif()

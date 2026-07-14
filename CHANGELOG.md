@@ -18,6 +18,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.42] - 2026-07-10
+
+### Fixed
+
+- Windows: `win_detect_active_if()` no longer compares interface metrics across address families, which on dual-stack hosts could pin an IPv6-only-default interface for IPv4 sockets and break all IPv4 connections. It now prefers the interface with an IPv4 default route, falling back to the IPv6 one (AG-56159).
+
+## [8.1.41] - 2026-07-10
+
+### Fixed
+
+- ngtcp2 build with quictls on MIPS.
+
 ## [8.1.40] - 2026-07-08
 
 ### Changed
@@ -1201,7 +1213,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.40...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.42...HEAD
+[8.1.42]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.41...v8.1.42
+[8.1.41]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.40...v8.1.41
 [8.1.40]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.39...v8.1.40
 [8.1.39]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.38...v8.1.39
 [8.1.38]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.37...v8.1.38
