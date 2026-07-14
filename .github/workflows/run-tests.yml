@@ -35,6 +35,7 @@ jobs:
               $ErrorActionPreference = 'Stop'
 
               & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
+              & ./scripts/export_conan.sh
 
               # Save vcvars to switch between them
               $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
@@ -79,6 +80,7 @@ jobs:
 
               python3 -m pip install conan --upgrade
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+              ./scripts/export_conan.sh
 
               mkdir -p build
               cd build
@@ -110,6 +112,7 @@ jobs:
 
               python3 -m pip install conan
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+              ./scripts/export_conan.sh
 
               ARCH=$(uname -m)
               mkdir -p build
@@ -163,6 +166,8 @@ jobs:
         run: |
           python3 -m pip install conan --upgrade
           conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+          ./scripts/export_conan.sh
+          
           cd android/NativeLibsCommon
           touch local.properties
           CMAKE_DIR=$(dirname $(dirname $(which cmake)))
