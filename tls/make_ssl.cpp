@@ -30,8 +30,15 @@ bool is_browser_profile(TlsClientProfile p) {
 // legacy TLS 1.2 suites are listed here. Order is JA4-irrelevant.
 const char *cipher_list_for(TlsClientProfile profile) {
     // clang-format off
+    // Enumerated explicitly (rather than an "ALL:!…" filter) so the fingerprint stays
+    // stable when the BoringSSL cipher table grows — e.g. the OpenSSL-imitation patch
+    // adds legacy DHE/CBC-SHA256 suites that an "ALL" expansion would wrongly sweep in.
     static const char *const CHROME =
-            "ALL:!aPSK:!ECDSA+SHA1:!3DES";
+            "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
+            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"
+            "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:"
+            "ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:"
+            "AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA:AES256-SHA";
     static const char *const SAFARI =
             "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-CHACHA20-POLY1305:"
             "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-CHACHA20-POLY1305:"
