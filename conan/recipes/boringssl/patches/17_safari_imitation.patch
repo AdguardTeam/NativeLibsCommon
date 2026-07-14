@@ -52,7 +52,7 @@ diff --git a/ssl/ssl_cipher.cc b/ssl/ssl_cipher.cc
 diff --git a/ssl/ssl_privkey.cc b/ssl/ssl_privkey.cc
 --- a/ssl/ssl_privkey.cc
 +++ b/ssl/ssl_privkey.cc
-@@ -597,9 +597,9 @@
+@@ -597,9 +597,11 @@
  }
  
  static bool set_sigalg_prefs(Array<uint16_t> *out, Span<const uint16_t> prefs) {
@@ -61,7 +61,9 @@ diff --git a/ssl/ssl_privkey.cc b/ssl/ssl_privkey.cc
 -  }
 +  // Allow duplicated signature algorithms so browser-imitation
 +  // profiles (e.g. Safari) can advertise them verbatim.
-+  (void) sigalgs_unique;
++  // Reference the address (not a bare call) so MSVC /W4 /WX does not raise
++  // C4551 while GCC/Clang still see the function as used.
++  (void) &sigalgs_unique;
  
    // Check for invalid algorithms, and filter out |SSL_SIGN_RSA_PKCS1_MD5_SHA1|.
    Array<uint16_t> filtered;
