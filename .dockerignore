@@ -3,3 +3,5 @@ cmake-build-*
 .venv
 venv
 .DS_Store
+.git
+.github
