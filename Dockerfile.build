@@ -9,11 +9,14 @@ RUN python3 -m pip install conan --upgrade
 
 FROM build AS native-tests
 
+ARG CI_CACHE_BUSTER
+
 RUN --mount=type=secret,id=conan_repo_url,required=true \
     --mount=type=secret,id=artifactory_user \
     --mount=type=secret,id=artifactory_api_key <<END
-set -u
+set -eu
 
+: "$CI_CACHE_BUSTER"
 conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
 conan config set tools.build:jobs=1
 mkdir -p build results
@@ -40,17 +43,23 @@ fi
 if [ "$test_status" -eq 0 ] && [ "$upload_status" -ne 0 ]; then
     test_status=$upload_status
 fi
+if [ ! -s /src/results/junit.xml ]; then
+    printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<testsuite name="native-tests" tests="1" failures="1"><testcase name="native-tests"><failure message="Build failed before running tests"/></testcase></testsuite>' > /src/results/junit.xml
+fi
 printf '%s\n' "$test_status" > /src/results/test-status
 exit 0
 END
 
 FROM build AS android-build
 
+ARG CI_CACHE_BUSTER
+
 RUN --mount=type=secret,id=conan_repo_url,required=true \
     --mount=type=secret,id=artifactory_user \
     --mount=type=secret,id=artifactory_api_key <<END
-set -u
+set -eu
 
+: "$CI_CACHE_BUSTER"
 conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
 conan config set tools.build:jobs=1
 cd android/NativeLibsCommon
