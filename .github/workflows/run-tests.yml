@@ -161,11 +161,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Build Android library
         run: |
           python3 -m pip install conan --upgrade
           conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+          ./scripts/export_conan.sh
           
           cd android/NativeLibsCommon
           touch local.properties
