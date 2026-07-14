@@ -1,0 +1,101 @@
+name: Announce release to Slack (Block Kit)
+description: >-
+  Post a release announcement to Slack as a Block Kit message: a header, the
+  changelog (converted from Markdown to mrkdwn), then the links at the end.
+
+# Reusable across core-libs, dns-libs, vpn-client and their release branches
+# (e.g. stable-0.20). The message layout is:
+#
+#     ┌────────────────────────────────────────┐
+#     │  <title>                       (header) │
+#     ├────────────────────────────────────────┤
+#     │  <changelog, as Slack mrkdwn>           │
+#     │  ────────────────────────────  (divider)│
+#     │  • <Changelog link>                     │
+#     │  • <integration issue links…>           │
+#     └────────────────────────────────────────┘
+#
+# Links go last, after the changelog, so the release notes are what readers see
+# first. The changelog conversion reuses the markdown-to-mrkdwn action and the
+# post goes through the shared slack action's Block Kit (`blocks`) mode.
+
+inputs:
+  channel:
+    description: "Slack channel (e.g. '#build-corelibs')"
+    required: true
+  title:
+    description: 'Header line, e.g. "CoreLibs 1.2.3 :release:d"'
+    required: true
+  changelog:
+    description: 'Release changelog in Markdown (converted to mrkdwn for display)'
+    required: true
+  links:
+    description: >-
+      JSON array of links to show at the end, in order, each
+      `{"label": "...", "url": "..."}`. Empty-url entries are skipped.
+    required: true
+  uv-image:
+    description: 'astral uv base image passed through to markdown-to-mrkdwn'
+    required: false
+    default: 'ghcr.io/astral-sh/uv:python3.14-alpine'
+
+runs:
+  using: composite
+  steps:
+    # Reuse the existing converter so the changelog renders as proper Slack
+    # mrkdwn (bold, links, lists) inside the section block.
+    - name: Convert changelog to Slack mrkdwn
+      id: mrkdwn
+      uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/markdown-to-mrkdwn@master
+      with:
+        markdown: ${{ inputs.changelog }}
+        uv-image: ${{ inputs.uv-image }}
+
+    # Assemble the Block Kit payload. Values flow in through the environment (not
+    # string interpolation) so changelog/links content can't break the shell or
+    # the JSON.
+    - name: Build Block Kit payload
+      id: blocks
+      shell: bash
+      env:
+        TITLE: ${{ inputs.title }}
+        BODY: ${{ steps.mrkdwn.outputs.mrkdwn }}
+        LINKS: ${{ inputs.links }}
+      run: |
+        set -euo pipefail
+
+        blocks="$(jq -c -n \
+          --arg title "$TITLE" \
+          --arg body "$BODY" \
+          --argjson links "$LINKS" \
+          '
+          # Slack section text must be non-empty and <= 3000 chars; keep the
+          # link to the full changelog for the truncated case.
+          def clamp: if (. | length) > 2900 then (.[0:2900] + "\n…") else . end;
+          ($body | if (. | gsub("\\s"; "")) == "" then "_No changelog._" else . end | clamp) as $notes |
+          ($links
+            | map(select(.url != null and .url != ""))
+            | map("• <\(.url)|\(.label)>")
+            | join("\n")) as $linktext |
+          [
+            { type: "header",  text: { type: "plain_text", text: $title, emoji: true } },
+            { type: "section", text: { type: "mrkdwn", text: $notes } }
+          ]
+          + (if $linktext == "" then [] else
+              [ { type: "divider" },
+                { type: "section", text: { type: "mrkdwn", text: $linktext } } ]
+            end)
+          ')"
+
+        {
+          echo "blocks<<BLOCKS_EOF_MARKER"
+          echo "$blocks"
+          echo "BLOCKS_EOF_MARKER"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Post to Slack
+      uses: AdGuardSoftwareLimited/actions/actions/slack@master
+      with:
+        channel: ${{ inputs.channel }}
+        blocks: ${{ steps.blocks.outputs.blocks }}
+        fallback_text: ${{ inputs.title }}

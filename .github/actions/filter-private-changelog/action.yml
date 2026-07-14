@@ -1,0 +1,88 @@
+name: Filter private changelog entries
+description: >-
+  Strip `- (Private)` paragraphs from a keepachangelog-style Markdown changelog,
+  producing a public changelog safe to attach to issues in public app repos.
+
+# A "private paragraph" is a bullet whose text starts with `(Private)`, e.g.
+#
+#     - (Private) Refactor the internal foo cache. AG-1234
+#       Extra continuation line.
+#       - nested detail
+#
+# The bullet, its continuation lines, and its nested sub-bullets (anything
+# indented deeper than the bullet) are removed. A sibling bullet or a blank line
+# ends the paragraph. Any `##`/`###` section left with no remaining entries is
+# dropped too, and runs of blank lines are squeezed, so the result stays tidy.
+#
+# The full (unfiltered) changelog is still what you publish in the GitHub
+# Release / CHANGELOG.md -- this filter is only for the public-facing copies.
+
+inputs:
+  changelog:
+    description: 'Markdown changelog to filter'
+    required: true
+
+outputs:
+  changelog:
+    description: 'The changelog with all `- (Private)` paragraphs removed'
+    value: ${{ steps.filter.outputs.changelog }}
+
+runs:
+  using: composite
+  steps:
+    - name: Strip private paragraphs
+      id: filter
+      shell: bash
+      env:
+        CHANGELOG: ${{ inputs.changelog }}
+      run: |
+        set -euo pipefail
+
+        filtered="$(printf '%s' "$CHANGELOG" | awk '
+          function indent(s){ match(s, /^ */); return RLENGTH }
+          BEGIN { skip = 0; n = 0 }
+          {
+            line = $0
+            # A blank line always ends a private paragraph.
+            if (line ~ /^[[:space:]]*$/) { skip = 0; buf[++n] = line; next }
+            ind = indent(line)
+            # Deeper-indented line while skipping -> continuation of the private
+            # bullet (wrapped text or nested sub-bullet); drop it.
+            if (skip && ind > skipind) { next }
+            # Otherwise the private paragraph is over.
+            skip = 0
+            if (line ~ /^ *- /) {
+              after = line; sub(/^ *- /, "", after)
+              if (after ~ /^\(Private\)/) { skip = 1; skipind = ind; next }
+            }
+            buf[++n] = line
+          }
+          END {
+            # Drop headings whose section became empty after filtering.
+            m = 0
+            for (i = 1; i <= n; i++) {
+              if (buf[i] ~ /^#{2,} /) {
+                has = 0
+                for (j = i + 1; j <= n; j++) {
+                  if (buf[j] ~ /^#{2,} /) break
+                  if (buf[j] !~ /^[[:space:]]*$/) { has = 1; break }
+                }
+                if (!has) continue
+              }
+              out[++m] = buf[i]
+            }
+            # Print, squeezing consecutive blank lines to a single one.
+            blank = 0
+            for (i = 1; i <= m; i++) {
+              if (out[i] ~ /^[[:space:]]*$/) { blank++; if (blank > 1) continue }
+              else blank = 0
+              print out[i]
+            }
+          }
+        ')"
+
+        {
+          echo "changelog<<CHANGELOG_EOF_MARKER"
+          echo "$filtered"
+          echo "CHANGELOG_EOF_MARKER"
+        } >> "$GITHUB_OUTPUT"
