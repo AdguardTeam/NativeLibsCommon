@@ -6,16 +6,22 @@ arch: [ mipsel ]
 #
 # ag_profile_version is for changes outside profile file, e.g. in toolchain.cmake.
 # ag_sanitizer is for Address sanitizer
+# ag_cc_is_zig marks packages built with zig as the compiler (`zig cc` / `zig c++`),
+# so they don't collide with packages built by a plain clang of the same version.
 os:
   Windows:
     ag_profile_version: &ag_profile_version [ null, "2" ]
     ag_sanitizer: &ag_sanitizer [ null, "address" ]
+    ag_cc_is_zig: &ag_cc_is_zig [ null, "1" ]
   Linux:
     ag_profile_version: *ag_profile_version
     ag_sanitizer: *ag_sanitizer
+    ag_cc_is_zig: *ag_cc_is_zig
   Macos:
     ag_profile_version: *ag_profile_version
     ag_sanitizer: *ag_sanitizer
+    ag_cc_is_zig: *ag_cc_is_zig
   Android:
     ag_profile_version: *ag_profile_version
     ag_sanitizer: *ag_sanitizer
+    ag_cc_is_zig: *ag_cc_is_zig
