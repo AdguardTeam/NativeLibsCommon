@@ -41,6 +41,45 @@ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -GNinja \
     ..
 ```
 
+### Cross-compiling with zig
+
+[zig](https://ziglang.org/) can be used as a self-contained cross-compiler via its `cc` / `c++`
+subcommands, which removes the need for a separate cross toolchain:
+
+```shell
+mkdir build && cd build
+cmake -DCMAKE_C_COMPILER="zig;cc;-target;x86_64-linux-musl" \
+    -DCMAKE_CXX_COMPILER="zig;c++;-target;x86_64-linux-musl" \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DCMAKE_SYSTEM_NAME=Linux \
+    -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+    -DCMAKE_CROSSCOMPILING=ON \
+    -GNinja \
+    ..
+```
+
+`CMAKE_SYSTEM_PROCESSOR` must match the `-target` architecture: it is the only source for the Conan
+`arch` setting. Without it, `arch` is inherited from the build machine's default profile, and Conan
+would resolve dependencies for the host architecture while zig compiles for the target.
+
+The compiler must be passed as a CMake list (`zig;cc;-target;...`), since `zig cc` is a subcommand
+rather than a standalone binary. Conan's `compiler_executables` accepts only an argument-less
+executable, so `cmake/conan_provider.cmake` detects this form and generates wrapper scripts in
+`${CMAKE_BINARY_DIR}/zig-wrappers/` that re-attach the subcommand and target, then points the Conan
+profile at those. The wrappers are named after the target triple, following the usual cross-toolchain
+convention, so build systems that infer cross-compilation from the compiler name recognise them:
+
+```text
+zig-wrappers/x86_64-linux-musl-cc
+zig-wrappers/x86_64-linux-musl-c++
+```
+
+Two settings distinguish zig builds from ordinary ones:
+
+- `compiler.libcxx` is left out of the profile, as zig supplies its own libc++ per target.
+- `os.ag_cc_is_zig=1` is added, so packages built with zig get their own package ID instead of
+  colliding with packages built by a plain clang of the same version.
+
 Currently, it contains Conan recipes for AdGuard libs
 
 ## Testing
