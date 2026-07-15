@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Add `make_ssl` function that supports different ClientHello profiles (Chrome, Firefox etc.).
+
 ### Changed
 
 ### Deprecated
