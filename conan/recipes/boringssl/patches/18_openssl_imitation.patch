@@ -244,7 +244,7 @@ index b4da826..a0347ad 100644
  #include <openssl/ec_key.h>
  #include <openssl/ecdsa.h>
  #include <openssl/err.h>
-@@ -1169,7 +1170,29 @@ static enum ssl_hs_wait_t do_read_server_key_exchange(SSL_HANDSHAKE *hs) {
+@@ -1157,7 +1158,29 @@ static enum ssl_hs_wait_t do_read_server_key_exchange(SSL_HANDSHAKE *hs) {
      hs->peer_psk_identity_hint.reset(raw);
    }
  
@@ -275,7 +275,7 @@ index b4da826..a0347ad 100644
      // Parse the server parameters.
      uint8_t group_type;
      uint16_t group_id;
-@@ -1604,6 +1627,72 @@ static enum ssl_hs_wait_t do_send_client_key_exchange(SSL_HANDSHAKE *hs) {
+@@ -1592,6 +1615,72 @@ static enum ssl_hs_wait_t do_send_client_key_exchange(SSL_HANDSHAKE *hs) {
  
      // The peer key can now be discarded.
      hs->peer_key.Reset();
