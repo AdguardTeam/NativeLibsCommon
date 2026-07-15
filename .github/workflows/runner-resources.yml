@@ -1,0 +1,65 @@
+name: Runner resources
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  resources:
+    name: Report resources
+    runs-on: team-corelibs
+    steps:
+      - name: Report resources on the runner
+        shell: bash
+        run: |
+          echo "::group::uname"
+          uname -a
+          echo "::endgroup::"
+
+          echo "::group::memory"
+          free -h || true
+          cat /proc/meminfo | head -3 || true
+          echo "--- cgroup v2 memory.max ---"
+          cat /sys/fs/cgroup/memory.max 2>/dev/null || true
+          echo "--- cgroup v1 memory.limit_in_bytes ---"
+          cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || true
+          echo "::endgroup::"
+
+          echo "::group::cpu"
+          echo "nproc: $(nproc)"
+          grep -c ^processor /proc/cpuinfo || true
+          echo "--- cgroup v2 cpu.max ---"
+          cat /sys/fs/cgroup/cpu.max 2>/dev/null || true
+          echo "--- cgroup v1 cpu.cfs_quota_us / cpu.cfs_period_us ---"
+          cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us 2>/dev/null || true
+          cat /sys/fs/cgroup/cpu/cpu.cfs_period_us 2>/dev/null || true
+          echo "::endgroup::"
+
+          echo "::group::disk"
+          df -h
+          echo "::endgroup::"
+
+      - name: Report resources inside docker build
+        shell: bash
+        run: |
+          docker build --no-cache --progress=plain -f - . <<'EOF'
+          FROM alpine:3.20
+          RUN echo "=== memory ===" && \
+              free -h || true; \
+              head -3 /proc/meminfo || true; \
+              echo "--- cgroup v2 memory.max ---"; \
+              cat /sys/fs/cgroup/memory.max 2>/dev/null || true; \
+              echo "--- cgroup v1 memory.limit_in_bytes ---"; \
+              cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || true
+          RUN echo "=== cpu ===" && \
+              echo "nproc: $(nproc)"; \
+              grep -c ^processor /proc/cpuinfo || true; \
+              echo "--- cgroup v2 cpu.max ---"; \
+              cat /sys/fs/cgroup/cpu.max 2>/dev/null || true; \
+              echo "--- cgroup v1 cpu.cfs_quota_us / cpu.cfs_period_us ---"; \
+              cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us 2>/dev/null || true; \
+              cat /sys/fs/cgroup/cpu/cpu.cfs_period_us 2>/dev/null || true
+          RUN echo "=== disk ===" && df -h
+          EOF
