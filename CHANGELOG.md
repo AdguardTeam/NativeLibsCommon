@@ -8,9 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Support for using zig as a cross-compiler: when the C/C++ compiler is given as `zig;cc;-target;...`, `cmake/conan_provider.cmake` now generates wrapper scripts that re-attach the subcommand and target, and passes those to Conan via `tools.build:compiler_executables`. The wrappers are named after the target triple (`x86_64-linux-musl-cc`, `x86_64-linux-musl-c++`) so build systems that infer cross-compilation from the compiler name detect it. `compiler.libcxx` is omitted from the generated profile for zig builds.
-- New custom setting `os.ag_cc_is_zig` (`None`, `1`) in `conan/settings_user.yml`, set to `1` in the generated profile for zig builds so their packages don't share a package ID with packages built by a plain clang of the same version.
-
 ### Changed
 
 ### Deprecated
@@ -20,6 +17,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 ### Security
+
+## [8.1.43] - 2026-07-15
+
+### Added
+
+- Support for using zig as a cross-compiler: when the C/C++ compiler is given as `zig;cc;-target;...`, `cmake/conan_provider.cmake` now generates wrapper scripts that re-attach the subcommand and target, and passes those to Conan via `tools.build:compiler_executables`. The wrappers are named after the target triple (`x86_64-linux-musl-cc`, `x86_64-linux-musl-c++`) so build systems that infer cross-compilation from the compiler name detect it. `compiler.libcxx` is omitted from the generated profile for zig builds.
+- New custom setting `os.ag_cc_is_zig` (`None`, `1`) in `conan/settings_user.yml`, set to `1` in the generated profile for zig builds so their packages don't share a package ID with packages built by a plain clang of the same version.
 
 ## [8.1.42] - 2026-07-10
 
@@ -1216,7 +1220,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.42...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.43...HEAD
+[8.1.43]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.42...v8.1.43
 [8.1.42]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.41...v8.1.42
 [8.1.41]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.40...v8.1.41
 [8.1.40]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.39...v8.1.40
