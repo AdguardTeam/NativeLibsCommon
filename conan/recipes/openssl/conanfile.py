@@ -484,6 +484,12 @@ class OpenSSLConan(ConanFile):
             cxxflags.append("-fembed-bitcode")
 
         if "mips" in str(self.settings.arch):
+            if self.settings.get_safe("os.ag_cc_is_zig"):
+                # 32-bit mips has no lock-free 8-byte atomics, so clang cannot fold the
+                # __atomic_is_lock_free(sizeof(uint64_t), ...) calls in threads_pthread.c
+                # and emits a libcall. zig's compiler-rt does not implement that symbol and
+                # zig ships no libatomic, so select OpenSSL's lock-based fallback instead.
+                cflags.append("-DBROKEN_CLANG_ATOMICS")
             ldflags.append("-latomic")
             compilers_from_conf = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
             if "-gcc" in compilers_from_conf['c']:
