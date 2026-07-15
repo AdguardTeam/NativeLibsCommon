@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Support for using zig as a cross-compiler: when the C/C++ compiler is given as `zig;cc;-target;...`, `cmake/conan_provider.cmake` now generates wrapper scripts that re-attach the subcommand and target, and passes those to Conan via `tools.build:compiler_executables`. The wrappers are named after the target triple (`x86_64-linux-musl-cc`, `x86_64-linux-musl-c++`) so build systems that infer cross-compilation from the compiler name detect it. `compiler.libcxx` is omitted from the generated profile for zig builds.
 - New custom setting `os.ag_cc_is_zig` (`None`, `1`) in `conan/settings_user.yml`, set to `1` in the generated profile for zig builds so their packages don't share a package ID with packages built by a plain clang of the same version.
+- Add `make_ssl` function that supports different ClientHello profiles (Chrome, Firefox etc.).
 
 ## [8.1.42] - 2026-07-10
 
