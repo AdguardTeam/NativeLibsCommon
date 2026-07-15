@@ -16,7 +16,7 @@ set -eux
 
 conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
 conan_home=$(conan config home)
-printf '%s\n' 'tools.build:jobs=1' >> "$conan_home/global.conf"
+echo 'tools.build:jobs=1' >> "$conan_home/global.conf"
 mkdir -p build results
 cd build
 trap '
@@ -30,7 +30,7 @@ trap '
     upload_status=$?
     test "$login_status" -eq 0 || upload_status="$login_status"
     test "$test_status" -ne 0 || test_status="$upload_status"
-    printf '%s\n' "$test_status" > /src/results/test-status
+    echo "$test_status" > /src/results/test-status
     exit 0
 ' EXIT
 
@@ -53,11 +53,11 @@ set -eux
 
 conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
 conan_home=$(conan config home)
-printf '%s\n' 'tools.build:jobs=1' >> "$conan_home/global.conf"
+echo 'tools.build:jobs=1' >> "$conan_home/global.conf"
 cd android/NativeLibsCommon
 touch local.properties
 cmake_dir=$(dirname "$(dirname "$(which cmake)")")
-printf 'cmake.dir=%s\n' "$cmake_dir" >> local.properties
+echo "cmake.dir=$cmake_dir" >> local.properties
 trap '
     build_status="$?"
     set +e +x
