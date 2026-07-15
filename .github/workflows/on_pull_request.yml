@@ -1,0 +1,44 @@
+name: on_pull_request
+
+on:
+  pull_request:
+
+jobs:
+  probe-resources:
+    runs-on: team-corelibs
+    steps:
+      - name: Runner resources
+        run: |
+          echo "=== memory ==="
+          free -h || true
+          grep MemTotal /proc/meminfo || true
+          echo "cgroup v2 memory.max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo n/a)"
+          echo "cgroup v1 memory.limit_in_bytes: $(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo n/a)"
+
+          echo "=== cpu ==="
+          echo "nproc: $(nproc)"
+          echo "processors in /proc/cpuinfo: $(grep -c ^processor /proc/cpuinfo || true)"
+          echo "cgroup v2 cpu.max: $(cat /sys/fs/cgroup/cpu.max 2>/dev/null || echo n/a)"
+          echo "cgroup v1 cpu.cfs_quota_us: $(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us 2>/dev/null || echo n/a)"
+          echo "cgroup v1 cpu.cfs_period_us: $(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us 2>/dev/null || echo n/a)"
+
+          echo "=== disk ==="
+          df -h || true
+
+      - name: Docker build with inline Dockerfile
+        run: |
+          docker build --progress=plain --no-cache -t probe:latest - <<'EOF'
+          FROM ubuntu:22.04
+          RUN echo "=== memory (docker build) ===" && \
+              (free -h || true) && \
+              (grep MemTotal /proc/meminfo || true) && \
+              echo "cgroup v2 memory.max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || echo n/a)" && \
+              echo "cgroup v1 memory.limit_in_bytes: $(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo n/a)" && \
+              echo "=== cpu (docker build) ===" && \
+              echo "nproc: $(nproc)" && \
+              echo "cgroup v2 cpu.max: $(cat /sys/fs/cgroup/cpu.max 2>/dev/null || echo n/a)" && \
+              echo "cgroup v1 cpu.cfs_quota_us: $(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us 2>/dev/null || echo n/a)" && \
+              echo "cgroup v1 cpu.cfs_period_us: $(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us 2>/dev/null || echo n/a)" && \
+              echo "=== disk (docker build) ===" && \
+              (df -h || true)
+          EOF
