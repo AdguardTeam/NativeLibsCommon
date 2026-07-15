@@ -24,6 +24,7 @@ class NativeLibsCommon(ConanFile):
         "fPIC": True,
     }
     def requirements(self):
+        self.requires("brotli/1.1.0", transitive_headers=True)
         self.requires("fmt/12.1.0", transitive_headers=True)
         self.requires("libevent/2.1.11@adguard/oss", transitive_headers=True)
         self.requires("llhttp/9.3.0@adguard/oss", transitive_headers=True)
@@ -103,6 +104,7 @@ class NativeLibsCommon(ConanFile):
         self.cpp_info.libs = ["ag_common", "ag_common_http", "ag_common_tls"]
         self.cpp_info.libdirs = ["lib"]
         self.cpp_info.requires = [
+            "brotli::brotli",
             "fmt::fmt",
             "libevent::libevent",
             "llhttp::llhttp",

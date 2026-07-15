@@ -1,0 +1,158 @@
+diff --git a/include/openssl/tls1.h b/include/openssl/tls1.h
+--- a/include/openssl/tls1.h
++++ b/include/openssl/tls1.h
+@@ -222,6 +222,9 @@
+ // ExtensionType value from RFC 8879
+ #define TLSEXT_TYPE_cert_compression 27
+ 
++// ExtensionType value from RFC 8449
++#define TLSEXT_TYPE_record_size_limit 28
++
+ // ExtensionType value from RFC 4507
+ #define TLSEXT_TYPE_session_ticket 35
+ 
+diff --git a/ssl/internal.h b/ssl/internal.h
+--- a/ssl/internal.h
++++ b/ssl/internal.h
+@@ -3240,6 +3240,14 @@
+   // verify_sigalgs, if not empty, is the set of signature algorithms
+   // accepted from the peer in decreasing order of preference.
+   Array<uint16_t> verify_sigalgs;
++
++  // delegated_credentials, if not empty, are advertised in the
++  // delegated_credential ClientHello extension (RFC 9345).
++  Array<uint16_t> delegated_credentials;
++
++  // record_size_limit, if non-zero, is advertised in the
++  // record_size_limit ClientHello extension (RFC 8449).
++  uint16_t record_size_limit = 0;
+ 
+   // srtp_profiles is the list of configured SRTP protection profiles for
+   // DTLS-SRTP.
+diff --git a/ssl/extensions.cc b/ssl/extensions.cc
+--- a/ssl/extensions.cc
++++ b/ssl/extensions.cc
+@@ -2764,7 +2764,23 @@
+ static bool ext_delegated_credential_add_clienthello(
+     const SSL_HANDSHAKE *hs, CBB *out, CBB *out_compressible,
+     ssl_client_hello_type_t type) {
+-  return true;
++  // Advertise the delegated_credential extension when configured.
++  if (hs->config->delegated_credentials.empty()) {
++    return true;
++  }
++
++  CBB contents, sigalgs;
++  if (!CBB_add_u16(out, TLSEXT_TYPE_delegated_credential) ||
++      !CBB_add_u16_length_prefixed(out, &contents) ||
++      !CBB_add_u16_length_prefixed(&contents, &sigalgs)) {
++    return false;
++  }
++  for (uint16_t alg : hs->config->delegated_credentials) {
++    if (!CBB_add_u16(&sigalgs, alg)) {
++      return false;
++    }
++  }
++  return CBB_flush(out);
+ }
+ 
+ static bool ext_delegated_credential_parse_clienthello(SSL_HANDSHAKE *hs,
+@@ -3114,6 +3131,39 @@
+   return true;
+ }
+ 
++// record_size_limit extension (RFC 8449)
++static bool ext_record_size_limit_add_clienthello(const SSL_HANDSHAKE *hs, CBB *out,
++                                                  CBB *out_compressible,
++                                                  ssl_client_hello_type_t type) {
++  if (hs->config->record_size_limit == 0) {
++    return true;
++  }
++  CBB contents;
++  if (!CBB_add_u16(out, TLSEXT_TYPE_record_size_limit) ||
++      !CBB_add_u16_length_prefixed(out, &contents) ||
++      !CBB_add_u16(&contents, hs->config->record_size_limit) ||
++      !CBB_flush(out)) {
++    return false;
++  }
++  return true;
++}
++
++static bool ext_record_size_limit_parse_serverhello(SSL_HANDSHAKE *hs,
++                                                    uint8_t *out_alert,
++                                                    CBS *contents) {
++  return true;
++}
++
++static bool ext_record_size_limit_parse_clienthello(SSL_HANDSHAKE *hs,
++                                                    uint8_t *out_alert,
++                                                    CBS *contents) {
++  return true;
++}
++
++static bool ext_record_size_limit_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
++  return true;
++}
++
+ // kExtensions contains all the supported extensions.
+ static const struct tls_extension kExtensions[] = {
+   {
+@@ -3295,6 +3345,13 @@
+     ext_ech_parse_clienthello,
+     ext_ech_add_serverhello,
+   },
++  {
++    TLSEXT_TYPE_record_size_limit,
++    ext_record_size_limit_add_clienthello,
++    ext_record_size_limit_parse_serverhello,
++    ext_record_size_limit_parse_clienthello,
++    ext_record_size_limit_add_serverhello,
++  },
+ };
+ 
+ #define kNumExtensions (sizeof(kExtensions) / sizeof(struct tls_extension))
+diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
+--- a/ssl/ssl_lib.cc
++++ b/ssl/ssl_lib.cc
+@@ -2250,8 +2250,24 @@
+     return;
+   }
+   ssl->config->ocsp_stapling_enabled = true;
++}
++
++void SSL_set_record_size_limit(SSL *ssl, uint16_t limit) {
++  if (!ssl->config) {
++    return;
++  }
++  ssl->config->record_size_limit = limit;
+ }
+ 
++void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
++                                   size_t num_prefs) {
++  if (!ssl->config) {
++    return;
++  }
++  (void)ssl->config->delegated_credentials.CopyFrom(
++      bssl::MakeConstSpan(prefs, num_prefs));
++}
++
+ void SSL_get0_signed_cert_timestamp_list(const SSL *ssl, const uint8_t **out,
+                                          size_t *out_len) {
+   SSL_SESSION *session = SSL_get_session(ssl);
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -2912,6 +2912,13 @@
+ // Call |SSL_get0_ocsp_response| to recover the OCSP response after the
+ // handshake.
+ OPENSSL_EXPORT void SSL_enable_ocsp_stapling(SSL *ssl);
++
++// SSL_set_record_size_limit advertises the record_size_limit extension (RFC 8449).
++OPENSSL_EXPORT void SSL_set_record_size_limit(SSL *ssl, uint16_t limit);
++// SSL_set_delegated_credentials advertises the delegated_credential extension
++// (RFC 9345) with the given signature algorithms |prefs|.
++OPENSSL_EXPORT void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
++                                                  size_t num_prefs);
+ 
+ // SSL_CTX_enable_ocsp_stapling enables OCSP stapling on all client SSL objects
+ // created from |ctx|.
