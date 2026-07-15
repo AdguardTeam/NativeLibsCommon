@@ -82,7 +82,7 @@ jobs:
               build_log=$(mktemp)
               run_build() {
                 DOCKER_BUILDKIT=1 docker build --progress=plain \
-                  --build-arg CI_CACHE_BUSTER='${{ github.run_id }}-${{ github.run_attempt }}' \
+                  --no-cache-filter native-tests \
                   --secret id=conan_repo_url,env=CONAN_REPO_URL \
                   --secret id=artifactory_user,env=ARTIFACTORY_USER \
                   --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
@@ -175,7 +175,7 @@ jobs:
           build_log=$(mktemp)
           run_build() {
             DOCKER_BUILDKIT=1 docker build --progress=plain \
-              --build-arg CI_CACHE_BUSTER='${{ github.run_id }}-${{ github.run_attempt }}' \
+              --no-cache-filter android-build \
               --secret id=conan_repo_url,env=CONAN_REPO_URL \
               --secret id=artifactory_user,env=ARTIFACTORY_USER \
               --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \

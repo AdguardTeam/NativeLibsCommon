@@ -9,58 +9,48 @@ RUN python3 -m pip install conan --upgrade
 
 FROM build AS native-tests
 
-ARG CI_CACHE_BUSTER
-
 RUN --mount=type=secret,id=conan_repo_url,required=true \
     --mount=type=secret,id=artifactory_user \
     --mount=type=secret,id=artifactory_api_key <<END
-set -eu
+set -eux
 
-: "$CI_CACHE_BUSTER"
 conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
 conan_home=$(conan config home)
 printf '%s\n' 'tools.build:jobs=1' >> "$conan_home/global.conf"
 mkdir -p build results
-: > /src/results/junit.xml
-test_status=0
 cd build
-export CMAKE_BUILD_PARALLEL_LEVEL=1
+trap '
+    test_status="$?"
+    set +e +x
+
+    conan remote login art "$(cat /run/secrets/artifactory_user)" \
+        --password "$(cat /run/secrets/artifactory_api_key)"
+    login_status=$?
+    conan upload -r art -c "*"
+    upload_status=$?
+    test "$login_status" -eq 0 || upload_status="$login_status"
+    test "$test_status" -ne 0 || test_status="$upload_status"
+    printf '%s\n' "$test_status" > /src/results/test-status
+    exit 0
+' EXIT
+
 cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
     -DSANITIZE=yes \
-    .. || test_status=$?
-if [ "$test_status" -eq 0 ]; then ninja -j1 tests || test_status=$?; fi
-if [ "$test_status" -eq 0 ]; then
-    ctest --output-junit /src/results/junit.xml -D ExperimentalTest --no-compress-output || test_status=$?
-fi
-upload_status=0
-if [ -s /run/secrets/artifactory_user ] && [ -s /run/secrets/artifactory_api_key ]; then
-    conan remote login art "$(cat /run/secrets/artifactory_user)" \
-        --password "$(cat /run/secrets/artifactory_api_key)" || upload_status=$?
-    if [ "$upload_status" -eq 0 ]; then conan upload -r art -c "*" || upload_status=$?; fi
-fi
-if [ "$test_status" -eq 0 ] && [ "$upload_status" -ne 0 ]; then
-    test_status=$upload_status
-fi
-if [ ! -s /src/results/junit.xml ]; then
-    printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' '<testsuite name="native-tests" tests="1" failures="1"><testcase name="native-tests"><failure message="Build failed before running tests"/></testcase></testsuite>' > /src/results/junit.xml
-fi
-printf '%s\n' "$test_status" > /src/results/test-status
-exit 0
+    ..
+ninja tests
+ctest --output-junit /src/results/junit.xml -D ExperimentalTest --no-compress-output
 END
 
 FROM build AS android-build
 
-ARG CI_CACHE_BUSTER
-
 RUN --mount=type=secret,id=conan_repo_url,required=true \
     --mount=type=secret,id=artifactory_user \
     --mount=type=secret,id=artifactory_api_key <<END
-set -eu
+set -eux
 
-: "$CI_CACHE_BUSTER"
 conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
 conan_home=$(conan config home)
 printf '%s\n' 'tools.build:jobs=1' >> "$conan_home/global.conf"
@@ -68,23 +58,24 @@ cd android/NativeLibsCommon
 touch local.properties
 cmake_dir=$(dirname "$(dirname "$(which cmake)")")
 printf 'cmake.dir=%s\n' "$cmake_dir" >> local.properties
-build_status=0
+trap '
+    build_status="$?"
+    set +e +x
+
+    conan remote login art "$(cat /run/secrets/artifactory_user)" \
+        --password "$(cat /run/secrets/artifactory_api_key)"
+    login_status=$?
+    conan upload -r art -c "*"
+    upload_status=$?
+    test "$login_status" -eq 0 || upload_status="$login_status"
+    test "$build_status" -ne 0 || build_status="$upload_status"
+    exit "$build_status"
+' EXIT
+
 export CMAKE_BUILD_PARALLEL_LEVEL=1
 ./gradlew --no-daemon --max-workers=1 \
     -Dorg.gradle.jvmargs="-Xmx768m -Dfile.encoding=UTF-8" \
-    :lib:assembleRelease || build_status=$?
-upload_status=0
-if [ -s /run/secrets/artifactory_user ] && [ -s /run/secrets/artifactory_api_key ]; then
-    conan remote login art "$(cat /run/secrets/artifactory_user)" \
-        --password "$(cat /run/secrets/artifactory_api_key)" || upload_status=$?
-    if [ "$upload_status" -eq 0 ]; then
-        conan upload -r art -c "*" || upload_status=$?
-    fi
-fi
-if [ "$build_status" -eq 0 ] && [ "$upload_status" -ne 0 ]; then
-    build_status=$upload_status
-fi
-exit "$build_status"
+    :lib:assembleRelease
 END
 
 FROM scratch AS native-tests-output
