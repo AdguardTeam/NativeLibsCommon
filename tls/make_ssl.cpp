@@ -233,13 +233,18 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
     if (!quic && browser) {
         SSL_CTX_set_grease_enabled(ctx.get(), 1);
     }
+#endif // OPENSSL_IS_BORINGSSL
 
     if (quic) {
-        if (0 != ngtcp2_crypto_boringssl_configure_client_context(ctx.get())) {
+#ifdef OPENSSL_IS_BORINGSSL
+        if (0 != ngtcp2_crypto_boringssl_configure_client_context(ctx.get()))
+#else
+        if (0 != ngtcp2_crypto_quictls_configure_client_context(ctx.get()))
+#endif
+        {
             return "Couldn't configure SSL object for QUIC";
         }
     }
-#endif // OPENSSL_IS_BORINGSSL
 
     SslPtr ssl{SSL_new(ctx.get())};
     if (ssl == nullptr) {

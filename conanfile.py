@@ -104,6 +104,7 @@ class NativeLibsCommon(ConanFile):
         self.cpp_info.libs = ["ag_common", "ag_common_http", "ag_common_tls"]
         self.cpp_info.libdirs = ["lib"]
         self.cpp_info.requires = [
+            "brotli::brotli",
             "fmt::fmt",
             "libevent::libevent",
             "llhttp::llhttp",
