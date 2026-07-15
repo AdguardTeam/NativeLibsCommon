@@ -15,8 +15,6 @@ RUN --mount=type=secret,id=conan_repo_url,required=true \
 set -eux
 
 conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
-conan_home=$(conan config home)
-echo 'tools.build:jobs=1' >> "$conan_home/global.conf"
 mkdir -p build results
 cd build
 trap '
@@ -25,11 +23,7 @@ trap '
 
     conan remote login art "$(cat /run/secrets/artifactory_user)" \
         --password "$(cat /run/secrets/artifactory_api_key)"
-    login_status=$?
     conan upload -r art -c "*"
-    upload_status=$?
-    test "$login_status" -eq 0 || upload_status="$login_status"
-    test "$test_status" -ne 0 || test_status="$upload_status"
     echo "$test_status" > /src/results/test-status
     exit 0
 ' EXIT
@@ -52,30 +46,19 @@ RUN --mount=type=secret,id=conan_repo_url,required=true \
 set -eux
 
 conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
-conan_home=$(conan config home)
-echo 'tools.build:jobs=1' >> "$conan_home/global.conf"
 cd android/NativeLibsCommon
 touch local.properties
 cmake_dir=$(dirname "$(dirname "$(which cmake)")")
 echo "cmake.dir=$cmake_dir" >> local.properties
 trap '
-    build_status="$?"
     set +e +x
 
     conan remote login art "$(cat /run/secrets/artifactory_user)" \
         --password "$(cat /run/secrets/artifactory_api_key)"
-    login_status=$?
     conan upload -r art -c "*"
-    upload_status=$?
-    test "$login_status" -eq 0 || upload_status="$login_status"
-    test "$build_status" -ne 0 || build_status="$upload_status"
-    exit "$build_status"
 ' EXIT
 
-export CMAKE_BUILD_PARALLEL_LEVEL=1
-./gradlew --no-daemon --max-workers=1 \
-    -Dorg.gradle.jvmargs="-Xmx768m -Dfile.encoding=UTF-8" \
-    :lib:assembleRelease
+./gradlew --no-daemon :lib:assembleRelease
 END
 
 FROM scratch AS native-tests-output

@@ -79,28 +79,14 @@ jobs:
 
               rm -rf build
               export CONAN_REPO_URL='${{ vars.CONAN_REPO_URL }}'
-              build_log=$(mktemp)
-              run_build() {
-                DOCKER_BUILDKIT=1 docker build --progress=plain \
-                  --no-cache-filter native-tests \
-                  --secret id=conan_repo_url,env=CONAN_REPO_URL \
-                  --secret id=artifactory_user,env=ARTIFACTORY_USER \
-                  --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
-                  --target native-tests-output \
-                  --output type=local,dest=build \
-                  -f Dockerfile.build . 2>&1 | tee "$build_log"
-              }
-
-              if ! run_build; then
-                if ! grep -Eq 'graceful_stop|failed to receive status' "$build_log"; then
-                  exit 1
-                fi
-                echo 'BuildKit stopped gracefully; retrying the build once.' >&2
-                rm -rf build
-                sleep 15
-                run_build
-              fi
-              rm -f "$build_log"
+              DOCKER_BUILDKIT=1 docker build --progress=plain \
+                --no-cache-filter native-tests \
+                --secret id=conan_repo_url,env=CONAN_REPO_URL \
+                --secret id=artifactory_user,env=ARTIFACTORY_USER \
+                --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
+                --target native-tests-output \
+                --output type=local,dest=build \
+                -f Dockerfile.build .
 
               test "$(cat build/test-status)" -eq 0
             finally-script: |
@@ -172,24 +158,11 @@ jobs:
         run: |
           set -euxo pipefail
 
-          build_log=$(mktemp)
-          run_build() {
-            DOCKER_BUILDKIT=1 docker build --progress=plain \
-              --no-cache-filter android-build \
-              --secret id=conan_repo_url,env=CONAN_REPO_URL \
-              --secret id=artifactory_user,env=ARTIFACTORY_USER \
-              --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
-              --target android-build \
-              --output type=cacheonly \
-              -f Dockerfile.build . 2>&1 | tee "$build_log"
-          }
-
-          if ! run_build; then
-            if ! grep -Eq 'graceful_stop|failed to receive status' "$build_log"; then
-              exit 1
-            fi
-            echo 'BuildKit stopped gracefully; retrying the build once.' >&2
-            sleep 15
-            run_build
-          fi
-          rm -f "$build_log"
+          DOCKER_BUILDKIT=1 docker build --progress=plain \
+            --no-cache-filter android-build \
+            --secret id=conan_repo_url,env=CONAN_REPO_URL \
+            --secret id=artifactory_user,env=ARTIFACTORY_USER \
+            --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
+            --target android-build \
+            --output type=cacheonly \
+            -f Dockerfile.build .
