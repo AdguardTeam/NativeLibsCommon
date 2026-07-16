@@ -18,13 +18,12 @@ conan remote add --index 0 art "$(cat /run/secrets/conan_repo_url)" || true
 mkdir -p build results
 cd build
 trap '
-    test_status="$?"
+    echo "$?" > /src/results/test-status
     set +e +x
 
     conan remote login art "$(cat /run/secrets/artifactory_user)" \
         --password "$(cat /run/secrets/artifactory_api_key)"
     conan upload -r art -c "*"
-    echo "$test_status" > /src/results/test-status
     exit 0
 ' EXIT
 
