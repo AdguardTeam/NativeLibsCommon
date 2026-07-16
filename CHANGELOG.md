@@ -8,8 +8,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Add `make_ssl` function that supports different ClientHello profiles (Chrome, Firefox etc.).
-
 ### Changed
 
 ### Deprecated
@@ -18,9 +16,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- OpenSSL now builds for 32-bit mips when compiled with zig. `crypto/threads_pthread.c` calls `__atomic_is_lock_free()` on `uint64_t`, which mips32 cannot do lock-free, so clang emits a libcall instead of folding it to a constant. zig's compiler-rt does not implement that symbol and zig ships no libatomic, so linking `fips.so`/`legacy.so` failed with `undefined symbol: __atomic_is_lock_free`. The recipe now defines `BROKEN_CLANG_ATOMICS` for zig builds on mips, selecting OpenSSL's lock-based fallback.
-
 ### Security
+
+## [8.1.44] - 2026-07-15
+
+### Added
+
+- Add `make_ssl` function that supports different ClientHello profiles (Chrome, Firefox etc.).
+
+### Fixed
+
+- OpenSSL now builds for 32-bit mips when compiled with zig. `crypto/threads_pthread.c` calls `__atomic_is_lock_free()` on `uint64_t`, which mips32 cannot do lock-free, so clang emits a libcall instead of folding it to a constant. zig's compiler-rt does not implement that symbol and zig ships no libatomic, so linking `fips.so`/`legacy.so` failed with `undefined symbol: __atomic_is_lock_free`. The recipe now defines `BROKEN_CLANG_ATOMICS` for zig builds on mips, selecting OpenSSL's lock-based fallback.
 
 ## [8.1.43] - 2026-07-15
 
@@ -1224,7 +1230,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.43...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...HEAD
+[8.1.44]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.43...v8.1.44
 [8.1.43]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.42...v8.1.43
 [8.1.42]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.41...v8.1.42
 [8.1.41]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.40...v8.1.41
