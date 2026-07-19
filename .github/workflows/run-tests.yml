@@ -140,7 +140,7 @@ jobs:
             # Upload whatever was built, then report the test result.
             conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
                 --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
-            conan upload -r art -c "*"
+            conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading" || true
             exit ${test_status:-0}
             END
 
@@ -166,8 +166,7 @@ jobs:
 
   android-build:
     name: Android build
-    if: ${{ always() && github.repository == 'AdGuardSoftwareLimited/native-libs-common' }}
-    needs: [tests, linux-tests]
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on: team-corelibs
     steps:
       - name: Checkout
@@ -208,6 +207,6 @@ jobs:
 
             conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
                 --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
-            conan upload -r art -c "*"
+            conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading" || true
             exit ${build_status:-0}
             END
