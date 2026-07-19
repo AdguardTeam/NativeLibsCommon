@@ -1,0 +1,15 @@
+This patch synchronizes the condition of enabling X25519_NEON with CMakeLists.txt
+
+diff --git a/crypto/curve25519/internal.h b/crypto/curve25519/internal.h
+index 5cf8fb5..86e964d 100644
+--- a/crypto/curve25519/internal.h
++++ b/crypto/curve25519/internal.h
+@@ -23,7 +23,7 @@
+ extern "C" {
+ #endif
+ 
+-#if defined(OPENSSL_ARM) && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_APPLE) && defined(__clang__)
++#if defined(OPENSSL_ARM) && !defined(OPENSSL_NO_ASM) && defined(__ANDROID__)
+ #define BORINGSSL_X25519_NEON
+ 
+ // x25519_NEON is defined in asm/x25519-arm.S.
