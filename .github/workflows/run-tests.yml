@@ -15,7 +15,7 @@ permissions:
 
 env:
   # Image used for the containerized Linux and Android builds on `team-corelibs`.
-  CORELIBS_IMAGE: adguard/core-libs:2.11
+  CORELIBS_IMAGE: adguard/core-libs:2.12
 
 jobs:
   resolve-images:
