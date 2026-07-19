@@ -13,6 +13,10 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  # Image used for the containerized Linux and Android builds on `team-corelibs`.
+  CORELIBS_IMAGE: adguard/core-libs:2.12
+
 jobs:
   resolve-images:
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
@@ -31,76 +35,39 @@ jobs:
             container-image: ''
             shell: powershell
             artifact-name: test-results-windows
+            results-path: 'cmake-build-msvc-debug/junit.xml'
             test-command: |
               $ErrorActionPreference = 'Stop'
 
+              # Windows runners ship no make of their own.
+              & choco install make -y --no-progress
+              if (!$?) { exit 1 }
+
               & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
 
-              # Save vcvars to switch between them
-              $vcvars32 = cmd /c "vcvarsamd64_x86 & set"
-              $vcvars64 = cmd /c "vcvars64 & set"
-              $vcvarsarm64 = cmd /c "vcvarsamd64_arm64 & set"
-              $vcvarsarm = cmd /c "vcvarsamd64_arm & set"
-              function setvar($_) {
+              # Tests are built for 32-bit x86, so use the cross toolchain env.
+              cmd /c "vcvarsamd64_x86 & set" | ForEach-Object {
                 if ($_ -match "=") {
-                  $v = $_.split("="); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+                  $v = $_.split("=", 2)
+                  Set-Item -Force -Path "ENV:\$($v[0])" -Value $v[1]
                 }
               }
 
-              & {
-                $vcvars32 | foreach { setvar $_ }
-                mkdir build
-                pushd build
-                & cmake -DCMAKE_BUILD_TYPE=Debug `
-                  -DCMAKE_C_COMPILER="cl.exe" `
-                  -DCMAKE_CXX_COMPILER="cl.exe" `
-                  -DCMAKE_C_FLAGS_DEBUG=/MT `
-                  -DCMAKE_CXX_FLAGS_DEBUG=/MT `
-                  -G Ninja ..
-                if (!$?) { exit 1 }
-                & ninja tests
-                if (!$?) { exit 1 }
-                & ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
-                if (!$?) { exit 1 }
-                popd
-              }
+              & make PRESET=msvc-debug test
+              if (!$?) { exit 1 }
             finally-script: |
               $ErrorActionPreference = 'Continue'
 
               & conan remote login art "$env:ARTIFACTORY_USER" --password "$env:ARTIFACTORY_API_KEY"
               & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
-          - name: Linux
-            runs-on: '["team-corelibs"]'
-            container-image: ''
-            shell: bash
-            artifact-name: test-results-linux
-            test-command: |
-              set -euxo pipefail
-
-              rm -rf build
-              export CONAN_REPO_URL='${{ vars.CONAN_REPO_URL }}'
-              DOCKER_BUILDKIT=1 docker build --progress=plain \
-                --no-cache-filter native-tests \
-                --secret id=conan_repo_url,env=CONAN_REPO_URL \
-                --secret id=artifactory_user,env=ARTIFACTORY_USER \
-                --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
-                --target native-tests-output \
-                --output type=local,dest=build \
-                -f Dockerfile.build .
-
-              test "$(cat build/test-status)" -eq 0
-            finally-script: |
-              # Conan upload is performed inside Dockerfile.build so it also
-              # runs when the test command itself fails.
-              true
           - name: Mac
             runs-on: '["ephemeral","ephemeral-mac","${{ needs.resolve-images.outputs.macos }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
             container-image: ''
             shell: bash
             artifact-name: test-results-macos
+            results-path: 'cmake-build-clang-debug/junit.xml'
             test-command: |
-              set -e
-              set -x
+              set -eux
 
               rm -rf venv
               python3 -m venv venv
@@ -109,20 +76,10 @@ jobs:
               python3 -m pip install conan
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
-              ARCH=$(uname -m)
-              mkdir -p build
-              cd build
-              cmake -DCMAKE_BUILD_TYPE=Debug -GNinja \
-                -DCMAKE_C_COMPILER=clang \
-                -DCMAKE_CXX_COMPILER=clang++ \
-                -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
-                -DCMAKE_OSX_ARCHITECTURES="$ARCH" \
-                ..
-              ninja tests
-              ctest --output-junit junit.xml -D ExperimentalTest --no-compress-output
+              # CMAKE_OSX_ARCHITECTURES defaults to the host arch (override: ARCH=...).
+              make PRESET=clang-debug test
             finally-script: |
-              set -e
-              set -x
+              set -eux
 
               source ./venv/bin/activate
               conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
@@ -138,31 +95,119 @@ jobs:
       shell: ${{ matrix.shell || 'bash' }}
       test-command: ${{ matrix.test-command }}
       finally-script: ${{ matrix.finally-script }}
-      results-path: 'build/junit.xml'
+      results-path: ${{ matrix.results-path }}
       artifact-name: ${{ matrix.artifact-name }}
+
+  linux-tests:
+    name: Linux build
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on: team-corelibs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Run tests
+        uses: AdGuardSoftwareLimited/actions/actions/docker-build@master
+        with:
+          target: results
+          output: type=local,dest=build
+          build-args: |
+            CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
+          secrets: |
+            CONAN_REPO_URL=${{ vars.CONAN_REPO_URL }}
+            ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
+            ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
+          content: |
+            # syntax=docker/dockerfile:1
+            FROM ${{ env.CORELIBS_IMAGE }} AS tests
+
+            WORKDIR /src
+            COPY . .
+
+            # Changes on every run so the tests are never served from the cache.
+            ARG CACHEBUST
+
+            RUN --mount=type=secret,id=CONAN_REPO_URL,required=true \
+                --mount=type=secret,id=ARTIFACTORY_USER \
+                --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'
+            set -eux
+
+            python3 -m pip install conan --upgrade
+            conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
+
+            make PRESET=clang-debug-sanitizer test || test_status=$?
+
+            # Upload whatever was built, then report the test result.
+            conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
+                --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
+            conan upload -r art -c "*"
+            exit ${test_status:-0}
+            END
+
+            FROM scratch AS results
+
+            COPY --from=tests /src/cmake-build-clang-debug-sanitizer/junit.xml /junit.xml
+
+      - name: JUnit summary
+        if: always()
+        uses: AdGuardSoftwareLimited/actions/actions/junit-summary@master
+        with:
+          path: 'build/junit.xml'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-linux
+          path: 'build/junit.xml'
+          # The report is only exported when the build succeeds, so a failing
+          # test run leaves nothing to upload.
+          if-no-files-found: warn
 
   android-build:
     name: Android build
     if: ${{ always() && github.repository == 'AdGuardSoftwareLimited/native-libs-common' }}
-    needs: tests
+    needs: [tests, linux-tests]
     runs-on: team-corelibs
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Build Android library
-        env:
-          CONAN_REPO_URL: ${{ vars.CONAN_REPO_URL }}
-          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
-          ARTIFACTORY_API_KEY: ${{ secrets.ARTIFACTORY_API_KEY }}
-        run: |
-          set -euxo pipefail
+        uses: AdGuardSoftwareLimited/actions/actions/docker-build@master
+        with:
+          target: android-build
+          output: type=cacheonly
+          build-args: |
+            CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
+          secrets: |
+            CONAN_REPO_URL=${{ vars.CONAN_REPO_URL }}
+            ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
+            ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
+          content: |
+            # syntax=docker/dockerfile:1
+            FROM ${{ env.CORELIBS_IMAGE }} AS android-build
 
-          DOCKER_BUILDKIT=1 docker build --progress=plain \
-            --no-cache-filter android-build \
-            --secret id=conan_repo_url,env=CONAN_REPO_URL \
-            --secret id=artifactory_user,env=ARTIFACTORY_USER \
-            --secret id=artifactory_api_key,env=ARTIFACTORY_API_KEY \
-            --target android-build \
-            --output type=cacheonly \
-            -f Dockerfile.build .
+            WORKDIR /src
+            COPY . .
+
+            ARG CACHEBUST
+
+            RUN --mount=type=secret,id=CONAN_REPO_URL,required=true \
+                --mount=type=secret,id=ARTIFACTORY_USER \
+                --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'
+            set -eux
+
+            python3 -m pip install conan --upgrade
+            conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
+
+            cd android/NativeLibsCommon
+            touch local.properties
+            echo "cmake.dir=$(dirname "$(dirname "$(which cmake)")")" >> local.properties
+            ./gradlew --no-daemon :lib:assembleRelease || build_status=$?
+
+            conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
+                --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
+            conan upload -r art -c "*"
+            exit ${build_status:-0}
+            END

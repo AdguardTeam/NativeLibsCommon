@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Update docker image to core-libs:2.12.
+
 ### Deprecated
 
 ### Removed
