@@ -124,10 +124,15 @@ jobs:
             WORKDIR /src
             COPY . .
 
+            # A cache mount below, so the packages are neither committed to the
+            # layer nor downloaded again on the next run.
+            ENV CONAN_HOME=/conan
+
             # Changes on every run so the tests are never served from the cache.
             ARG CACHEBUST
 
-            RUN --mount=type=secret,id=CONAN_REPO_URL,required=true \
+            RUN --mount=type=cache,id=conan-linux,target=/conan \
+                --mount=type=secret,id=CONAN_REPO_URL,required=true \
                 --mount=type=secret,id=ARTIFACTORY_USER \
                 --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'
             set -eux
@@ -193,22 +198,39 @@ jobs:
 
             WORKDIR /src
 
+            # SDK components are installed with sdkmanager below, once, into the
+            # cached layer. Auto-download stays on for local builds; here it is
+            # off so anything missing fails by name instead of being refetched
+            # on every run.
+            ENV GRADLE_FLAGS="--no-daemon -Pandroid.builder.sdkDownload=false"
+
+            # A cache mount in the build step, so the packages are neither
+            # committed to the layer nor downloaded again on the next run.
+            ENV CONAN_HOME=/conan
+
             # Only what Gradle needs to configure the project: the C++ sources
             # are copied further down, so editing them leaves this layer — and
             # the Gradle distribution and dependencies it pulls — cached.
             COPY android ./android
             COPY CMakeLists.txt ./
 
-            RUN --mount=type=secret,id=CONAN_REPO_URL,required=true <<'END'
+            RUN <<'END'
             set -eux
 
             python3 -m pip install conan --upgrade
-            conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
 
             cd android/NativeLibsCommon
             touch local.properties
             echo "cmake.dir=$(dirname "$(dirname "$(which cmake)")")" >> local.properties
-            ./gradlew --no-daemon :lib:preBuild
+            # AGP downloads SDK components only from tasks that consume them,
+            # and this module has no sources to compile — so the platform was
+            # still being installed during assembleRelease. Fetch it directly.
+            : "${ANDROID_HOME:=$ANDROID_SDK_ROOT}"
+            compile_sdk=$(sed -n 's/^ *compileSdk *\([0-9][0-9]*\).*/\1/p' lib/build.gradle)
+            yes | "$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")" \
+                "platforms;android-${compile_sdk}"
+
+            ./gradlew $GRADLE_FLAGS :lib:preBuild
             END
 
             COPY . .
@@ -216,18 +238,24 @@ jobs:
             # Changes on every run, so the build below is never cached.
             ARG CACHEBUST
 
-            RUN --mount=type=secret,id=ARTIFACTORY_USER \
+            RUN --mount=type=cache,id=conan-android,target=/conan \
+                --mount=type=secret,id=CONAN_REPO_URL,required=true \
+                --mount=type=secret,id=ARTIFACTORY_USER \
                 --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'
             set -eux
 
+            # The remote lives in the cache mount, so it is configured here
+            # rather than in the layer above.
+            conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
+
             cd android/NativeLibsCommon
-            ./gradlew --no-daemon :lib:assembleRelease || build_status=$?
+            ./gradlew $GRADLE_FLAGS :lib:assembleRelease || build_status=$?
 
             conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
                 --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
             conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading" || true
 
             # Keep the build outputs out of the committed layer.
-            ./gradlew --no-daemon clean || true
+            ./gradlew $GRADLE_FLAGS clean || true
             exit ${build_status:-0}
             END
