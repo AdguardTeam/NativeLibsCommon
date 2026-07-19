@@ -39,6 +39,10 @@ jobs:
             test-command: |
               $ErrorActionPreference = 'Stop'
 
+              # Windows runners ship no make of their own.
+              & choco install make -y --no-progress
+              if (!$?) { exit 1 }
+
               & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
 
               # Tests are built for 32-bit x86, so use the cross toolchain env.
@@ -49,8 +53,7 @@ jobs:
                 }
               }
 
-              # Windows runners have no make of their own; Git for Windows ships one.
-              & 'C:\Program Files\Git\usr\bin\make.exe' PRESET=msvc-debug test
+              & make PRESET=msvc-debug test
               if (!$?) { exit 1 }
             finally-script: |
               $ErrorActionPreference = 'Continue'
