@@ -25,6 +25,20 @@ ifeq ($(OS), Windows_NT)
 NPROC ?= $(or $(NUMBER_OF_PROCESSORS),8)
 else
 NPROC ?= $(shell (nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 8) | tr -d '\n')
+UNAME_S := $(shell uname -s)
+endif
+
+# On macOS CMake would otherwise build for whatever architecture the toolchain
+# defaults to, so pin it to the host. Override with ARCH, which also takes a
+# semicolon-separated list for a universal binary, e.g.
+#   make ARCH=x86_64 test
+#   make ARCH='arm64;x86_64' build_libs
+# Not applied to the cross-compiling presets, which don't target Apple.
+ifeq ($(UNAME_S), Darwin)
+ifeq ($(findstring cross,$(PRESET)),)
+ARCH ?= $(shell uname -m)
+OSX_ARCH_ARGS = -DCMAKE_OSX_ARCHITECTURES="$(ARCH)"
+endif
 endif
 
 .PHONY: all
@@ -42,12 +56,12 @@ export_conan:
 ## Extra CMake flags can be passed via CMAKE_ARGS, e.g.
 ##   make CMAKE_ARGS=-DCMAKE_OSX_ARCHITECTURES=arm64 test
 setup_cmake:
-	cmake --preset $(PRESET) $(CMAKE_ARGS)
+	cmake --preset $(PRESET) $(OSX_ARCH_ARGS) $(CMAKE_ARGS)
 
 .PHONY: compile_commands
 ## Generate compile_commands.json for IDE / clang-tidy integration.
 compile_commands:
-	cmake --preset $(PRESET) -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+	cmake --preset $(PRESET) $(OSX_ARCH_ARGS) $(CMAKE_ARGS) -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 .PHONY: build_libs
 ## Build all libraries (ag_common, ag_common_http, ag_common_tls).

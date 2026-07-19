@@ -73,7 +73,8 @@ jobs:
               python3 -m pip install conan
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
-              make PRESET=clang-debug CMAKE_ARGS="-DCMAKE_OSX_ARCHITECTURES=$(uname -m)" test
+              # CMAKE_OSX_ARCHITECTURES defaults to the host arch (override: ARCH=...).
+              make PRESET=clang-debug test
             finally-script: |
               set -eux
 
