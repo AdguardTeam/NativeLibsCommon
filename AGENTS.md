@@ -77,8 +77,9 @@ Builds are driven by the CMake presets in
 - `make PRESET=musl-cross-x86_64-relwithdebinfo build_libs`
 
 Available presets: `clang-relwithdebinfo`, `clang-debug`,
-`clang-debug-sanitizer`, `msvc-relwithdebinfo`, `msvc-debug`,
-`musl-cross-x86_64-relwithdebinfo`, `musl-cross-x86_64-debug`.
+`clang-debug-sanitizer`, `msvc-relwithdebinfo`, `msvc-debug`, and the
+zig-based musl cross presets `musl-cross-<arch>-<relwithdebinfo|debug>`
+for `arch` in `x86_64`, `aarch64`, `arm`, `mips`, `mipsel`.
 
 ## Code Style
 
