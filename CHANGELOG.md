@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Update docker image to core-libs:2.12.
 - The `musl-cross` CMake presets now cross-compile with `zig cc -target ...` instead of an external `/opt/cross` musl-gcc toolchain, and cover `x86_64`, `aarch64`, `arm`, `mips` and `mipsel`.
 
 ### Deprecated
