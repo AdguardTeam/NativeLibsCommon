@@ -15,7 +15,7 @@ name: Announce release
 #     Slack job could not collect every issue URL for one aggregated message.
 # Named jobs sidestep both: each calls create-gh-issue.yml (OIDC-approved) and
 # the Slack job reads each `needs.issue-N.outputs.issue-url` directly. The list
-# is capped at 4 apps (enough for iOS/Mac/Windows/Android); extend with more
+# is capped at 5 apps (e.g. iOS/Mac/Windows/Android/etc); extend with more
 # `issue-N` jobs if a product ships to more platforms.
 #
 # The tracking issues live in public app repos, so they carry the changelog with
@@ -49,7 +49,7 @@ on:
         type: string
         required: true
         description: >-
-          JSON array (max 4) of downstream apps to open a tracking issue in,
+          JSON array (max 5) of downstream apps to open a tracking issue in,
           each `{"repo": "owner/name", "assignee": "gh-user", "platform": "Android"}`.
           `assignee` and `platform` are optional; `platform` defaults to the repo
           name and is used for the Slack link text. (Not a GitHub issue label --
@@ -164,11 +164,33 @@ jobs:
       team: ${{ inputs.team }}
     secrets: inherit
 
+  issue-5:
+    if: ${{ fromJSON(inputs.targets)[4] != null }}
+    needs: public-changelog
+    permissions:
+      contents: read
+      id-token: write
+    uses: AdGuardSoftwareLimited/actions/.github/workflows/create-gh-issue.yml@master
+    with:
+      target_repo: ${{ fromJSON(inputs.targets)[4].repo }}
+      title: Update ${{ inputs.product }} to ${{ inputs.version }}
+      body: |
+        A new ${{ inputs.product }} version ${{ inputs.version }} has been released. Please integrate it.
+
+        Changelog: ${{ inputs.release_url }}
+
+        ## Changelog
+
+        ${{ needs.public-changelog.outputs.changelog-text }}
+      assignees: ${{ fromJSON(inputs.targets)[4].assignee }}
+      team: ${{ inputs.team }}
+    secrets: inherit
+
   # Announce to Slack as one Block Kit message: header, the full changelog, then
   # the changelog + every opened issue link at the end. Skipped issue jobs leave
   # an empty URL, which the link builder drops.
   slack:
-    needs: [public-changelog, issue-1, issue-2, issue-3, issue-4]
+    needs: [public-changelog, issue-1, issue-2, issue-3, issue-4, issue-5]
     # Run even if some targets were skipped (skipped != failure), but not if any
     # issue job or the changelog filter actually failed.
     if: ${{ always() && !cancelled() && !contains(needs.*.result, 'failure') }}
@@ -184,6 +206,7 @@ jobs:
           U2: ${{ needs.issue-2.outputs.issue-url }}
           U3: ${{ needs.issue-3.outputs.issue-url }}
           U4: ${{ needs.issue-4.outputs.issue-url }}
+          U5: ${{ needs.issue-5.outputs.issue-url }}
         run: |
           set -euo pipefail
 
@@ -192,10 +215,10 @@ jobs:
           links="$(jq -c -n \
             --arg curl "$RELEASE_URL" \
             --argjson targets "$TARGETS" \
-            --arg u1 "$U1" --arg u2 "$U2" --arg u3 "$U3" --arg u4 "$U4" \
+            --arg u1 "$U1" --arg u2 "$U2" --arg u3 "$U3" --arg u4 "$U4" --arg u5 "$U5" \
             '
             [ { label: "Changelog", url: $curl } ]
-            + ( [ $u1, $u2, $u3, $u4 ]
+            + ( [ $u1, $u2, $u3, $u4, $u5 ]
                 | to_entries
                 | map(select(.value != "" and $targets[.key] != null)
                       | { label: (($targets[.key].platform // ($targets[.key].repo | split("/") | last))
