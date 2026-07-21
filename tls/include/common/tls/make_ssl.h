@@ -17,18 +17,20 @@ using SslPtr = UniquePtr<SSL, &SSL_free>;
 /**
  * TLS ClientHello fingerprint profile.
  *
- * `CHROME`, `SAFARI` and `FIREFOX` reproduce the respective browser ClientHello (matching JA4);
+ * `CHROME`, `CHROME_CANARY`, `SAFARI` and `FIREFOX` reproduce the respective browser ClientHello
+ * (matching JA4);
  * `OKHTTP` reproduces the OkHttp Android HTTP client;
  * `OPENSSL_DEFAULT` reproduces the default OpenSSL 3.x ClientHello (matching JA4);
  * `DEFAULT` applies no mimicry and emits the plain BoringSSL/OpenSSL library-default ClientHello.
  */
 enum class TlsClientProfile {
-    CHROME,  ///< Chrome-like ClientHello (default)
-    SAFARI,  ///< Safari-like ClientHello
-    FIREFOX, ///< Firefox-like ClientHello
-    OKHTTP,  ///< OkHttp (Android) client
+    CHROME,          ///< Chrome-like ClientHello (default)
+    CHROME_CANARY,   ///< Chrome Canary-like ClientHello
+    SAFARI,          ///< Safari-like ClientHello
+    FIREFOX,         ///< Firefox-like ClientHello
+    OKHTTP,          ///< OkHttp (Android) client
     OPENSSL_DEFAULT, ///< OpenSSL default ClientHello
-    DEFAULT, ///< No mimicry — library defaults
+    DEFAULT,         ///< No mimicry — library defaults
 };
 
 /** How the produced `SSL` object will be used; affects QUIC-specific configuration. */
