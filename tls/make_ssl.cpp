@@ -416,18 +416,14 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
         if (profile == TlsClientProfile::CHROME_CANARY) {
             // `server_padding` (0x12e0 = 4832) asks the server to pad EncryptedExtensions by the
             // requested number of bytes; Chrome requests 1000.
-#ifdef SSL_set_server_padding_request
             SSL_set_server_padding_request(ssl.get(), 1000);
-#endif
             // A GREASE value at the head of signature_algorithms. This affects neither JA4 (which
             // strips GREASE before hashing) nor JA3 (which does not cover signature algorithms at
             // all) — only the raw bytes. It is still worth sending: implementations that hash
             // GREASE instead of stripping it (tshark, for example) derive a different JA4_c from
             // every Chrome 152 handshake, so a client omitting it would stand out by hashing to
             // one stable value under those tools.
-#ifdef SSL_set_grease_sigalgs_enabled
             SSL_set_grease_sigalgs_enabled(ssl.get(), 1);
-#endif
         }
 
         // Safari does not advertise the session_ticket extension.

@@ -1,0 +1,312 @@
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+index ca243c4..91b58df 100644
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -2919,6 +2919,47 @@ OPENSSL_EXPORT void SSL_set_record_size_limit(SSL *ssl, uint16_t limit);
+ // (RFC 9345) with the given signature algorithms |prefs|.
+ OPENSSL_EXPORT void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
+                                                   size_t num_prefs);
++
++#define SSL_set1_requested_trust_anchors SSL_set1_requested_trust_anchors
++
++// SSL_set1_requested_trust_anchors advertises the trust_anchors ClientHello
++// extension (draft-ietf-tls-trust-anchor-ids). |ids| is a TrustAnchorIDList
++// body: a sequence of u8-length-prefixed trust anchor IDs, without the outer
++// u16 length prefix, which this function adds. Passing |ids_len| of zero sends
++// an empty list, which advertises support for the extension without naming a
++// trust anchor; that is distinct from not calling this function at all, which
++// omits the extension entirely.
++//
++// This is advertise-only: BoringSSL performs no trust anchor negotiation and
++// ignores the peer's response. It exists to reproduce Chrome's ClientHello.
++//
++// It returns one on success and zero on error.
++OPENSSL_EXPORT int SSL_set1_requested_trust_anchors(SSL *ssl,
++                                                    const uint8_t *ids,
++                                                    size_t ids_len);
++
++#define SSL_set_server_padding_request SSL_set_server_padding_request
++
++// SSL_set_server_padding_request advertises the server_padding ClientHello
++// extension, asking the server to add |padding| bytes of padding to
++// EncryptedExtensions. The extension_data is |padding| as a big-endian
++// uint16_t.
++//
++// This is advertise-only: BoringSSL ignores whatever the server does in
++// response. It exists to reproduce Chrome's ClientHello.
++OPENSSL_EXPORT void SSL_set_server_padding_request(SSL *ssl, uint16_t padding);
++
++#define SSL_set_grease_sigalgs_enabled SSL_set_grease_sigalgs_enabled
++
++// SSL_set_grease_sigalgs_enabled configures |ssl| to prepend a GREASE value
++// (RFC 8701) to the signature_algorithms ClientHello extension. The GREASE
++// value is advertised only; it is never added to the set of signature
++// algorithms |ssl| will actually accept from the peer.
++//
++// Note: upstream BoringSSL later added this as an |SSL_CTX|-level toggle named
++// |SSL_CTX_set_grease_sigalgs_enabled|. This per-|SSL| spelling is local to
++// patch stack and should be reconciled if BoringSSL is updated.
++OPENSSL_EXPORT void SSL_set_grease_sigalgs_enabled(SSL *ssl, int enabled);
+ // SSL_set_encrypt_then_mac configures whether |ssl| advertises the (empty)
+ // encrypt_then_mac ClientHello extension (RFC 7366). This is advertise-only for
+ // ClientHello fingerprinting; BoringSSL does not implement Encrypt-then-MAC.
+diff --git a/include/openssl/tls1.h b/include/openssl/tls1.h
+index 499d03c..232b0ca 100644
+--- a/include/openssl/tls1.h
++++ b/include/openssl/tls1.h
+@@ -253,6 +253,15 @@ extern "C" {
+ #define TLSEXT_TYPE_application_settings_old 17513
+ #define TLSEXT_TYPE_application_settings 17613
+ 
++// ExtensionType value from draft-ietf-tls-trust-anchor-ids. This is not an IANA
++// defined extension number; Chromium marks it provisional and will replace it
++// with the final codepoint once standardization completes.
++#define TLSEXT_TYPE_trust_anchors 0xca34
++
++// Extension allowing the client to ask the server to add additional bytes of
++// padding to EncryptedExtensions. This is not an IANA defined extension number.
++#define TLSEXT_TYPE_server_padding 4832
++
+ // ExtensionType values from draft-ietf-tls-esni-13. This is not an IANA defined
+ // extension number.
+ #define TLSEXT_TYPE_encrypted_client_hello 0xfe0d
+diff --git a/ssl/extensions.cc b/ssl/extensions.cc
+index 8820497..f725adb 100644
+--- a/ssl/extensions.cc
++++ b/ssl/extensions.cc
+@@ -1041,8 +1041,20 @@ static bool ext_sigalgs_add_clienthello(const SSL_HANDSHAKE *hs, CBB *out,
+   CBB contents, sigalgs_cbb;
+   if (!CBB_add_u16(out_compressible, TLSEXT_TYPE_signature_algorithms) ||
+       !CBB_add_u16_length_prefixed(out_compressible, &contents) ||
+-      !CBB_add_u16_length_prefixed(&contents, &sigalgs_cbb) ||
+-      !tls12_add_verify_sigalgs(hs, &sigalgs_cbb) ||
++      !CBB_add_u16_length_prefixed(&contents, &sigalgs_cbb)) {
++    return false;
++  }
++
++  // Chrome 152 and newer prepend a GREASE value to signature_algorithms. It is
++  // only ever written here, in the ClientHello, and is deliberately not added to
++  // the accepted set returned by |tls12_get_verify_sigalgs|, so a server that
++  // echoed it back would still be rejected.
++  if (hs->config->grease_sigalgs_enabled &&
++      !CBB_add_u16(&sigalgs_cbb, ssl_get_grease_value(hs, ssl_grease_sigalg))) {
++    return false;
++  }
++
++  if (!tls12_add_verify_sigalgs(hs, &sigalgs_cbb) ||
+       !CBB_flush(out_compressible)) {
+     return false;
+   }
+@@ -3209,6 +3221,87 @@ static bool ext_encrypt_then_mac_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
+   return true;
+ }
+ 
++// trust_anchors (draft-ietf-tls-trust-anchor-ids).
++//
++// This is an advertise-only, client-side implementation for fingerprint
++// imitation: the list is written into the ClientHello, but no trust anchor
++// negotiation is performed and the server's response is ignored.
++static bool ext_trust_anchors_add_clienthello(const SSL_HANDSHAKE *hs, CBB *out,
++                                              CBB *out_compressible,
++                                              ssl_client_hello_type_t type) {
++  if (!hs->config->trust_anchors_enabled) {
++    return true;
++  }
++
++  // An empty TrustAnchorIDList is meaningful — it advertises support for the
++  // extension without naming a trust anchor, which is what Chrome sends on
++  // almost every connection — so the (possibly empty) list is always written.
++  CBB contents, list;
++  if (!CBB_add_u16(out_compressible, TLSEXT_TYPE_trust_anchors) ||
++      !CBB_add_u16_length_prefixed(out_compressible, &contents) ||
++      !CBB_add_u16_length_prefixed(&contents, &list) ||
++      !CBB_add_bytes(&list, hs->config->requested_trust_anchors.data(),
++                     hs->config->requested_trust_anchors.size()) ||
++      !CBB_flush(out_compressible)) {
++    return false;
++  }
++  return true;
++}
++
++static bool ext_trust_anchors_parse_serverhello(SSL_HANDSHAKE *hs,
++                                                uint8_t *out_alert,
++                                                CBS *contents) {
++  return true;
++}
++
++static bool ext_trust_anchors_parse_clienthello(SSL_HANDSHAKE *hs,
++                                                uint8_t *out_alert,
++                                                CBS *contents) {
++  return true;
++}
++
++static bool ext_trust_anchors_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
++  return true;
++}
++
++// server_padding.
++//
++// Asks the server to add padding bytes to EncryptedExtensions. Client-side and
++// advertise-only: the request is written into the ClientHello, and whatever the
++// server does in response is ignored.
++static bool ext_server_padding_add_clienthello(const SSL_HANDSHAKE *hs, CBB *out,
++                                               CBB *out_compressible,
++                                               ssl_client_hello_type_t type) {
++  if (!hs->config->server_padding_enabled) {
++    return true;
++  }
++
++  CBB contents;
++  if (!CBB_add_u16(out_compressible, TLSEXT_TYPE_server_padding) ||
++      !CBB_add_u16_length_prefixed(out_compressible, &contents) ||
++      !CBB_add_u16(&contents, hs->config->server_padding_request) ||
++      !CBB_flush(out_compressible)) {
++    return false;
++  }
++  return true;
++}
++
++static bool ext_server_padding_parse_serverhello(SSL_HANDSHAKE *hs,
++                                                 uint8_t *out_alert,
++                                                 CBS *contents) {
++  return true;
++}
++
++static bool ext_server_padding_parse_clienthello(SSL_HANDSHAKE *hs,
++                                                 uint8_t *out_alert,
++                                                 CBS *contents) {
++  return true;
++}
++
++static bool ext_server_padding_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
++  return true;
++}
++
+ // kExtensions contains all the supported extensions.
+ static const struct tls_extension kExtensions[] = {
+   {
+@@ -3408,6 +3501,20 @@ static const struct tls_extension kExtensions[] = {
+     ext_record_size_limit_parse_clienthello,
+     ext_record_size_limit_add_serverhello,
+   },
++  {
++    TLSEXT_TYPE_trust_anchors,
++    ext_trust_anchors_add_clienthello,
++    ext_trust_anchors_parse_serverhello,
++    ext_trust_anchors_parse_clienthello,
++    ext_trust_anchors_add_serverhello,
++  },
++  {
++    TLSEXT_TYPE_server_padding,
++    ext_server_padding_add_clienthello,
++    ext_server_padding_parse_serverhello,
++    ext_server_padding_parse_clienthello,
++    ext_server_padding_add_serverhello,
++  },
+ };
+ 
+ #define kNumExtensions (sizeof(kExtensions) / sizeof(struct tls_extension))
+diff --git a/ssl/internal.h b/ssl/internal.h
+index d391573..7ee35f6 100644
+--- a/ssl/internal.h
++++ b/ssl/internal.h
+@@ -1819,7 +1819,8 @@ enum ssl_grease_index_t {
+   ssl_grease_version,
+   ssl_grease_ticket_extension,
+   ssl_grease_ech_config_id,
+-  ssl_grease_last_index = ssl_grease_ech_config_id,
++  ssl_grease_sigalg,
++  ssl_grease_last_index = ssl_grease_sigalg,
+ };
+ 
+ enum tls12_server_hs_state_t {
+@@ -3267,6 +3268,18 @@ struct SSL_CONFIG {
+   // record_size_limit ClientHello extension (RFC 8449).
+   uint16_t record_size_limit = 0;
+ 
++  // server_padding_request, if |server_padding_enabled| is set, is the number of
++  // padding bytes requested in the server_padding ClientHello extension.
++  uint16_t server_padding_request = 0;
++
++  // requested_trust_anchors, if |trust_anchors_enabled| is set, is the
++  // TrustAnchorIDList advertised in the trust_anchors ClientHello extension
++  // (draft-ietf-tls-trust-anchor-ids), already encoded as a sequence of
++  // u8-length-prefixed TrustAnchorIDs. It may be empty: Chrome sends an empty
++  // list to signal support without naming any trust anchor, so "empty" and
++  // "absent" are distinguished by |trust_anchors_enabled| rather than by size.
++  Array<uint8_t> requested_trust_anchors;
++
+   // encrypt_then_mac, if true, advertises the (empty) encrypt_then_mac
+   // ClientHello extension (RFC 7366). BoringSSL does not implement
+   // Encrypt-then-MAC record protection; this is advertise-only, to reproduce a
+@@ -3347,6 +3360,19 @@ struct SSL_CONFIG {
+   // to negotiate and convey application settings.
+   bool alps_use_new_codepoint : 1;
+ 
++  // trust_anchors_enabled is whether to send the trust_anchors ClientHello
++  // extension carrying |requested_trust_anchors|.
++  bool trust_anchors_enabled : 1;
++
++  // server_padding_enabled is whether to send the server_padding ClientHello
++  // extension carrying |server_padding_request|. A separate flag is used rather
++  // than a zero sentinel so that a request of zero bytes stays expressible.
++  bool server_padding_enabled : 1;
++
++  // grease_sigalgs_enabled is whether to prepend a GREASE value to the
++  // signature_algorithms ClientHello extension.
++  bool grease_sigalgs_enabled : 1;
++
+   // check_client_certificate_type indicates whether the client, in TLS 1.2 and
+   // below, will check its certificate against the server's requested
+   // certificate types.
+diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
+index b63ca17..3f398d1 100644
+--- a/ssl/ssl_lib.cc
++++ b/ssl/ssl_lib.cc
+@@ -747,6 +747,9 @@ SSL_CONFIG::SSL_CONFIG(SSL *ssl_arg)
+       quic_use_legacy_codepoint(false),
+       permute_extensions(false),
+       alps_use_new_codepoint(false),
++      trust_anchors_enabled(false),
++      server_padding_enabled(false),
++      grease_sigalgs_enabled(false),
+       check_client_certificate_type(true),
+       check_ecdsa_curve(true) {
+   assert(ssl);
+@@ -2268,6 +2271,36 @@ void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
+       bssl::MakeConstSpan(prefs, num_prefs));
+ }
+ 
++int SSL_set1_requested_trust_anchors(SSL *ssl, const uint8_t *ids,
++                                     size_t ids_len) {
++  if (!ssl->config) {
++    return 0;
++  }
++  if (!ssl->config->requested_trust_anchors.CopyFrom(
++          bssl::MakeConstSpan(ids, ids_len))) {
++    return 0;
++  }
++  // Enabled even when |ids_len| is zero: an empty list is a valid, meaningful
++  // advertisement.
++  ssl->config->trust_anchors_enabled = true;
++  return 1;
++}
++
++void SSL_set_server_padding_request(SSL *ssl, uint16_t padding) {
++  if (!ssl->config) {
++    return;
++  }
++  ssl->config->server_padding_request = padding;
++  ssl->config->server_padding_enabled = true;
++}
++
++void SSL_set_grease_sigalgs_enabled(SSL *ssl, int enabled) {
++  if (!ssl->config) {
++    return;
++  }
++  ssl->config->grease_sigalgs_enabled = !!enabled;
++}
++
+ void SSL_set_encrypt_then_mac(SSL *ssl, int enabled) {
+   if (!ssl->config) {
+     return;
