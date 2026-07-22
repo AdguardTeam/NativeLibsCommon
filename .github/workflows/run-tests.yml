@@ -45,6 +45,13 @@ jobs:
 
               & conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }}
 
+              # Export custom recipes (e.g. boringssl) so this build uses the
+              # working-tree recipe rather than the published one.
+              Get-ChildItem conan/recipes -Directory | ForEach-Object {
+                & conan export $_.FullName --user adguard --channel oss
+                if (!$?) { exit 1 }
+              }
+
               # Tests are built for 32-bit x86, so use the cross toolchain env.
               cmd /c "vcvarsamd64_x86 & set" | ForEach-Object {
                 if ($_ -match "=") {
@@ -75,6 +82,12 @@ jobs:
 
               python3 -m pip install conan
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+
+              # Export custom recipes (e.g. boringssl) so this build uses the
+              # working-tree recipe rather than the published one.
+              for recipe in conan/recipes/*/; do
+                  conan export "$recipe" --user adguard --channel oss
+              done
 
               # CMAKE_OSX_ARCHITECTURES defaults to the host arch (override: ARCH=...).
               make PRESET=clang-debug test
@@ -139,6 +152,13 @@ jobs:
 
             python3 -m pip install conan --upgrade
             conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
+            # Export custom recipes (e.g. boringssl) into the mounted /conan
+            # cache so this build uses the working-tree recipe. The
+            # native_libs_common self-export is skipped: it needs .git (absent
+            # in the image) and isn't consumed here — the lib is built directly.
+            for recipe in conan/recipes/*/; do
+                conan export "$recipe" --user adguard --channel oss
+            done
 
             make PRESET=clang-debug-sanitizer test || test_status=$?
 
@@ -247,6 +267,13 @@ jobs:
             # The remote lives in the cache mount, so it is configured here
             # rather than in the layer above.
             conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
+            # Export only the custom recipes (e.g. boringssl) into the mounted
+            # /conan cache. The native_libs_common self-export is skipped: it
+            # needs `git describe` (no .git in the image) and isn't consumed
+            # here — the lib is built directly from the working tree.
+            for recipe in conan/recipes/*/; do
+                conan export "$recipe" --user adguard --channel oss
+            done
 
             cd android/NativeLibsCommon
             ./gradlew $GRADLE_FLAGS :lib:assembleRelease || build_status=$?
