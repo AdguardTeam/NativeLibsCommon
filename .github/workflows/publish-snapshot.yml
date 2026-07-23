@@ -40,9 +40,6 @@ jobs:
           # Full history + tags so `git describe` can compute the
           # <tag>-<n>-g<rev> snapshot version.
           fetch-depth: 0
-      - run: |
-          pwd
-          ls -la
 
       - name: Upload conan recipes
         uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/upload-conan-recipes@master

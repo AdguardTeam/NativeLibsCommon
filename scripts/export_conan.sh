@@ -10,9 +10,6 @@
 
 set -e
 
-pwd
-ls -la
-
 cd "$(dirname "$0")/.."
 
 version=$(git describe --tags --match "v*" | sed 's/^v//')
