@@ -6,6 +6,10 @@ inputs:
     description: 'Script name to run for exporting Conan recipes'
     required: true
     default: 'scripts/export_conan.sh'
+  version:
+    description: 'Version to export the recipes at. If empty, the export script computes it from `git describe`'
+    required: false
+    default: ''
   conan_repo_url:
     description: 'URL of the Conan repository'
     required: true
@@ -38,7 +42,7 @@ runs:
             conan remote add --index 0 art ${{ inputs.conan_repo_url }} || true
 
             # Export packages
-            sh ${{ inputs.export_script_path }}
+            sh ${{ inputs.export_script_path }} "${{ inputs.version }}"
 
             # Upload to Conan
             conan remote login art "${{ inputs.artifactory_user }}" --password "${{ inputs.artifactory_api_key }}"
