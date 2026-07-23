@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Update docker image to core-libs:2.12.
 - The `musl-cross` CMake presets now cross-compile with `zig cc -target ...` instead of an external `/opt/cross` musl-gcc toolchain, and cover `x86_64`, `aarch64`, `arm`, `mips` and `mipsel`.
+- `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER` are replaced by the generated zig wrapper script for the `musl-cross` presets, so that compiler launchers (`sccache`, `ccache`) work with them. Existing `musl-cross` build directories have to be deleted once, as the compiler path changes.
 
 ### Deprecated
 
