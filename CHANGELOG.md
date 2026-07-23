@@ -10,10 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Update docker image to core-libs:2.12.
-- The `musl-cross` CMake presets now cross-compile with `zig cc -target ...` instead of an external `/opt/cross` musl-gcc toolchain, and cover `x86_64`, `aarch64`, `arm`, `mips` and `mipsel`.
-- `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER` are replaced by the generated zig wrapper script for the `musl-cross` presets, so that compiler launchers (`sccache`, `ccache`) work with them. Existing `musl-cross` build directories have to be deleted once, as the compiler path changes.
-
 ### Deprecated
 
 ### Removed
@@ -21,6 +17,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 ### Security
+
+## [8.1.45] - 2026-07-23
+
+### Changed
+
+- Update docker image to core-libs:2.12.
+- The `musl-cross` CMake presets now cross-compile with `zig cc -target ...` instead of an external `/opt/cross` musl-gcc toolchain, and cover `x86_64`, `aarch64`, `arm`, `mips` and `mipsel`.
+- `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER` are replaced by the generated zig wrapper script for the `musl-cross` presets, so that compiler launchers (`sccache`, `ccache`) work with them. Existing `musl-cross` build directories have to be deleted once, as the compiler path changes.
 
 ## [8.1.44] - 2026-07-15
 
@@ -1234,7 +1238,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.45...HEAD
+[8.1.45]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...v8.1.45
 [8.1.44]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.43...v8.1.44
 [8.1.43]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.42...v8.1.43
 [8.1.42]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.41...v8.1.42
