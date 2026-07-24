@@ -1,0 +1,100 @@
+This patch is imported from https://github.com/0x676e67/wreq project under Apache-2.0 license.
+   
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+index ca243c4..3c3e798 100644
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -2919,6 +2919,13 @@ OPENSSL_EXPORT void SSL_set_record_size_limit(SSL *ssl, uint16_t limit);
+ // (RFC 9345) with the given signature algorithms |prefs|.
+ OPENSSL_EXPORT void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
+                                                   size_t num_prefs);
++// SSL_set_extension_order pins the ClientHello extension order for |ssl|. The
++// |num| extension types in |ids| are advertised first, in this exact order,
++// with the random extension permutation disabled; any other supported
++// extensions follow in their internal order. Used to reproduce a specific
++// browser's ClientHello extension sequence.
++OPENSSL_EXPORT void SSL_set_extension_order(SSL *ssl, const uint16_t *ids,
++                                            size_t num);
+ // SSL_set_encrypt_then_mac configures whether |ssl| advertises the (empty)
+ // encrypt_then_mac ClientHello extension (RFC 7366). This is advertise-only for
+ // ClientHello fingerprinting; BoringSSL does not implement Encrypt-then-MAC.
+diff --git a/ssl/extensions.cc b/ssl/extensions.cc
+index 8820497..966fa16 100644
+--- a/ssl/extensions.cc
++++ b/ssl/extensions.cc
+@@ -3420,6 +3420,38 @@ static_assert(kNumExtensions <=
+               "too many extensions for received bitset");
+ 
+ bool ssl_setup_extension_permutation(SSL_HANDSHAKE *hs) {
++  // A pinned extension order takes precedence over both the default order and
++  // the random permutation. The listed extension types are placed first, in the
++  // given order; any remaining supported extensions keep their kExtensions table
++  // order. Unknown or duplicate entries in the list are ignored.
++  const Array<uint16_t> &extension_order = hs->config->extension_order;
++  if (!extension_order.empty()) {
++    static_assert(kNumExtensions <= UINT8_MAX,
++                  "extensions_permutation type is too small");
++    Array<uint8_t> permutation;
++    if (!permutation.Init(kNumExtensions)) {
++      return false;
++    }
++    bool seen[kNumExtensions] = {false};
++    size_t idx = 0;
++    for (uint16_t value : extension_order) {
++      for (size_t j = 0; j < kNumExtensions; j++) {
++        if (kExtensions[j].value == value && !seen[j]) {
++          seen[j] = true;
++          permutation[idx++] = static_cast<uint8_t>(j);
++          break;
++        }
++      }
++    }
++    for (size_t j = 0; j < kNumExtensions; j++) {
++      if (!seen[j]) {
++        permutation[idx++] = static_cast<uint8_t>(j);
++      }
++    }
++    hs->extension_permutation = std::move(permutation);
++    return true;
++  }
++
+   if (!hs->config->permute_extensions) {
+     return true;
+   }
+diff --git a/ssl/internal.h b/ssl/internal.h
+index d391573..df74f79 100644
+--- a/ssl/internal.h
++++ b/ssl/internal.h
+@@ -3267,6 +3267,14 @@ struct SSL_CONFIG {
+   // record_size_limit ClientHello extension (RFC 8449).
+   uint16_t record_size_limit = 0;
+ 
++  // extension_order, if not empty, pins the ClientHello extension order: the
++  // listed extension types are emitted first, in this exact order, and the
++  // random extension permutation is skipped. Any remaining supported extensions
++  // follow in their kExtensions table order. Used by browser-imitation profiles
++  // (e.g. Safari, Firefox) that must reproduce a byte-exact extension sequence.
++  // See |SSL_set_extension_order| and |ssl_setup_extension_permutation|.
++  Array<uint16_t> extension_order;
++
+   // encrypt_then_mac, if true, advertises the (empty) encrypt_then_mac
+   // ClientHello extension (RFC 7366). BoringSSL does not implement
+   // Encrypt-then-MAC record protection; this is advertise-only, to reproduce a
+diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
+index b63ca17..290d01a 100644
+--- a/ssl/ssl_lib.cc
++++ b/ssl/ssl_lib.cc
+@@ -2268,6 +2268,13 @@ void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
+       bssl::MakeConstSpan(prefs, num_prefs));
+ }
+ 
++void SSL_set_extension_order(SSL *ssl, const uint16_t *ids, size_t num) {
++  if (!ssl->config) {
++    return;
++  }
++  (void)ssl->config->extension_order.CopyFrom(bssl::MakeConstSpan(ids, num));
++}
++
+ void SSL_set_encrypt_then_mac(SSL *ssl, int enabled) {
+   if (!ssl->config) {
+     return;
