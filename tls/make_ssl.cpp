@@ -9,6 +9,8 @@
 
 #include "common/socket_address.h"
 
+#include <iterator>
+
 #ifdef OPENSSL_IS_BORINGSSL
 #include <ngtcp2/ngtcp2_crypto_boringssl.h>
 #else
@@ -151,17 +153,18 @@ std::pair<const uint16_t *, size_t> sigalgs_for(TlsClientProfile profile) {
     return {CHROME, std::size(CHROME)};
 }
 
-// Per-profile ClientHello extension order. Only Safari and Firefox pin an
+// Per-profile ClientHello extension order. Every non-Chrome profile pins an
 // explicit order; the listed extension types are emitted first in this exact
 // sequence and BoringSSL's random permutation is skipped (see the
-// extension_order patch). Chrome deliberately permutes instead, and the
-// remaining profiles keep BoringSSL's default kExtensions order. Extension
+// extension_order patch). Chrome deliberately permutes instead. Pinning is
+// required because this BoringSSL's kExtensions table order was reordered by the
+// imitation patches and matches none of the reference clients (in particular it
+// moved key_share/supported_versions ahead of signature_algorithms). Extension
 // types a profile does not actually send are ignored, so the list is safe to
 // apply verbatim. Profiles without a pinned order return {nullptr, 0}.
 std::pair<const uint16_t *, size_t> extension_order_for(TlsClientProfile profile) {
     // Real Safari ClientHello order. Matches the wreq Safari profile, which
-    // emits BoringSSL's default extension order; pinned here explicitly because
-    // this BoringSSL's default kExtensions order differs from Safari's.
+    // emits btls's default (pristine-upstream) BoringSSL extension order.
     static constexpr uint16_t SAFARI[] = {
             TLSEXT_TYPE_server_name,
             TLSEXT_TYPE_extended_master_secret,
@@ -198,14 +201,48 @@ std::pair<const uint16_t *, size_t> extension_order_for(TlsClientProfile profile
             TLSEXT_TYPE_cert_compression,
             TLSEXT_TYPE_encrypted_client_hello,
     };
+    // OkHttp / Conscrypt order. Conscrypt is BoringSSL-based and does not
+    // permute, so its order is btls's default (pristine-upstream) order; matches
+    // the wreq OkHttp profile, which also pins no order.
+    static constexpr uint16_t OKHTTP[] = {
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_session_ticket,
+            TLSEXT_TYPE_application_layer_protocol_negotiation,
+            TLSEXT_TYPE_status_request,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_key_share,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_supported_versions,
+    };
+    // `openssl s_client` order, captured from OpenSSL 3.6 (matches the OPENSSL
+    // reference). OpenSSL uses its own extension order, unrelated to BoringSSL's.
+    static constexpr uint16_t OPENSSL[] = {
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_session_ticket,
+            TLSEXT_TYPE_encrypt_then_mac,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_supported_versions,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_key_share,
+    };
     switch (profile) {
     case TlsClientProfile::SAFARI:
         return {SAFARI, std::size(SAFARI)};
     case TlsClientProfile::FIREFOX:
         return {FIREFOX, std::size(FIREFOX)};
-    case TlsClientProfile::CHROME:
     case TlsClientProfile::OKHTTP:
+        return {OKHTTP, std::size(OKHTTP)};
     case TlsClientProfile::OPENSSL_DEFAULT:
+        return {OPENSSL, std::size(OPENSSL)};
+    case TlsClientProfile::CHROME:
     case TlsClientProfile::DEFAULT:
         break;
     }
@@ -401,11 +438,10 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
         }
 
         if (!quic) {
-            // Pin the ClientHello extension order for the profiles that require a
-            // byte-exact sequence (Safari, Firefox). Chrome permutes instead, and
-            // the remaining profiles keep BoringSSL's default order. Not applied to
-            // QUIC, whose extension set (transport parameters) differs and has no
-            // reference order here.
+            // Pin the ClientHello extension order for every non-Chrome profile so
+            // the wire order matches the reference client (Chrome permutes instead).
+            // Not applied to QUIC, whose extension set (transport parameters) differs
+            // and has no reference order here.
             if (auto [ext_order, ext_order_len] = extension_order_for(profile); ext_order != nullptr) {
                 SSL_set_extension_order(ssl.get(), ext_order, ext_order_len);
             }

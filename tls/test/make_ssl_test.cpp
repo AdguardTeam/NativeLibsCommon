@@ -161,4 +161,37 @@ TEST(MakeSsl, ExtensionOrder) {
             TLSEXT_TYPE_encrypted_client_hello,
     };
     EXPECT_EQ(firefox_expected, client_hello_extensions(ag::tls::TlsClientProfile::FIREFOX));
+
+    // OkHttp / Conscrypt (btls default / pristine-upstream BoringSSL order).
+    const std::vector<uint16_t> okhttp_expected = {
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_session_ticket,
+            TLSEXT_TYPE_application_layer_protocol_negotiation,
+            TLSEXT_TYPE_status_request,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_key_share,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_supported_versions,
+    };
+    EXPECT_EQ(okhttp_expected, client_hello_extensions(ag::tls::TlsClientProfile::OKHTTP));
+
+    // `openssl s_client` order (captured from OpenSSL 3.6).
+    const std::vector<uint16_t> openssl_expected = {
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_session_ticket,
+            TLSEXT_TYPE_encrypt_then_mac,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_supported_versions,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_key_share,
+    };
+    EXPECT_EQ(openssl_expected, client_hello_extensions(ag::tls::TlsClientProfile::OPENSSL_DEFAULT));
 }
