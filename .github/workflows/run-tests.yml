@@ -75,6 +75,7 @@ jobs:
 
               python3 -m pip install conan
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+              ./scripts/export_conan.sh local
 
               # CMAKE_OSX_ARCHITECTURES defaults to the host arch (override: ARCH=...).
               make PRESET=clang-debug test
@@ -139,6 +140,7 @@ jobs:
 
             python3 -m pip install conan --upgrade
             conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
+            ./scripts/export_conan.sh local
 
             make PRESET=clang-debug-sanitizer test || test_status=$?
 
@@ -247,6 +249,7 @@ jobs:
             # The remote lives in the cache mount, so it is configured here
             # rather than in the layer above.
             conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
+            ./scripts/export_conan.sh local
 
             cd android/NativeLibsCommon
             ./gradlew $GRADLE_FLAGS :lib:assembleRelease || build_status=$?
