@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.46] - 2026-07-24
+
+### Changed
+
+- Bump `ag_profile_version` from `"2"` to `"3"` in `conan/settings_user.yml` and all `.jinja` profiles. Cached Conan packages needed to be invalidated for several reasons: hard-float code for armv7 had crept into the cache while the project uses soft-float; the profile was not bumped after the Xcode 26.4.1 upgrade; and the MSVC version on GitHub Actions differs slightly from the Bamboo builder (though not enough to be considered a different profile).
+
 ## [8.1.45] - 2026-07-23
 
 ### Changed
@@ -1238,7 +1244,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.45...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.46...HEAD
+[8.1.46]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.45...v8.1.46
 [8.1.45]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...v8.1.45
 [8.1.44]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.43...v8.1.44
 [8.1.43]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.42...v8.1.43
