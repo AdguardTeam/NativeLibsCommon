@@ -151,6 +151,67 @@ std::pair<const uint16_t *, size_t> sigalgs_for(TlsClientProfile profile) {
     return {CHROME, std::size(CHROME)};
 }
 
+// Per-profile ClientHello extension order. Only Safari and Firefox pin an
+// explicit order; the listed extension types are emitted first in this exact
+// sequence and BoringSSL's random permutation is skipped (see the
+// extension_order patch). Chrome deliberately permutes instead, and the
+// remaining profiles keep BoringSSL's default kExtensions order. Extension
+// types a profile does not actually send are ignored, so the list is safe to
+// apply verbatim. Profiles without a pinned order return {nullptr, 0}.
+std::pair<const uint16_t *, size_t> extension_order_for(TlsClientProfile profile) {
+    // Real Safari ClientHello order. Matches the wreq Safari profile, which
+    // emits BoringSSL's default extension order; pinned here explicitly because
+    // this BoringSSL's default kExtensions order differs from Safari's.
+    static constexpr uint16_t SAFARI[] = {
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_application_layer_protocol_negotiation,
+            TLSEXT_TYPE_status_request,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_certificate_timestamp,
+            TLSEXT_TYPE_key_share,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_supported_versions,
+            TLSEXT_TYPE_cert_compression,
+    };
+    // Firefox ClientHello order, verbatim from wreq-util's
+    // EXTENSION_PERMUTATION_INDICES.
+    static constexpr uint16_t FIREFOX[] = {
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_session_ticket,
+            TLSEXT_TYPE_application_layer_protocol_negotiation,
+            TLSEXT_TYPE_status_request,
+            TLSEXT_TYPE_delegated_credential,
+            TLSEXT_TYPE_certificate_timestamp,
+            TLSEXT_TYPE_key_share,
+            TLSEXT_TYPE_supported_versions,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_record_size_limit,
+            TLSEXT_TYPE_cert_compression,
+            TLSEXT_TYPE_encrypted_client_hello,
+    };
+    switch (profile) {
+    case TlsClientProfile::SAFARI:
+        return {SAFARI, std::size(SAFARI)};
+    case TlsClientProfile::FIREFOX:
+        return {FIREFOX, std::size(FIREFOX)};
+    case TlsClientProfile::CHROME:
+    case TlsClientProfile::OKHTTP:
+    case TlsClientProfile::OPENSSL_DEFAULT:
+    case TlsClientProfile::DEFAULT:
+        break;
+    }
+    return {nullptr, 0};
+}
+
 // OpenSSL `s_client` default signature_algorithms, verbatim and in order, so
 // the JA4_c signature-algorithm component matches. Many of these codepoints
 // (ML-DSA 0x0904-0906, brainpool 0x081a-081c, rsa_pss_pss 0x0809-080b, ed448
@@ -340,6 +401,15 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
         }
 
         if (!quic) {
+            // Pin the ClientHello extension order for the profiles that require a
+            // byte-exact sequence (Safari, Firefox). Chrome permutes instead, and
+            // the remaining profiles keep BoringSSL's default order. Not applied to
+            // QUIC, whose extension set (transport parameters) differs and has no
+            // reference order here.
+            if (auto [ext_order, ext_order_len] = extension_order_for(profile); ext_order != nullptr) {
+                SSL_set_extension_order(ssl.get(), ext_order, ext_order_len);
+            }
+
             // signed_certificate_timestamp: sent by the browser profiles, not by OkHttp/OpenSSL.
             if (browser) {
                 SSL_enable_signed_cert_timestamps(ssl.get());
