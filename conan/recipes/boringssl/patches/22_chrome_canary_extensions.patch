@@ -1,11 +1,11 @@
 diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
-index ca243c4..91b58df 100644
+index 3c3e798..4e46e28 100644
 --- a/include/openssl/ssl.h
 +++ b/include/openssl/ssl.h
-@@ -2919,6 +2919,47 @@ OPENSSL_EXPORT void SSL_set_record_size_limit(SSL *ssl, uint16_t limit);
- // (RFC 9345) with the given signature algorithms |prefs|.
- OPENSSL_EXPORT void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
-                                                   size_t num_prefs);
+@@ -2926,6 +2926,47 @@ OPENSSL_EXPORT void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *pref
+ // browser's ClientHello extension sequence.
+ OPENSSL_EXPORT void SSL_set_extension_order(SSL *ssl, const uint16_t *ids,
+                                             size_t num);
 +
 +#define SSL_set1_requested_trust_anchors SSL_set1_requested_trust_anchors
 +
@@ -71,7 +71,7 @@ index 499d03c..232b0ca 100644
  // extension number.
  #define TLSEXT_TYPE_encrypted_client_hello 0xfe0d
 diff --git a/ssl/extensions.cc b/ssl/extensions.cc
-index 8820497..f725adb 100644
+index 966fa16..3e91d6a 100644
 --- a/ssl/extensions.cc
 +++ b/ssl/extensions.cc
 @@ -1041,8 +1041,20 @@ static bool ext_sigalgs_add_clienthello(const SSL_HANDSHAKE *hs, CBB *out,
@@ -207,7 +207,7 @@ index 8820497..f725adb 100644
  
  #define kNumExtensions (sizeof(kExtensions) / sizeof(struct tls_extension))
 diff --git a/ssl/internal.h b/ssl/internal.h
-index d391573..7ee35f6 100644
+index df74f79..e602f26 100644
 --- a/ssl/internal.h
 +++ b/ssl/internal.h
 @@ -1819,7 +1819,8 @@ enum ssl_grease_index_t {
@@ -220,9 +220,9 @@ index d391573..7ee35f6 100644
  };
  
  enum tls12_server_hs_state_t {
-@@ -3267,6 +3268,18 @@ struct SSL_CONFIG {
-   // record_size_limit ClientHello extension (RFC 8449).
-   uint16_t record_size_limit = 0;
+@@ -3275,6 +3276,18 @@ struct SSL_CONFIG {
+   // See |SSL_set_extension_order| and |ssl_setup_extension_permutation|.
+   Array<uint16_t> extension_order;
  
 +  // server_padding_request, if |server_padding_enabled| is set, is the number of
 +  // padding bytes requested in the server_padding ClientHello extension.
@@ -239,7 +239,7 @@ index d391573..7ee35f6 100644
    // encrypt_then_mac, if true, advertises the (empty) encrypt_then_mac
    // ClientHello extension (RFC 7366). BoringSSL does not implement
    // Encrypt-then-MAC record protection; this is advertise-only, to reproduce a
-@@ -3347,6 +3360,19 @@ struct SSL_CONFIG {
+@@ -3355,6 +3368,19 @@ struct SSL_CONFIG {
    // to negotiate and convey application settings.
    bool alps_use_new_codepoint : 1;
  
@@ -260,7 +260,7 @@ index d391573..7ee35f6 100644
    // below, will check its certificate against the server's requested
    // certificate types.
 diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
-index b63ca17..3f398d1 100644
+index 290d01a..5b70b8d 100644
 --- a/ssl/ssl_lib.cc
 +++ b/ssl/ssl_lib.cc
 @@ -747,6 +747,9 @@ SSL_CONFIG::SSL_CONFIG(SSL *ssl_arg)
@@ -273,8 +273,8 @@ index b63ca17..3f398d1 100644
        check_client_certificate_type(true),
        check_ecdsa_curve(true) {
    assert(ssl);
-@@ -2268,6 +2271,36 @@ void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
-       bssl::MakeConstSpan(prefs, num_prefs));
+@@ -2275,6 +2278,36 @@ void SSL_set_extension_order(SSL *ssl, const uint16_t *ids, size_t num) {
+   (void)ssl->config->extension_order.CopyFrom(bssl::MakeConstSpan(ids, num));
  }
  
 +int SSL_set1_requested_trust_anchors(SSL *ssl, const uint8_t *ids,
