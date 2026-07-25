@@ -190,6 +190,24 @@ FMT_INLINE void print(FILE *file, StrictFormatString<T...> fmt, T &&...args) {
     return fmt::vprint(file, fmt, vargs);
 }
 
+/**
+ * Same as `print()`, but appends a newline to the output.
+ */
+template <typename... T>
+FMT_INLINE void println(StrictFormatString<T...> fmt, T &&...args) {
+    const auto &vargs = fmt::make_format_args(args...);
+    return fmt::vprintln(stdout, fmt, vargs);
+}
+
+/**
+ * Same as `print()` to a file, but appends a newline to the output.
+ */
+template <typename... T>
+FMT_INLINE void println(FILE *file, StrictFormatString<T...> fmt, T &&...args) {
+    const auto &vargs = fmt::make_format_args(args...);
+    return fmt::vprintln(file, fmt, vargs);
+}
+
 template <typename... T>
 FMT_INLINE std::string format(StrictFormatString<T...> fmt, T &&...args) {
     const auto &vargs = fmt::make_format_args(args...);

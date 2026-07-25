@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - New `make_ssl` ClientHello profile `TlsClientProfile::CHROME_CANARY`, reproducing the Chrome 152 (canary) ClientHello.
 - New BoringSSL patch `21_chrome_canary_extensions`, adding the client-side `server_padding` extension (codepoint `4832`) via `SSL_set_server_padding_request`, a signature_algorithms GREASE toggle via `SSL_set_grease_sigalgs_enabled`, and the `trust_anchors` extension (draft-ietf-tls-trust-anchor-ids, provisional codepoint `0xca34`) via `SSL_set1_requested_trust_anchors`.
+- `ag::println()` in `common/format.h` — the newline-appending counterpart of `ag::print()`, with the same strict format string checking (`fmt::println()` only checks that enough arguments are passed, not that there are no extra ones).
 
 ### Changed
 
