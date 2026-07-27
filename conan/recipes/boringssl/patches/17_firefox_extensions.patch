@@ -1,3 +1,5 @@
+This patch is imported from https://github.com/0x676e67/wreq project under Apache-2.0 license.
+
 diff --git a/include/openssl/tls1.h b/include/openssl/tls1.h
 --- a/include/openssl/tls1.h
 +++ b/include/openssl/tls1.h

@@ -1,3 +1,5 @@
+This patch is imported from https://github.com/0x676e67/wreq project under Apache-2.0 license.
+
 diff --git a/ssl/ssl_cipher.cc b/ssl/ssl_cipher.cc
 --- a/ssl/ssl_cipher.cc
 +++ b/ssl/ssl_cipher.cc
