@@ -47,10 +47,12 @@ jobs:
       - name: Build an RFC 3161 timestamp query
         run: |
           set -eux
-          # Same shape as the query codesign sends: SHA-256 imprint, nonce,
-          # certReq = true. The system LibreSSL supports `openssl ts`.
+          # Byte-for-byte the shape codesign sends, as captured from a real
+          # signing run: SHA-256 imprint, nonce, certReq = true and reqPolicy
+          # 1.2.3.4.5.6. The system LibreSSL supports `openssl ts`.
           echo "native-libs-common tsa probe ${GITHUB_RUN_ID}" > probe.bin
-          /usr/bin/openssl ts -query -data probe.bin -sha256 -cert -out probe.tsq
+          /usr/bin/openssl ts -query -data probe.bin -sha256 -cert \
+            -policy 1.2.3.4.5.6 -out probe.tsq
           /usr/bin/openssl ts -query -in probe.tsq -text
 
           cat > probe.sh <<'SH'
