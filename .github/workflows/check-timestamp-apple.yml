@@ -1,0 +1,71 @@
+name: Check timestamp.apple.com availability
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-images:
+    name: Resolve build image labels
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    runs-on: [team-corelibs]
+    outputs:
+      macos: ${{ steps.kv.outputs.MACOS }}
+    steps:
+      - name: Resolve image labels from cistate
+        id: kv
+        uses: AdGuardSoftwareLimited/actions/actions/kv-multi@master
+        with:
+          get: |
+            MACOS=build-images/macos
+
+  check:
+    name: curl http://timestamp.apple.com
+    needs: resolve-images
+    runs-on: ${{ fromJSON(format('["ephemeral","ephemeral-mac","{0}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]', needs.resolve-images.outputs.macos)) }}
+    steps:
+      - name: Show network configuration
+        run: |
+          set -x
+          ifconfig || true
+          scutil --dns || true
+          netstat -rn || true
+
+      # Each probe keeps going on failure so that all three outcomes are visible
+      # in one run; the summary step at the end fails the job if any of them broke.
+      - name: curl (default)
+        id: default
+        continue-on-error: true
+        run: |
+          set -x
+          curl -sSv --max-time 30 -o /dev/null http://timestamp.apple.com
+
+      - name: curl -4
+        id: ipv4
+        continue-on-error: true
+        run: |
+          set -x
+          curl -sSv -4 --max-time 30 -o /dev/null http://timestamp.apple.com
+
+      - name: curl -6
+        id: ipv6
+        continue-on-error: true
+        run: |
+          set -x
+          curl -sSv -6 --max-time 30 -o /dev/null http://timestamp.apple.com
+
+      - name: Summary
+        run: |
+          {
+            echo '| Probe | Outcome |'
+            echo '| --- | --- |'
+            echo '| default | ${{ steps.default.outcome }} |'
+            echo '| -4 | ${{ steps.ipv4.outcome }} |'
+            echo '| -6 | ${{ steps.ipv6.outcome }} |'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          [ '${{ steps.default.outcome }}' = success ] \
+            && [ '${{ steps.ipv4.outcome }}' = success ] \
+            && [ '${{ steps.ipv6.outcome }}' = success ]
