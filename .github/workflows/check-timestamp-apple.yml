@@ -6,6 +6,15 @@ on:
 permissions:
   contents: read
 
+env:
+  # The URL codesign actually uses. It is not baked into codesign itself: the
+  # default comes from the Security framework's TimeStampingPrefs.plist
+  # (ServerURL key), and the request is issued by XPCTimeStampingService.xpc.
+  TSA_URL: http://timestamp.apple.com/ts01
+  # User-Agent of the process that really issues the request, for parity with
+  # codesign (CFNetwork/Darwin versions differ per host, that is fine).
+  TSA_UA: XPCTimeStampingService/50001 CFNetwork/3826.600.41.1.1 Darwin/24.6.0
+
 jobs:
   resolve-images:
     name: Resolve build image labels
@@ -22,7 +31,7 @@ jobs:
             MACOS=build-images/macos
 
   check:
-    name: curl http://timestamp.apple.com
+    name: Probe Apple timestamp authority
     needs: resolve-images
     runs-on: ${{ fromJSON(format('["ephemeral","ephemeral-mac","{0}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]', needs.resolve-images.outputs.macos)) }}
     steps:
@@ -32,40 +41,74 @@ jobs:
           ifconfig || true
           scutil --dns || true
           netstat -rn || true
+          dig +short timestamp.apple.com A || true
+          dig +short timestamp.apple.com AAAA || true
 
-      # Each probe keeps going on failure so that all three outcomes are visible
-      # in one run; the summary step at the end fails the job if any of them broke.
-      - name: curl (default)
-        id: default
+      - name: Build an RFC 3161 timestamp query
+        run: |
+          set -eux
+          # Same shape as the query codesign sends: SHA-256 imprint, nonce,
+          # certReq = true. The system LibreSSL supports `openssl ts`.
+          echo "native-libs-common tsa probe ${GITHUB_RUN_ID}" > probe.bin
+          /usr/bin/openssl ts -query -data probe.bin -sha256 -cert -out probe.tsq
+          /usr/bin/openssl ts -query -in probe.tsq -text
+
+          cat > probe.sh <<'SH'
+          #!/bin/bash
+          # $1 = curl address-family option ('' | -4 | -6), $2 = tag
+          set -eux
+          curl -fsS ${1:+"$1"} --max-time 30 \
+            -H 'Content-Type: application/timestamp-query' \
+            -H "User-Agent: ${TSA_UA}" \
+            --data-binary @probe.tsq \
+            -w 'http=%{http_code} ip=%{remote_ip} size=%{size_download}\n' \
+            -o "reply-$2.tsr" "${TSA_URL}"
+          /usr/bin/openssl ts -reply -in "reply-$2.tsr" -text
+          # A reachable-but-broken TSA still answers 200, so require a grant.
+          /usr/bin/openssl ts -reply -in "reply-$2.tsr" -text | grep -q 'Status: Granted'
+          SH
+          chmod +x probe.sh
+
+      # Each probe keeps going on failure so that all outcomes show up in one
+      # run; the summary step at the end fails the job if any of them broke.
+      - name: POST timestamp query (default)
+        id: post_default
+        continue-on-error: true
+        run: ./probe.sh '' default
+
+      - name: POST timestamp query (-4)
+        id: post_ipv4
+        continue-on-error: true
+        run: ./probe.sh -4 ipv4
+
+      - name: POST timestamp query (-6)
+        id: post_ipv6
+        continue-on-error: true
+        run: ./probe.sh -6 ipv6
+
+      - name: Plain GET on the bare host (informational)
+        id: get_root
         continue-on-error: true
         run: |
           set -x
-          curl -sSv --max-time 30 -o /dev/null http://timestamp.apple.com
-
-      - name: curl -4
-        id: ipv4
-        continue-on-error: true
-        run: |
-          set -x
-          curl -sSv -4 --max-time 30 -o /dev/null http://timestamp.apple.com
-
-      - name: curl -6
-        id: ipv6
-        continue-on-error: true
-        run: |
-          set -x
-          curl -sSv -6 --max-time 30 -o /dev/null http://timestamp.apple.com
+          # The bare host answers 302 -> www.apple.com/certificateauthority/ for
+          # any GET, so this says nothing about the TSA itself. -f turns that 302
+          # into a real failure instead of a silent "success".
+          for opt in '' -4 -6; do
+            curl -fsSv ${opt:+"$opt"} --max-time 30 -o /dev/null http://timestamp.apple.com/
+          done
 
       - name: Summary
         run: |
           {
             echo '| Probe | Outcome |'
             echo '| --- | --- |'
-            echo '| default | ${{ steps.default.outcome }} |'
-            echo '| -4 | ${{ steps.ipv4.outcome }} |'
-            echo '| -6 | ${{ steps.ipv6.outcome }} |'
+            echo "| POST ${TSA_URL} (default) | ${{ steps.post_default.outcome }} |"
+            echo "| POST ${TSA_URL} (-4) | ${{ steps.post_ipv4.outcome }} |"
+            echo "| POST ${TSA_URL} (-6) | ${{ steps.post_ipv6.outcome }} |"
+            echo '| GET http://timestamp.apple.com/ (informational) | ${{ steps.get_root.outcome }} |'
           } >> "$GITHUB_STEP_SUMMARY"
 
-          [ '${{ steps.default.outcome }}' = success ] \
-            && [ '${{ steps.ipv4.outcome }}' = success ] \
-            && [ '${{ steps.ipv6.outcome }}' = success ]
+          [ '${{ steps.post_default.outcome }}' = success ] \
+            && [ '${{ steps.post_ipv4.outcome }}' = success ] \
+            && [ '${{ steps.post_ipv6.outcome }}' = success ]
