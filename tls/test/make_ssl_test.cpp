@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <iterator>
@@ -15,7 +16,7 @@
 #include "ja4.h"
 
 // Build the ClientHello bytes (the first TLS record) for the given profile.
-static std::vector<uint8_t> build_client_hello(ag::tls::TlsClientProfile profile) {
+static std::vector<uint8_t> build_client_hello(ag::tls::TlsClientProfile profile, const char *sni = "example.org") {
     static constexpr uint8_t H2_ALPN[] = {2, 'h', '2'};
 
     ag::tls::SslInitParameters params;
@@ -25,7 +26,7 @@ static std::vector<uint8_t> build_client_hello(ag::tls::TlsClientProfile profile
     if (profile != ag::tls::TlsClientProfile::OPENSSL_DEFAULT) {
         params.alpn_protos = {H2_ALPN, std::size(H2_ALPN)};
     }
-    params.sni = "example.org";
+    params.sni = sni;
     params.post_quantum = true;
 
     auto r = ag::tls::make_ssl(params);
@@ -62,9 +63,10 @@ static bool is_grease_value(uint16_t v) {
 // GREASE (RFC 8701) and padding stripped. Unlike JA4 — which sorts the extension
 // list before hashing — this preserves order, so it guards the fixed extension
 // ordering that the Safari and Firefox profiles must reproduce.
-static std::vector<uint16_t> client_hello_extensions(ag::tls::TlsClientProfile profile) {
+static std::vector<uint16_t> client_hello_extensions(
+        ag::tls::TlsClientProfile profile, const char *sni = "example.org") {
     std::vector<uint16_t> out;
-    std::vector<uint8_t> h = build_client_hello(profile);
+    std::vector<uint8_t> h = build_client_hello(profile, sni);
     if (h.size() < 44) {
         return out;
     }
@@ -117,6 +119,18 @@ TEST(MakeSsl, Ja4Profiles) {
             EXPECT_EQ(c.expected, ja4) << c.name << ": JA4 mismatch vs reference";
         }
     }
+}
+
+// SNI is optional: a null host name must produce a working `SSL`
+// object with no server_name extension, rather than an error or a crash.
+TEST(MakeSsl, NoSni) {
+    auto exts = client_hello_extensions(ag::tls::TlsClientProfile::CHROME, nullptr);
+    EXPECT_FALSE(exts.empty());
+    EXPECT_EQ(exts.end(), std::find(exts.begin(), exts.end(), TLSEXT_TYPE_server_name));
+
+    // A regular host name still gets one.
+    std::vector<uint16_t> exts_chrome = client_hello_extensions(ag::tls::TlsClientProfile::CHROME);
+    EXPECT_NE(exts_chrome.end(), std::find(exts_chrome.begin(), exts_chrome.end(), TLSEXT_TYPE_server_name));
 }
 
 // The Safari and Firefox profiles must emit ClientHello extensions in a fixed,

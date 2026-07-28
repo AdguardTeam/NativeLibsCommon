@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `make_ssl()` no longer crashes when `SslInitParameters::sni` is left at its default `nullptr`.
+
 ### Security
 
 ## [8.1.46] - 2026-07-24
