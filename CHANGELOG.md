@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - `make_ssl()` no longer crashes when `SslInitParameters::sni` is left at its default `nullptr`.
+- HTTP/3: report an error from `nghttp3_conn_read_stream()` to ngtcp2 again. The escalation was dropped by accident in 8.1.37, so a broken connection got stuck instead of failing.
 
 ### Security
 
