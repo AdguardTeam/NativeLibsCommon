@@ -360,7 +360,7 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
     if (ssl == nullptr) {
         return "Failed to create SSL";
     }
-    if (!SocketAddress{params.sni}.valid()) {
+    if (params.sni != nullptr && !SocketAddress{params.sni}.valid()) {
         if (0 == SSL_set_tlsext_host_name(ssl.get(), params.sni)) {
             return "Failed to set SNI";
         }
