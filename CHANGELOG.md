@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [8.1.47] - 2026-07-28
+
+### Added
+
 - New `make_ssl` ClientHello profile `TlsClientProfile::CHROME_CANARY`, reproducing the Chrome 152 (canary) ClientHello.
 - New BoringSSL patch `21_chrome_canary_extensions`, adding the client-side `server_padding` extension (codepoint `4832`) via `SSL_set_server_padding_request`, a signature_algorithms GREASE toggle via `SSL_set_grease_sigalgs_enabled`, and the `trust_anchors` extension (draft-ietf-tls-trust-anchor-ids, provisional codepoint `0xca34`) via `SSL_set1_requested_trust_anchors`.
 - `ag::println()` in `common/format.h` — the newline-appending counterpart of `ag::print()`, with the same strict format string checking (`fmt::println()` only checks that enough arguments are passed, not that there are no extra ones).
@@ -16,15 +30,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `TlsClientProfile::CHROME` now tracks Chrome 150 instead of Chrome 149, since 150 is the current stable release.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - `make_ssl()` no longer crashes when `SslInitParameters::sni` is left at its default `nullptr`.
-
-### Security
 
 ## [8.1.46] - 2026-07-24
 
@@ -1252,7 +1260,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.46...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.47...HEAD
+[8.1.47]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.46...v8.1.47
 [8.1.46]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.45...v8.1.46
 [8.1.45]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...v8.1.45
 [8.1.44]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.43...v8.1.44
