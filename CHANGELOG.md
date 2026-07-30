@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.48] - 2026-07-30
+
 ## [8.1.47] - 2026-07-28
 
 ### Added
@@ -1262,7 +1264,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.47...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.48...HEAD
+[8.1.48]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.47...v8.1.48
 [8.1.47]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.46...v8.1.47
 [8.1.46]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.45...v8.1.46
 [8.1.45]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...v8.1.45
