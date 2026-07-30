@@ -176,10 +176,15 @@ protected:
     evutil_socket_t m_monitor_sock_fd = -1;
     LinuxRoutingTable m_routing_table;
     bool m_netlink_available = false;
+    UniquePtr<event, &event_free> m_debounce_event;
+    bool m_debounce_pending = false;
 
     bool create_socket();
     void close_socket();
     bool init_routing_table();
+    void schedule_not_connected_debounce();
+    void cancel_debounce_timer();
+    void on_debounce_timeout();
 #endif // __linux__
 
     void changed_handler();

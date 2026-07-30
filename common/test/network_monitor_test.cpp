@@ -27,6 +27,16 @@ public:
     void simulate_status_change(const std::string &new_if_name, bool is_satisfied) {
         handle_network_change(new_if_name, is_satisfied);
     }
+
+#ifdef __linux__
+    void schedule_disconnect_debounce() {
+        schedule_not_connected_debounce();
+    }
+
+    void cancel_disconnect_debounce() {
+        cancel_debounce_timer();
+    }
+#endif // __linux__
 };
 
 class NetworkMonitorTest : public testing::Test {
@@ -118,6 +128,42 @@ TEST_F(NetworkMonitorTest, NetworkStatusChange) {
 }
 
 #ifdef __linux__
+TEST_F(NetworkMonitorTest, DisconnectDebouncedTimeout) {
+    start_monitor();
+
+    m_monitor->simulate_status_change("eth0", true);
+    ASSERT_TRUE(m_is_connected);
+    ASSERT_EQ(m_bound_if, "eth0");
+
+    m_monitor->schedule_disconnect_debounce();
+    event_base_dispatch(m_ev_base.get());
+
+    ASSERT_FALSE(m_is_connected);
+    ASSERT_TRUE(m_bound_if.empty());
+
+    m_monitor->stop();
+}
+
+TEST_F(NetworkMonitorTest, DisconnectDebouncedCanceled) {
+    start_monitor();
+
+    m_monitor->simulate_status_change("eth0", true);
+    ASSERT_TRUE(m_is_connected);
+    ASSERT_EQ(m_bound_if, "eth0");
+
+    m_monitor->schedule_disconnect_debounce();
+    m_monitor->cancel_disconnect_debounce();
+
+    timeval exit_delay{2, 0};
+    event_base_loopexit(m_ev_base.get(), &exit_delay);
+    event_base_dispatch(m_ev_base.get());
+
+    ASSERT_TRUE(m_is_connected);
+    ASSERT_EQ(m_bound_if, "eth0");
+
+    m_monitor->stop();
+}
+
 TEST(RouteEntryTest, Sorting) {
     utils::RouteEntry default_route(CidrRange({0, 0, 0, 0}, 0));
     default_route.metric = 100;

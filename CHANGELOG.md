@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Linux NetworkMonitor now debounces brief default-route losses (5 s) before reporting "not connected", avoiding spurious disconnects during transient network transitions.
+
 ### Security
 
 ## [8.1.44] - 2026-07-15

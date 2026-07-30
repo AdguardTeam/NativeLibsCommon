@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 static constexpr size_t NETLINK_BUFFER_SIZE = 8192;
+static constexpr timeval DISCONNECT_DEBOUNCE_DELAY{5, 0}; // 5 seconds
 #endif // __linux__
 
 namespace ag::utils {
@@ -116,6 +117,14 @@ void NetworkMonitorImpl::start(event_base *ev_base) {
             this));
 
     event_add(m_monitor_event.get(), nullptr);
+
+    m_debounce_event.reset(event_new(
+            ev_base, -1, EV_TIMEOUT,
+            [](evutil_socket_t, short, void *arg) {
+                auto *monitor = static_cast<NetworkMonitorImpl *>(arg);
+                monitor->on_debounce_timeout();
+            },
+            this));
 #endif // __linux__
 }
 
@@ -135,8 +144,10 @@ void NetworkMonitorImpl::stop() {
 #endif // __APPLE__
 
 #ifdef __linux__
+    cancel_debounce_timer();
     event_del(m_monitor_event.get());
     m_monitor_event.reset();
+    m_debounce_event.reset();
     close_socket();
 #endif // __linux__
     m_if_name.clear();
@@ -680,14 +691,56 @@ void NetworkMonitorImpl::changed_handler() {
     if (m_netlink_available) {
         if (addr_changed || m_routing_table.has_default_changed_and_reset()) {
             auto new_if_name = m_routing_table.get_default_if_name();
-            handle_network_change(new_if_name, !new_if_name.empty());
+            if (!new_if_name.empty()) {
+                cancel_debounce_timer();
+                handle_network_change(new_if_name, true);
+            } else {
+                schedule_not_connected_debounce();
+            }
         }
     } else if (addr_changed) {
         auto new_if_name = get_default_interface();
-        handle_network_change(new_if_name, !new_if_name.empty());
+        if (!new_if_name.empty()) {
+            cancel_debounce_timer();
+            handle_network_change(new_if_name, true);
+        } else {
+            schedule_not_connected_debounce();
+        }
     }
 #endif // __linux__
 }
+
+#ifdef __linux__
+void NetworkMonitorImpl::schedule_not_connected_debounce() {
+    if (m_debounce_pending || !m_debounce_event) {
+        return;
+    }
+    if (m_if_name.empty()) {
+        return;
+    }
+    timeval tv = DISCONNECT_DEBOUNCE_DELAY;
+    if (event_add(m_debounce_event.get(), &tv) == 0) {
+        m_debounce_pending = true;
+        dbglog(m_logger, "Default route lost, scheduling disconnect debounce");
+    } else {
+        warnlog(m_logger, "Failed to schedule disconnect debounce");
+    }
+}
+
+void NetworkMonitorImpl::cancel_debounce_timer() {
+    if (!m_debounce_pending || !m_debounce_event) {
+        return;
+    }
+    event_del(m_debounce_event.get());
+    m_debounce_pending = false;
+    dbglog(m_logger, "Default route restored, canceling disconnect debounce");
+}
+
+void NetworkMonitorImpl::on_debounce_timeout() {
+    m_debounce_pending = false;
+    handle_network_change("", false);
+}
+#endif // __linux__
 
 void NetworkMonitorImpl::handle_network_change(const std::string &new_if_name, bool is_satisfied) {
     if (!is_satisfied) {
