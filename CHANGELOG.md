@@ -18,6 +18,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.48] - 2026-07-30
+
+### Changed
+
+- HTTP/3: `Http3Client::consume_stream()` and `Http3Server::consume_stream()` no longer extend the connection-level flow control window. The session now extends it itself as soon as the body data is passed to `Handler::on_body`, the same way `Http2Session.
+
+### Fixed
+
+- HTTP/3: report an error from `nghttp3_conn_read_stream()` to ngtcp2 again. The escalation was dropped by accident in 8.1.37, so a peer that violates the HTTP/3 framing left the connection stuck instead of failing it.
+
 ## [8.1.47] - 2026-07-28
 
 ### Added
@@ -29,12 +39,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - `TlsClientProfile::CHROME` now tracks Chrome 150 instead of Chrome 149, since 150 is the current stable release.
-- HTTP/3: `Http3Client::consume_stream()` and `Http3Server::consume_stream()` no longer extend the connection-level flow control window. The session now extends it itself as soon as the body data is passed to `Handler::on_body`, the same way `Http2Session.
 
 ### Fixed
 
 - `make_ssl()` no longer crashes when `SslInitParameters::sni` is left at its default `nullptr`.
-- HTTP/3: report an error from `nghttp3_conn_read_stream()` to ngtcp2 again. The escalation was dropped by accident in 8.1.37, so a peer that violates the HTTP/3 framing left the connection stuck instead of failing it.
 
 ## [8.1.46] - 2026-07-24
 
@@ -1262,7 +1270,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.47...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.48...HEAD
+[8.1.48]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.47...v8.1.48
 [8.1.47]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.46...v8.1.47
 [8.1.46]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.45...v8.1.46
 [8.1.45]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...v8.1.45
