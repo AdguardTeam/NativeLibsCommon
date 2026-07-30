@@ -195,8 +195,8 @@ endfunction()
 # differ from those of a plain clang of the same version. os.ag_cc_is_zig feeds the
 # package hash to keep the two from sharing a package ID.
 function(detect_cc_is_zig CC_IS_ZIG)
-    detect_zig_compiler(C _zig_executable _zig_args)
-    if(_zig_executable)
+    is_zig_compiler(C _is_zig)
+    if(_is_zig)
         message(STATUS "CMake-Conan: [settings] os.ag_cc_is_zig=1")
         set(${CC_IS_ZIG} "1" PARENT_SCOPE)
     else()
@@ -272,11 +272,59 @@ function(write_zig_wrapper LANG ZIG_EXECUTABLE ZIG_ARGS WRAPPER)
 endfunction()
 
 
+# Replace `zig cc -target ...` in CMAKE_<LANG>_COMPILER with the wrapper script, so
+# the compiler is a plain single executable for CMake, Conan and everything that
+# prepends to the compiler command. In particular CMAKE_<LANG>_COMPILER_LAUNCHER:
+# sccache/ccache probe the first word of the command (`zig -E ...`), which zig
+# rejects as an unknown command, and the launcher gives up with "compiler not
+# supported". Must run before the language is enabled, i.e. before project().
+function(substitute_zig_compiler LANG)
+    detect_zig_compiler(${LANG} _zig_executable _zig_args)
+
+    if(NOT _zig_executable)
+        # Compiler is no longer zig (or already substituted): drop a stale record.
+        if(_CONAN_ZIG_${LANG}_WRAPPER AND NOT CMAKE_${LANG}_COMPILER STREQUAL "${_CONAN_ZIG_${LANG}_WRAPPER}")
+            unset(_CONAN_ZIG_${LANG}_WRAPPER CACHE)
+            unset(_CONAN_ZIG_${LANG}_COMMAND CACHE)
+        endif()
+        return()
+    endif()
+
+    # On Windows the wrapper is a .cmd, which CMake cannot drive as the compiler.
+    # Leave the command alone there; Conan still gets the wrapper.
+    if(CMAKE_HOST_WIN32)
+        return()
+    endif()
+
+    write_zig_wrapper(${LANG} "${_zig_executable}" "${_zig_args}" _wrapper)
+    # Keep the original command around: once substituted, nothing downstream can
+    # tell that this is zig, and the Conan settings depend on it.
+    set(_CONAN_ZIG_${LANG}_COMMAND "${CMAKE_${LANG}_COMPILER}" CACHE INTERNAL
+        "${LANG} compiler command before the zig wrapper substitution")
+    set(_CONAN_ZIG_${LANG}_WRAPPER "${_wrapper}" CACHE INTERNAL
+        "zig wrapper substituted for the ${LANG} compiler")
+    set(CMAKE_${LANG}_COMPILER "${_wrapper}" CACHE FILEPATH "${LANG} compiler" FORCE)
+    message(STATUS "CMake-Conan: Using zig wrapper as the ${LANG} compiler: ${_wrapper}")
+endfunction()
+
+
+# True when LANG is compiled by zig, whether or not CMAKE_<LANG>_COMPILER has
+# already been replaced by the wrapper.
+function(is_zig_compiler LANG RESULT)
+    detect_zig_compiler(${LANG} _zig_executable _zig_args)
+    if(_zig_executable OR _CONAN_ZIG_${LANG}_WRAPPER)
+        set(${RESULT} TRUE PARENT_SCOPE)
+    else()
+        set(${RESULT} FALSE PARENT_SCOPE)
+    endif()
+endfunction()
+
+
 function(detect_lib_cxx LIB_CXX)
     # zig bundles its own libc++ and selects it per target; pinning compiler.libcxx
     # here would only add a setting Conan cannot honour through the wrapper.
-    detect_zig_compiler(CXX _zig_executable _zig_args)
-    if(_zig_executable)
+    is_zig_compiler(CXX _is_zig)
+    if(_is_zig)
         message(STATUS "CMake-Conan: zig C++ compiler detected, omitting compiler.libcxx")
         return()
     endif()
@@ -759,10 +807,23 @@ endmacro()
 # to check if the dependency provider was invoked at all.
 cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}" CALL conan_provide_dependency_check)
 
+# This file is pulled in through CMAKE_PROJECT_TOP_LEVEL_INCLUDES, i.e. from
+# project() but before any language is enabled, which is the only point where
+# CMAKE_<LANG>_COMPILER can still be rewritten without upsetting CMake.
+substitute_zig_compiler(C)
+substitute_zig_compiler(CXX)
+
+# Profile selection must see the compiler command as the user gave it, not the
+# substituted wrapper, so that it does not depend on which configure run this is.
+set(_C_COMPILER_COMMAND "${CMAKE_C_COMPILER}")
+if(_CONAN_ZIG_C_COMMAND)
+    set(_C_COMPILER_COMMAND "${_CONAN_ZIG_C_COMMAND}")
+endif()
+
 # Detect conan profile to use
 set(_PROFILES_DIR ${CMAKE_CURRENT_LIST_DIR}/../conan/profiles)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    if (CMAKE_C_COMPILER MATCHES ".*-musl(eabi)?-.*")
+    if (_C_COMPILER_COMMAND MATCHES ".*-musl(eabi)?-.*")
         if(SANITIZE)
             set(_SELECTED_PROFILE "${_PROFILES_DIR}/linux-musl-asan.jinja")
         else()

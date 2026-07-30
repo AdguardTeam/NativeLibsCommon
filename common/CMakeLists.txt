@@ -74,6 +74,7 @@ target_compile_definitions(${PROJECT_NAME}  PUBLIC FMT_EXCEPTIONS=0)
 
 enable_testing()
 include(../cmake/add_unit_test.cmake)
+include(../cmake/add_compile_fail_test.cmake)
 link_libraries(${PROJECT_NAME})
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 
@@ -90,3 +91,17 @@ add_unit_test(base64_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(rotating_log_to_file_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(regex_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(move_only_function_test ${TEST_DIR} "" TRUE TRUE)
+add_unit_test(format_test ${TEST_DIR} "" TRUE TRUE)
+
+# Invalid format strings are rejected at compile time, so they are tested as builds that must fail.
+set(COMPILE_FAIL_DIR ${TEST_DIR}/compile_fail)
+add_compile_fail_test(format_extra_arg ${COMPILE_FAIL_DIR}/extra_arg.cpp
+        "Number of arguments does not match")
+add_compile_fail_test(format_missing_arg ${COMPILE_FAIL_DIR}/missing_arg.cpp
+        "argument not found")
+add_compile_fail_test(format_invalid_spec ${COMPILE_FAIL_DIR}/invalid_spec.cpp
+        "invalid format specifier")
+add_compile_fail_test(format_invalid_format_string ${COMPILE_FAIL_DIR}/invalid_format_string.cpp
+        "invalid format string")
+add_compile_fail_test(format_named_arg ${COMPILE_FAIL_DIR}/named_arg.cpp
+        "named arguments are not supported")

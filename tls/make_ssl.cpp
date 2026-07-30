@@ -9,6 +9,8 @@
 
 #include "common/socket_address.h"
 
+#include <iterator>
+
 #ifdef OPENSSL_IS_BORINGSSL
 #include <ngtcp2/ngtcp2_crypto_boringssl.h>
 #else
@@ -20,8 +22,14 @@ namespace ag::tls {
 
 namespace {
 
+// Chrome and Chrome Canary share every ClientHello trait except the ones Canary added; the
+// differences are called out at each use site.
+bool is_chrome_profile(TlsClientProfile p) {
+    return p == TlsClientProfile::CHROME || p == TlsClientProfile::CHROME_CANARY;
+}
+
 bool is_browser_profile(TlsClientProfile p) {
-    return p == TlsClientProfile::CHROME || p == TlsClientProfile::SAFARI || p == TlsClientProfile::FIREFOX;
+    return is_chrome_profile(p) || p == TlsClientProfile::SAFARI || p == TlsClientProfile::FIREFOX;
 }
 
 #ifdef OPENSSL_IS_BORINGSSL
@@ -77,6 +85,7 @@ const char *cipher_list_for(TlsClientProfile profile) {
     case TlsClientProfile::OPENSSL_DEFAULT:
         return OPENSSL;
     case TlsClientProfile::CHROME:
+    case TlsClientProfile::CHROME_CANARY:
     case TlsClientProfile::DEFAULT:
         break;
     }
@@ -110,6 +119,7 @@ std::pair<const uint16_t *, size_t> groups_for(TlsClientProfile profile) {
     case TlsClientProfile::OPENSSL_DEFAULT:
         return {OPENSSL, std::size(OPENSSL)};
     case TlsClientProfile::CHROME:
+    case TlsClientProfile::CHROME_CANARY:
     case TlsClientProfile::DEFAULT:
         break;
     }
@@ -118,9 +128,12 @@ std::pair<const uint16_t *, size_t> groups_for(TlsClientProfile profile) {
 
 // Per-profile signature algorithms. Order is significant for JA4 (kept verbatim).
 std::pair<const uint16_t *, size_t> sigalgs_for(TlsClientProfile profile) {
-    static constexpr uint16_t CHROME[] = {SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256,
-            SSL_SIGN_RSA_PKCS1_SHA256, SSL_SIGN_ECDSA_SECP384R1_SHA384, SSL_SIGN_RSA_PSS_RSAE_SHA384,
-            SSL_SIGN_RSA_PKCS1_SHA384, SSL_SIGN_RSA_PSS_RSAE_SHA512, SSL_SIGN_RSA_PKCS1_SHA512};
+    // Chrome 150 prepended the ML-DSA codepoints; Chrome 152 left the list alone, so both Chrome
+    // profiles share it.
+    static constexpr uint16_t CHROME[] = {0x0904, 0x0905, 0x0906, // ML-DSA (mldsa44, mldsa65, mldsa87)
+            SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256, SSL_SIGN_RSA_PKCS1_SHA256,
+            SSL_SIGN_ECDSA_SECP384R1_SHA384, SSL_SIGN_RSA_PSS_RSAE_SHA384, SSL_SIGN_RSA_PKCS1_SHA384,
+            SSL_SIGN_RSA_PSS_RSAE_SHA512, SSL_SIGN_RSA_PKCS1_SHA512};
     // Safari repeats rsa_pss_rsae_sha384 verbatim.
     static constexpr uint16_t SAFARI[] = {SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256,
             SSL_SIGN_RSA_PKCS1_SHA256, SSL_SIGN_ECDSA_SECP384R1_SHA384, SSL_SIGN_RSA_PSS_RSAE_SHA384,
@@ -142,6 +155,7 @@ std::pair<const uint16_t *, size_t> sigalgs_for(TlsClientProfile profile) {
     case TlsClientProfile::OKHTTP:
         return {OKHTTP, std::size(OKHTTP)};
     case TlsClientProfile::CHROME:
+    case TlsClientProfile::CHROME_CANARY:
     case TlsClientProfile::DEFAULT:
     // OPENSSL uses OPENSSL_SIGALGS via SSL_set_raw_verify_algorithm_prefs, not
     // this table; handled here only for switch exhaustiveness.
@@ -149,6 +163,102 @@ std::pair<const uint16_t *, size_t> sigalgs_for(TlsClientProfile profile) {
         break;
     }
     return {CHROME, std::size(CHROME)};
+}
+
+// Per-profile ClientHello extension order. Every non-Chrome profile pins an
+// explicit order; the listed extension types are emitted first in this exact
+// sequence and BoringSSL's random permutation is skipped (see the
+// extension_order patch). Chrome deliberately permutes instead. Pinning is
+// required because this BoringSSL's kExtensions table order was reordered by the
+// imitation patches and matches none of the reference clients (in particular it
+// moved key_share/supported_versions ahead of signature_algorithms). Extension
+// types a profile does not actually send are ignored, so the list is safe to
+// apply verbatim. Profiles without a pinned order return {nullptr, 0}.
+std::pair<const uint16_t *, size_t> extension_order_for(TlsClientProfile profile) {
+    // Real Safari ClientHello order. Matches the wreq Safari profile, which
+    // emits btls's default (pristine-upstream) BoringSSL extension order.
+    static constexpr uint16_t SAFARI[] = {
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_application_layer_protocol_negotiation,
+            TLSEXT_TYPE_status_request,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_certificate_timestamp,
+            TLSEXT_TYPE_key_share,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_supported_versions,
+            TLSEXT_TYPE_cert_compression,
+    };
+    // Firefox ClientHello order, verbatim from wreq-util's
+    // EXTENSION_PERMUTATION_INDICES.
+    static constexpr uint16_t FIREFOX[] = {
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_session_ticket,
+            TLSEXT_TYPE_application_layer_protocol_negotiation,
+            TLSEXT_TYPE_status_request,
+            TLSEXT_TYPE_delegated_credential,
+            TLSEXT_TYPE_certificate_timestamp,
+            TLSEXT_TYPE_key_share,
+            TLSEXT_TYPE_supported_versions,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_record_size_limit,
+            TLSEXT_TYPE_cert_compression,
+            TLSEXT_TYPE_encrypted_client_hello,
+    };
+    // OkHttp / Conscrypt order. Conscrypt is BoringSSL-based and does not
+    // permute, so its order is btls's default (pristine-upstream) order; matches
+    // the wreq OkHttp profile, which also pins no order.
+    static constexpr uint16_t OKHTTP[] = {
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_session_ticket,
+            TLSEXT_TYPE_application_layer_protocol_negotiation,
+            TLSEXT_TYPE_status_request,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_key_share,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_supported_versions,
+    };
+    // `openssl s_client` order, captured from OpenSSL 3.6 (matches the OPENSSL
+    // reference). OpenSSL uses its own extension order, unrelated to BoringSSL's.
+    static constexpr uint16_t OPENSSL[] = {
+            TLSEXT_TYPE_renegotiate,
+            TLSEXT_TYPE_server_name,
+            TLSEXT_TYPE_ec_point_formats,
+            TLSEXT_TYPE_supported_groups,
+            TLSEXT_TYPE_session_ticket,
+            TLSEXT_TYPE_encrypt_then_mac,
+            TLSEXT_TYPE_extended_master_secret,
+            TLSEXT_TYPE_signature_algorithms,
+            TLSEXT_TYPE_supported_versions,
+            TLSEXT_TYPE_psk_key_exchange_modes,
+            TLSEXT_TYPE_key_share,
+    };
+    switch (profile) {
+    case TlsClientProfile::SAFARI:
+        return {SAFARI, std::size(SAFARI)};
+    case TlsClientProfile::FIREFOX:
+        return {FIREFOX, std::size(FIREFOX)};
+    case TlsClientProfile::OKHTTP:
+        return {OKHTTP, std::size(OKHTTP)};
+    case TlsClientProfile::OPENSSL_DEFAULT:
+        return {OPENSSL, std::size(OPENSSL)};
+    case TlsClientProfile::CHROME:
+    case TlsClientProfile::DEFAULT:
+        break;
+    }
+    return {nullptr, 0};
 }
 
 // OpenSSL `s_client` default signature_algorithms, verbatim and in order, so
@@ -227,7 +337,7 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
     }
 
     // Chrome permutes ClientHello extensions; the other profiles keep a fixed order.
-    SSL_CTX_set_permute_extensions(ctx.get(), profile == TlsClientProfile::CHROME);
+    SSL_CTX_set_permute_extensions(ctx.get(), is_chrome_profile(profile));
 
     // GREASE is sent by the browser profiles.
     if (!quic && browser) {
@@ -250,7 +360,7 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
     if (ssl == nullptr) {
         return "Failed to create SSL";
     }
-    if (!SocketAddress{params.sni}.valid()) {
+    if (params.sni != nullptr && !SocketAddress{params.sni}.valid()) {
         if (0 == SSL_set_tlsext_host_name(ssl.get(), params.sni)) {
             return "Failed to set SNI";
         }
@@ -290,17 +400,30 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
 #ifdef OPENSSL_IS_BORINGSSL
     if (profile != TlsClientProfile::DEFAULT) {
         // ECH GREASE: sent by Chrome and Firefox.
-        if (profile == TlsClientProfile::CHROME || profile == TlsClientProfile::FIREFOX) {
+        if (is_chrome_profile(profile) || profile == TlsClientProfile::FIREFOX) {
             SSL_set_enable_ech_grease(ssl.get(), 1);
         }
 
         // ALPS (application settings): only Chrome sends it.
-        if (profile == TlsClientProfile::CHROME) {
+        if (is_chrome_profile(profile)) {
             const char *alps = quic ? "h3" : "h2";
             if (1 != SSL_add_application_settings(ssl.get(), (const uint8_t *) alps, 2, nullptr, 0)) {
                 return "Failed to add ALPS extension";
             }
             SSL_set_alps_use_new_codepoint(ssl.get(), 1);
+        }
+
+        if (profile == TlsClientProfile::CHROME_CANARY) {
+            // `server_padding` (0x12e0 = 4832) asks the server to pad EncryptedExtensions by the
+            // requested number of bytes; Chrome requests 1000.
+            SSL_set_server_padding_request(ssl.get(), 1000);
+            // A GREASE value at the head of signature_algorithms. This affects neither JA4 (which
+            // strips GREASE before hashing) nor JA3 (which does not cover signature algorithms at
+            // all) — only the raw bytes. It is still worth sending: implementations that hash
+            // GREASE instead of stripping it (tshark, for example) derive a different JA4_c from
+            // every Chrome 152 handshake, so a client omitting it would stand out by hashing to
+            // one stable value under those tools.
+            SSL_set_grease_sigalgs_enabled(ssl.get(), 1);
         }
 
         // Safari does not advertise the session_ticket extension.
@@ -324,7 +447,7 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
 
         // The post-quantum toggle only gates the default Chrome group list; the other profiles
         // always advertise their fixed group list.
-        if (profile != TlsClientProfile::CHROME || params.post_quantum) {
+        if (!is_chrome_profile(profile) || params.post_quantum) {
             auto [groups, groups_len] = groups_for(profile);
             if (!SSL_set1_group_ids(ssl.get(), groups, groups_len)) {
                 return "Failed to set groups";
@@ -340,6 +463,14 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
         }
 
         if (!quic) {
+            // Pin the ClientHello extension order for every non-Chrome profile so
+            // the wire order matches the reference client (Chrome permutes instead).
+            // Not applied to QUIC, whose extension set (transport parameters) differs
+            // and has no reference order here.
+            if (auto [ext_order, ext_order_len] = extension_order_for(profile); ext_order != nullptr) {
+                SSL_set_extension_order(ssl.get(), ext_order, ext_order_len);
+            }
+
             // signed_certificate_timestamp: sent by the browser profiles, not by OkHttp/OpenSSL.
             if (browser) {
                 SSL_enable_signed_cert_timestamps(ssl.get());
@@ -357,7 +488,12 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
                         ssl.get(), OPENSSL_SIGALGS, std::size(OPENSSL_SIGALGS));
             } else {
                 auto [sigalgs, sigalgs_len] = sigalgs_for(profile);
-                if (!SSL_set_verify_algorithm_prefs(ssl.get(), sigalgs, sigalgs_len)) {
+                if (is_chrome_profile(profile)) {
+                    // Since Chrome 150 the list leads with ML-DSA, which BoringSSL does not know;
+                    // as with OPENSSL_SIGALGS these can only be advertised through the raw setter,
+                    // which skips the supported-algorithm check.
+                    SSL_set_raw_verify_algorithm_prefs(ssl.get(), sigalgs, sigalgs_len);
+                } else if (!SSL_set_verify_algorithm_prefs(ssl.get(), sigalgs, sigalgs_len)) {
                     return "Failed to set signature algorithms";
                 }
             }

@@ -10,7 +10,7 @@ arch: [ mipsel ]
 # so they don't collide with packages built by a plain clang of the same version.
 os:
   Windows:
-    ag_profile_version: &ag_profile_version [ null, "2" ]
+    ag_profile_version: &ag_profile_version [ null, "3" ]
     ag_sanitizer: &ag_sanitizer [ null, "address" ]
     ag_cc_is_zig: &ag_cc_is_zig [ null, "1" ]
   Linux:

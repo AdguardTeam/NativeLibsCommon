@@ -10,9 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Update docker image to core-libs:2.12.
-- The `musl-cross` CMake presets now cross-compile with `zig cc -target ...` instead of an external `/opt/cross` musl-gcc toolchain, and cover `x86_64`, `aarch64`, `arm`, `mips` and `mipsel`.
-
 ### Deprecated
 
 ### Removed
@@ -22,6 +19,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Linux NetworkMonitor now debounces brief default-route losses (5 s) before reporting "not connected", avoiding spurious disconnects during transient network transitions.
 
 ### Security
+
+## [8.1.47] - 2026-07-28
+
+### Added
+
+- New `make_ssl` ClientHello profile `TlsClientProfile::CHROME_CANARY`, reproducing the Chrome 152 (canary) ClientHello.
+- New BoringSSL patch `21_chrome_canary_extensions`, adding the client-side `server_padding` extension (codepoint `4832`) via `SSL_set_server_padding_request`, a signature_algorithms GREASE toggle via `SSL_set_grease_sigalgs_enabled`, and the `trust_anchors` extension (draft-ietf-tls-trust-anchor-ids, provisional codepoint `0xca34`) via `SSL_set1_requested_trust_anchors`.
+- `ag::println()` in `common/format.h` — the newline-appending counterpart of `ag::print()`, with the same strict format string checking (`fmt::println()` only checks that enough arguments are passed, not that there are no extra ones).
+
+### Changed
+
+- `TlsClientProfile::CHROME` now tracks Chrome 150 instead of Chrome 149, since 150 is the current stable release.
+
+### Fixed
+
+- `make_ssl()` no longer crashes when `SslInitParameters::sni` is left at its default `nullptr`.
+
+## [8.1.46] - 2026-07-24
+
+### Changed
+
+- Bump `ag_profile_version` from `"2"` to `"3"` in `conan/settings_user.yml` and all `.jinja` profiles. Cached Conan packages needed to be invalidated for several reasons: hard-float code for armv7 had crept into the cache while the project uses soft-float; the profile was not bumped after the Xcode 26.4.1 upgrade; and the MSVC version on GitHub Actions differs slightly from the Bamboo builder (though not enough to be considered a different profile).
+
+## [8.1.45] - 2026-07-23
+
+### Changed
+
+- Update docker image to core-libs:2.12.
+- The `musl-cross` CMake presets now cross-compile with `zig cc -target ...` instead of an external `/opt/cross` musl-gcc toolchain, and cover `x86_64`, `aarch64`, `arm`, `mips` and `mipsel`.
+- `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER` are replaced by the generated zig wrapper script for the `musl-cross` presets, so that compiler launchers (`sccache`, `ccache`) work with them. Existing `musl-cross` build directories have to be deleted once, as the compiler path changes.
 
 ## [8.1.44] - 2026-07-15
 
@@ -1235,7 +1262,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.47...HEAD
+[8.1.47]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.46...v8.1.47
+[8.1.46]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.45...v8.1.46
+[8.1.45]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.44...v8.1.45
 [8.1.44]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.43...v8.1.44
 [8.1.43]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.42...v8.1.43
 [8.1.42]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.41...v8.1.42

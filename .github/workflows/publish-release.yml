@@ -84,10 +84,19 @@ jobs:
           ref: ${{ github.event.pull_request.merge_commit_sha || '' }}
           fetch-depth: 0
 
+      # Taken from the tag job instead of `git describe`, which doesn't work
+      # inside the action's Docker build (it doesn't see .git).
+      - name: Compute release version
+        id: version
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+        env:
+          TAG: ${{ needs.tag.outputs.tag }}
+
       - name: Upload conan recipes
         uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/upload-conan-recipes@master
         with:
           export_script_path: scripts/export_conan.sh
+          version: ${{ steps.version.outputs.version }}
           conan_repo_url: ${{ vars.CONAN_REPO_URL }}
           artifactory_user: ${{ secrets.ARTIFACTORY_USER }}
           artifactory_api_key: ${{ secrets.ARTIFACTORY_API_KEY }}

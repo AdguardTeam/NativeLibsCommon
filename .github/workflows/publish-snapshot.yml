@@ -41,10 +41,16 @@ jobs:
           # <tag>-<n>-g<rev> snapshot version.
           fetch-depth: 0
 
+      # Computed here, outside the action's Docker build, which doesn't see .git.
+      - name: Compute snapshot version
+        id: version
+        run: echo "version=$(git describe --tags --match 'v*' | sed 's/^v//')" >> "$GITHUB_OUTPUT"
+
       - name: Upload conan recipes
         uses: AdGuardSoftwareLimited/native-libs-common/.github/actions/upload-conan-recipes@master
         with:
           export_script_path: scripts/export_conan.sh
+          version: ${{ steps.version.outputs.version }}
           conan_repo_url: ${{ vars.CONAN_REPO_URL }}
           artifactory_user: ${{ secrets.ARTIFACTORY_USER }}
           artifactory_api_key: ${{ secrets.ARTIFACTORY_API_KEY }}

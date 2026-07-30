@@ -131,7 +131,7 @@ jobs:
             # Changes on every run so the tests are never served from the cache.
             ARG CACHEBUST
 
-            RUN --mount=type=cache,id=conan-linux,target=/conan \
+            RUN --mount=type=cache,id=conan-linux-${{ github.run_id }},target=/conan \
                 --mount=type=secret,id=CONAN_REPO_URL,required=true \
                 --mount=type=secret,id=ARTIFACTORY_USER \
                 --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'

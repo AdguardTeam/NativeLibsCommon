@@ -29,10 +29,11 @@ See [README.md](README.md) for build and Conan usage details, and
 | `tls/` | TLS certificate utilities → library `ag_common_tls` |
 | `<module>/include/common/` | Public headers, included as `common/<...>` |
 | `<module>/test/` | Unit tests for the module |
+| `<module>/test/compile_fail/` | Code that must *not* compile, checked by `add_compile_fail_test` |
 | `android/` | Android (Kotlin/Gradle) adapter and bindings |
 | `conan/recipes/` | Custom Conan recipes for AdGuard-patched dependencies |
 | `conan/profiles/` | Conan profiles & CMake toolchains (linux, apple, android, windows, musl) |
-| `cmake/` | CMake modules: `add_unit_test`, Conan bootstrap/provider |
+| `cmake/` | CMake modules: `add_unit_test`, `add_compile_fail_test`, Conan bootstrap/provider |
 | `scripts/` | Conan export helpers, version setting, changelog tooling |
 | `.github/workflows/` | CI/CD pipelines (tests, release, mirror) |
 
