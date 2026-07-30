@@ -388,7 +388,8 @@ public:
      */
     Error<Http3Error> consume_connection(size_t length);
     /**
-     * Extend stream- and connection-level flow control windows.
+     * Extend stream-level flow control window. The connection-level window is extended by the session
+     * itself as soon as the data is passed to `Handler::on_body`, so it is not extended here.
      * @return Some error if failed, null otherwise.
      */
     Error<Http3Error> consume_stream(uint64_t stream_id, size_t length);
@@ -573,7 +574,8 @@ public:
      */
     Error<Http3Error> consume_connection(size_t length);
     /**
-     * Extend stream- and connection-level flow control windows.
+     * Extend stream-level flow control window. The connection-level window is extended by the session
+     * itself as soon as the data is passed to `Handler::on_body`, so it is not extended here.
      * @return Some error if failed, null otherwise.
      */
     Error<Http3Error> consume_stream(uint64_t stream_id, size_t length);

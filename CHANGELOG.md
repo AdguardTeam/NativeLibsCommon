@@ -29,10 +29,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - `TlsClientProfile::CHROME` now tracks Chrome 150 instead of Chrome 149, since 150 is the current stable release.
+- HTTP/3: `Http3Client::consume_stream()` and `Http3Server::consume_stream()` no longer extend the connection-level flow control window. The session now extends it itself as soon as the body data is passed to `Handler::on_body`, the same way `Http2Session.
 
 ### Fixed
 
 - `make_ssl()` no longer crashes when `SslInitParameters::sni` is left at its default `nullptr`.
+- HTTP/3: report an error from `nghttp3_conn_read_stream()` to ngtcp2 again. The escalation was dropped by accident in 8.1.37, so a peer that violates the HTTP/3 framing left the connection stuck instead of failing it.
 
 ## [8.1.46] - 2026-07-24
 

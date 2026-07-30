@@ -220,6 +220,12 @@ int Http3Session<T>::on_data_chunk_recv(
     auto *self = (Http3Session *) arg;
     log_sid(trace, self->m_id, stream_id, "{}", len);
 
+    // Body data is handed over to the application, which may hold on to it for a while and extend the
+    // stream-level window later via `consume_stream()`. The connection-level window, however, is extended
+    // right away, so that streams the application does not consume throttle only themselves and do not
+    // eat into the budget shared with every other stream on the same connection.
+    self->consume_connection_impl(len);
+
     auto iter = self->m_streams.find(stream_id);
     if (iter == self->m_streams.end()) {
         log_sid(warn, self->m_id, stream_id, "Stream not found");
@@ -734,9 +740,12 @@ int Http3Session<T>::recv_h3_stream_data(int64_t stream_id, Uint8View chunk, boo
     nghttp3_ssize r = nghttp3_conn_read_stream(m_http_conn.get(), stream_id, chunk.data(), chunk.length(), eof);
     if (r < 0) {
         log_sid(dbg, m_id, stream_id, "Couldn't read stream: {} ({})", nghttp3_strerror(r), r);
-        return 0;
+        ngtcp2_ccerr_set_application_error(&m_last_error, nghttp3_err_infer_quic_app_error_code(int(r)), nullptr, 0);
+        return NGTCP2_ERR_CALLBACK_FAILURE;
     }
 
+    // These bytes never reach the application, so both windows are extended here.
+    consume_connection_impl(r);
     if (Error<Http3Error> error = consume_stream_impl(stream_id, r); error != nullptr) {
         log_sid(dbg, m_id, stream_id, "Couldn't consume stream: {}", error->str());
         return NGTCP2_ERR_CALLBACK_FAILURE;
@@ -813,10 +822,6 @@ Error<Http3Error> Http3Session<T>::consume_connection_impl(size_t length) {
 
 template <typename T>
 Error<Http3Error> Http3Session<T>::consume_stream_impl(uint64_t stream_id, size_t length) {
-    if (Error<Http3Error> error = consume_connection_impl(length); error != nullptr) {
-        return make_error(Http3Error{NGTCP2_ERR_INTERNAL}, "Couldn't consume connection", error);
-    }
-
     if (int status = ngtcp2_conn_extend_max_stream_offset(m_quic_conn.get(), int64_t(stream_id), length);
             status != NGTCP2_NO_ERROR) {
         return make_error(Http3Error{status}, "Couldn't consume stream");
@@ -1061,8 +1066,9 @@ template <typename T>
 int Http3Session<T>::on_deferred_consume(nghttp3_conn *, int64_t stream_id, size_t consumed, void *arg, void *) {
     auto *self = (Http3Session *) arg;
 
-    Error<Http3Error> error = self->consume_stream_impl(stream_id, consumed);
-    if (error != nullptr) {
+    // These bytes never reach the application, so both windows are extended here.
+    self->consume_connection_impl(consumed);
+    if (Error<Http3Error> error = self->consume_stream_impl(stream_id, consumed); error != nullptr) {
         log_sid(dbg, self->m_id, stream_id, "{}", error->str());
         return NGHTTP3_ERR_CALLBACK_FAILURE;
     }
