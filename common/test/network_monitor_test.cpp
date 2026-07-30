@@ -47,6 +47,7 @@ protected:
 
 #ifdef __linux__
     UniquePtr<event_base, &event_base_free> m_ev_base;
+    bool m_break_event_loop_on_disconnect = false;
 #endif
 
     void SetUp() override {
@@ -54,6 +55,11 @@ protected:
                 std::make_unique<SimulateStatusNetworkMonitor>([this](const std::string &if_name, bool is_connected) {
                     m_is_connected = is_connected;
                     m_bound_if = if_name;
+#ifdef __linux__
+                    if (m_break_event_loop_on_disconnect && !is_connected) {
+                        event_base_loopbreak(m_ev_base.get());
+                    }
+#endif
                 });
 
 #ifdef __linux__
@@ -135,13 +141,15 @@ TEST_F(NetworkMonitorTest, DisconnectDebouncedTimeout) {
     ASSERT_TRUE(m_is_connected);
     ASSERT_EQ(m_bound_if, "eth0");
 
+    m_break_event_loop_on_disconnect = true;
     m_monitor->schedule_disconnect_debounce();
+    timeval watchdog_delay{10, 0};
+    event_base_loopexit(m_ev_base.get(), &watchdog_delay);
     event_base_dispatch(m_ev_base.get());
+    m_monitor->stop();
 
     ASSERT_FALSE(m_is_connected);
     ASSERT_TRUE(m_bound_if.empty());
-
-    m_monitor->stop();
 }
 
 TEST_F(NetworkMonitorTest, DisconnectDebouncedCanceled) {
