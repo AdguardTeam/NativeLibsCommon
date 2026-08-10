@@ -1,4 +1,7 @@
+#include <algorithm>
 #include <cstring>
+#include <utility>
+#include <vector>
 
 #include <event2/thread.h>
 #include <event2/util.h>
@@ -234,75 +237,98 @@ static bool is_physical_adapter(const IP_ADAPTER_ADDRESSES *aa) {
     return aa->FirstUnicastAddress != nullptr;
 }
 
+namespace {
+
+struct DefaultRouteIf {
+    NET_IFINDEX idx; // The route's InterfaceIndex property.
+    ULONG metric; // Initially, the route's metric, then summed with the interface metric.
+
+    DefaultRouteIf(NET_IFINDEX idx, ULONG metric)
+            : idx{idx}
+            , metric{metric} {
+    }
+};
+
+std::string format_as(const DefaultRouteIf &o) {
+    return AG_FMT("{{idx: {}, metric: {}}}", o.idx, o.metric);
+}
+
+} // namespace
+
 static DWORD get_default_route_ifs(
-        std::unordered_set<NET_IFINDEX> &net_ifs_v4, std::unordered_set<NET_IFINDEX> &net_ifs_v6) {
+        std::vector<DefaultRouteIf> &net_ifs_v4, std::vector<DefaultRouteIf> &net_ifs_v6) {
     PMIB_IPFORWARD_TABLE2 table_v4{};
     PMIB_IPFORWARD_TABLE2 table_v6{};
+    ag::utils::ScopeExit e{[&] {
+        FreeMibTable(table_v4);
+        FreeMibTable(table_v6);
+    }};
     DWORD error = ERROR_SUCCESS;
     if (error = GetIpForwardTable2(AF_INET, &table_v4); error != ERROR_SUCCESS) {
-        errlog(g_logger, "Ipv4 GetIpForwardTable2(): {}", sys::strerror(error));
+        warnlog(g_logger, "Ipv4 GetIpForwardTable2(): {}", sys::strerror(error));
         return error;
     }
     if (error = GetIpForwardTable2(AF_INET6, &table_v6); error != ERROR_SUCCESS) {
-        errlog(g_logger, "Ipv6 GetIpForwardTable2(): {}", sys::strerror(error));
+        warnlog(g_logger, "Ipv6 GetIpForwardTable2(): {}", sys::strerror(error));
         return error;
     }
     for (size_t i = 0; i < table_v4->NumEntries; i++) {
         if (SocketAddress((sockaddr *) &table_v4->Table[i].DestinationPrefix.Prefix.Ipv4).is_any()
                 && table_v4->Table[i].DestinationPrefix.PrefixLength == 0) {
-            net_ifs_v4.insert(table_v4->Table[i].InterfaceIndex);
+            net_ifs_v4.emplace_back(table_v4->Table[i].InterfaceIndex, table_v4->Table[i].Metric);
         }
     }
     for (size_t i = 0; i < table_v6->NumEntries; i++) {
         if (SocketAddress((sockaddr *) &table_v6->Table[i].DestinationPrefix.Prefix.Ipv6).is_any()
                 && table_v6->Table[i].DestinationPrefix.PrefixLength == 0) {
-            net_ifs_v6.insert(table_v6->Table[i].InterfaceIndex);
+            net_ifs_v6.emplace_back(table_v6->Table[i].InterfaceIndex, table_v6->Table[i].Metric);
         }
     }
     dbglog(g_logger, "Default route interfaces: ipv4 = {}, ipv6 = {}", net_ifs_v4, net_ifs_v6);
     return error;
 }
 
-/// return interface with minimal metric: <index, min_metric>
-static std::pair<uint32_t, uint32_t> get_min_metric_if(std::unordered_set<NET_IFINDEX> &net_ifs, bool ipv6 = false) {
+// Filter inactive ifs and add interface metrics to the route metrics stored in `net_ifs`.
+static void filter_default_route_ifs(std::vector<DefaultRouteIf> &net_ifs, bool ipv6 = false) {
     auto ip_family = AF_INET;
     if (ipv6) {
         ip_family = AF_INET6;
     }
-    uint32_t result_idx = 0;
-    uint32_t min_metric = NL_MAX_METRIC_COMPONENT;
-    for (const auto &index : net_ifs) {
+    for (auto it = net_ifs.begin(); it != net_ifs.end();) {
         MIB_IPINTERFACE_ROW row;
         InitializeIpInterfaceEntry(&row);
         row.Family = ip_family;
-        row.InterfaceIndex = index;
+        row.InterfaceIndex = it->idx;
         if (DWORD error = GetIpInterfaceEntry(&row); error != ERROR_SUCCESS) {
-            errlog(g_logger, "GetIpInterfaceEntry(): {}", sys::strerror(error));
-        } else if (row.Connected && row.Metric < min_metric) {
-            result_idx = row.InterfaceIndex;
-            min_metric = row.Metric;
+            warnlog(g_logger, "GetIpInterfaceEntry(): {}", sys::strerror(error));
+            it = net_ifs.erase(it);
+            continue;
         }
+        if (!row.Connected) {
+            it = net_ifs.erase(it);
+            continue;
+        }
+        it->metric += row.Metric;
+        ++it;
     }
-    return {result_idx, min_metric};
 }
 
 DWORD utils::win_get_physical_interfaces(std::unordered_set<NET_IFINDEX> &physical_ifs) {
-    ULONG flags =
-            GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_INCLUDE_GATEWAYS;
+    ULONG flags = GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER;
 
     ULONG size = 0;
     ULONG ret = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, nullptr, &size);
     if (ret != ERROR_BUFFER_OVERFLOW) {
         if (ret == NO_ERROR)
             return ERROR_SUCCESS;
-        errlog(g_logger, "GetAdaptersAddresses(size probe) failed: {}", sys::strerror(ret));
+        warnlog(g_logger, "GetAdaptersAddresses(size probe) failed: {}", sys::strerror(ret));
         return ret;
     }
 
     std::vector<uint8_t> buf(size);
     ret = GetAdaptersAddresses(AF_UNSPEC, flags, nullptr, (IP_ADAPTER_ADDRESSES *) buf.data(), &size);
     if (ret != NO_ERROR) {
-        errlog(g_logger, "GetAdaptersAddresses() failed: {}", sys::strerror(ret));
+        warnlog(g_logger, "GetAdaptersAddresses() failed: {}", sys::strerror(ret));
         return ret;
     }
 
@@ -326,47 +352,43 @@ uint32_t utils::win_detect_active_if() {
     std::unordered_set<NET_IFINDEX> physical_ifs;
     DWORD error = win_get_physical_interfaces(physical_ifs);
     if (physical_ifs.empty()) {
+        warnlog(g_logger, "get_physical_interfaces: {}", sys::strerror(error));
         SetLastError(error);
-        errlog(g_logger, "get_physical_interfaces: {}", sys::strerror(error));
         return 0;
     }
     // get interfaces with default route from routing table
-    std::unordered_set<NET_IFINDEX> net_ifs_v4;
-    std::unordered_set<NET_IFINDEX> net_ifs_v6;
+    std::vector<DefaultRouteIf> net_ifs_v4;
+    std::vector<DefaultRouteIf> net_ifs_v6;
     error = get_default_route_ifs(net_ifs_v4, net_ifs_v6);
     if (error != ERROR_SUCCESS) {
+        warnlog(g_logger, "get_default_route_ifs: {}", sys::strerror(error));
         SetLastError(error);
-        errlog(g_logger, "get_default_route_ifs: {}", sys::strerror(error));
         return 0;
     }
     // exclude non-physical interfaces
-    std::erase_if(net_ifs_v4, [&](auto net_if) {
-        return !physical_ifs.contains(net_if);
+    std::erase_if(net_ifs_v4, [&](const auto &net_if) {
+        return !physical_ifs.contains(net_if.idx);
     });
-    std::erase_if(net_ifs_v6, [&](auto net_if) {
-        return !physical_ifs.contains(net_if);
+    std::erase_if(net_ifs_v6, [&](const auto &net_if) {
+        return !physical_ifs.contains(net_if.idx);
     });
 
-    // Then choose operational one with minimal metric
-    // handle ipv4
-    auto [index_v4, min_metric_v4] = get_min_metric_if(net_ifs_v4, false);
-    dbglog(g_logger, "min_metric_v4 = {} with if_index = {}", min_metric_v4, index_v4);
-    // handle ipv6
-    auto [index_v6, min_metric_v6] = get_min_metric_if(net_ifs_v6, true);
-    dbglog(g_logger, "min_metric_v6 = {} with if_index = {}", min_metric_v6, index_v6);
-    // A default IPv4 route already guarantees IPv4 connectivity on `index_v4`, and likewise a default
-    // IPv6 route guarantees IPv6 connectivity on `index_v6`. Comparing metrics across address families
-    // is meaningless: on dual-stack hosts it can pin an IPv6-only-default interface (lower metric) for
-    // IPv4 sockets, so GetBestRoute2() then fails for IPv4 destinations and every IPv4 endpoint
-    // connection breaks (AG-56159). Prefer the IPv4 default-route interface; fall back to the IPv6 one
-    // only when there is no usable IPv4 default route.
-    if (index_v4 != 0) {
-        return index_v4;
+    // Select the connected interface with the minimum sum of interface and route metrics, preferring IPv4 interfaces.
+    for (std::vector<DefaultRouteIf> *net_ifs : {&net_ifs_v4, &net_ifs_v6}) {
+        bool ipv6 = (net_ifs == &net_ifs_v6);
+        filter_default_route_ifs(*net_ifs, ipv6);
+        if (net_ifs->empty()) {
+            continue;
+        }
+        std::sort(net_ifs->begin(), net_ifs->end(), [](const auto &l, const auto &r) {
+            return l.metric < r.metric;
+        });
+        dbglog(g_logger, "Minimum combined metric (v{}): {}, interface index: {}", ipv6 ? "6" : "4",
+                net_ifs->front().metric, net_ifs->front().idx);
+        return net_ifs->front().idx;
     }
-    if (index_v6 == 0) {
-        errlog(g_logger, "No default-route interface found");
-    }
-    return index_v6;
+    warnlog(g_logger, "No default-route interface found");
+    return 0;
 }
 
 static std::string if_index_to_uuid(uint32_t idx) {
