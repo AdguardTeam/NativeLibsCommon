@@ -6,7 +6,7 @@ import os
 
 class BoringsslConan(ConanFile):
     name = "openssl"
-    version = "boring-2024-09-13"
+    version = "boring-2026-05-08"
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
@@ -18,8 +18,8 @@ class BoringsslConan(ConanFile):
 
     def source(self):
         get(self,
-            # 0.20240913.0 tag
-            url="https://boringssl.googlesource.com/boringssl/+archive/58f3bc83230d2958bb9710bc910972c4f5d382dc.tar.gz",
+            # 0.20260508.0 tag
+            url="https://boringssl.googlesource.com/boringssl/+archive/d589045a772678d5ca131f4c8087d001b9258380.tar.gz",
             destination="source_subfolder")
 
         # Apply all patches from the `patches` directory
@@ -40,7 +40,6 @@ class BoringsslConan(ConanFile):
             tc.cache_variables["CMAKE_SYSTEM_PROCESSOR"] = "ARM64"
             tc.cache_variables["CMAKE_ASM_COMPILER"] = "C:/Program Files/LLVM/bin/clang.exe"
 
-        # TODO: remove this after updating to version newer than 2024-09-13
         tc.cache_variables["CMAKE_POLICY_VERSION_MINIMUM"] = "3.24"
         tc.generate()
 

@@ -11,7 +11,7 @@ class LibeventConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
-    requires = ["openssl/boring-2024-09-13@adguard/oss"]
+    requires = ["openssl/boring-2026-05-08@adguard/oss"]
     exports_sources = ["CMakeLists.txt", "patches/*"]
 
     def config_options(self):

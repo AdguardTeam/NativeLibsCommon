@@ -1,17 +1,17 @@
 diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
-index f76e0a1b5..4e4685529 100644
+index f3ab1aa..618fb74 100644
 --- a/include/openssl/ssl.h
 +++ b/include/openssl/ssl.h
-@@ -2550,6 +2550,8 @@ OPENSSL_EXPORT size_t SSL_CTX_get_num_tickets(const SSL_CTX *ctx);
- #define SSL_GROUP_X25519 29
+@@ -2586,6 +2586,8 @@ OPENSSL_EXPORT size_t SSL_CTX_get_num_tickets(const SSL_CTX *ctx);
  #define SSL_GROUP_X25519_MLKEM768 0x11ec
  #define SSL_GROUP_X25519_KYBER768_DRAFT00 0x6399
+ #define SSL_GROUP_MLKEM1024 0x0202
 +#define SSL_GROUP_FFDHE2048 256
 +#define SSL_GROUP_FFDHE3072 257
  
  // SSL_CTX_set1_group_ids sets the preferred groups for |ctx| to |group_ids|.
- // Each element of |group_ids| should be one of the |SSL_GROUP_*| constants. It
-@@ -5543,6 +5545,8 @@ OPENSSL_EXPORT int SSL_CTX_set_tlsext_status_arg(SSL_CTX *ctx, void *arg);
+ // Each element of |group_ids| should be a unique one of the |SSL_GROUP_*|
+@@ -6182,6 +6184,8 @@ OPENSSL_EXPORT int SSL_CTX_set_tlsext_status_arg(SSL_CTX *ctx, void *arg);
  #define SSL_CURVE_SECP521R1 SSL_GROUP_SECP521R1
  #define SSL_CURVE_X25519 SSL_GROUP_X25519
  #define SSL_CURVE_X25519_KYBER768_DRAFT00 SSL_GROUP_X25519_KYBER768_DRAFT00
@@ -20,7 +20,7 @@ index f76e0a1b5..4e4685529 100644
  
  // SSL_get_curve_id calls |SSL_get_group_id|.
  OPENSSL_EXPORT uint16_t SSL_get_curve_id(const SSL *ssl);
-@@ -5910,11 +5912,11 @@ OPENSSL_EXPORT void SSL_set_msg_callback_cl(
+@@ -6744,11 +6748,11 @@ OPENSSL_EXPORT void SSL_set_msg_callback_cl(
                                           const uint8_t *buf, size_t len,
                                           SSL *ssl, void *arg));
  
@@ -38,10 +38,10 @@ index f76e0a1b5..4e4685529 100644
      SSL_CTX *ctx, bool override_value);
  
 diff --git a/ssl/encrypted_client_hello.cc b/ssl/encrypted_client_hello.cc
-index 8c4a42ce8..af20d5aa6 100644
+index e288f3c..c149f32 100644
 --- a/ssl/encrypted_client_hello.cc
 +++ b/ssl/encrypted_client_hello.cc
-@@ -661,9 +661,7 @@ bool ssl_select_ech_config(SSL_HANDSHAKE *hs, Span<uint8_t> out_enc,
+@@ -681,9 +681,7 @@ bool ssl_select_ech_config(SSL_HANDSHAKE *hs, Span<uint8_t> out_enc,
        if (supported &&  //
            ech_config.kem_id == EVP_HPKE_DHKEM_X25519_HKDF_SHA256 &&
            select_ech_cipher_suite(&kdf, &aead, ech_config.cipher_suites,
@@ -52,7 +52,7 @@ index 8c4a42ce8..af20d5aa6 100644
          ScopedCBB info;
          static const uint8_t kInfoLabel[] = "tls ech";  // includes trailing NUL
          if (!CBB_init(info.get(), sizeof(kInfoLabel) + ech_config.raw.size()) ||
-@@ -717,9 +715,7 @@ static bool setup_ech_grease(SSL_HANDSHAKE *hs) {
+@@ -736,9 +734,7 @@ static bool setup_ech_grease(SSL_HANDSHAKE *hs) {
    }
  
    const uint16_t kdf_id = EVP_HPKE_HKDF_SHA256;
@@ -64,124 +64,128 @@ index 8c4a42ce8..af20d5aa6 100644
        has_aes_hw ? EVP_hpke_aes_128_gcm() : EVP_hpke_chacha20_poly1305();
    static_assert(ssl_grease_ech_config_id < sizeof(hs->grease_seed),
 diff --git a/ssl/extensions.cc b/ssl/extensions.cc
-index 30591a6a0..ecf6dd397 100644
+index d4b9395..72ef05f 100644
 --- a/ssl/extensions.cc
 +++ b/ssl/extensions.cc
-@@ -3123,13 +3123,6 @@ static const struct tls_extension kExtensions[] = {
-     ext_sni_parse_clienthello,
-     ext_sni_add_serverhello,
-   },
--  {
--    TLSEXT_TYPE_encrypted_client_hello,
--    ext_ech_add_clienthello,
--    ext_ech_parse_serverhello,
--    ext_ech_parse_clienthello,
--    ext_ech_add_serverhello,
--  },
-   {
-     TLSEXT_TYPE_extended_master_secret,
-     ext_ems_add_clienthello,
-@@ -3181,6 +3174,20 @@ static const struct tls_extension kExtensions[] = {
-     ext_ocsp_parse_clienthello,
-     ext_ocsp_add_serverhello,
-   },
-+  {
-+    TLSEXT_TYPE_key_share,
-+    ext_key_share_add_clienthello,
-+    forbid_parse_serverhello,
-+    ignore_parse_clienthello,
-+    dont_add_serverhello,
-+  },
-+  {
-+    TLSEXT_TYPE_supported_versions,
-+    ext_supported_versions_add_clienthello,
-+    forbid_parse_serverhello,
-+    ignore_parse_clienthello,
-+    dont_add_serverhello,
-+  },
-   {
-     TLSEXT_TYPE_signature_algorithms,
-     ext_sigalgs_add_clienthello,
-@@ -3216,13 +3223,6 @@ static const struct tls_extension kExtensions[] = {
-     ext_srtp_parse_clienthello,
-     ext_srtp_add_serverhello,
-   },
--  {
--    TLSEXT_TYPE_key_share,
--    ext_key_share_add_clienthello,
--    forbid_parse_serverhello,
--    ignore_parse_clienthello,
--    dont_add_serverhello,
--  },
-   {
-     TLSEXT_TYPE_psk_key_exchange_modes,
-     ext_psk_key_exchange_modes_add_clienthello,
-@@ -3237,13 +3237,6 @@ static const struct tls_extension kExtensions[] = {
-     ext_early_data_parse_clienthello,
-     ext_early_data_add_serverhello,
-   },
--  {
--    TLSEXT_TYPE_supported_versions,
--    ext_supported_versions_add_clienthello,
--    forbid_parse_serverhello,
--    ignore_parse_clienthello,
--    dont_add_serverhello,
--  },
-   {
-     TLSEXT_TYPE_cookie,
-     ext_cookie_add_clienthello,
-@@ -3295,6 +3288,13 @@ static const struct tls_extension kExtensions[] = {
-     ignore_parse_clienthello,
-     ext_alps_add_serverhello_old,
-   },
-+  {
-+    TLSEXT_TYPE_encrypted_client_hello,
-+    ext_ech_add_clienthello,
-+    ext_ech_parse_serverhello,
-+    ext_ech_parse_clienthello,
-+    ext_ech_add_serverhello,
-+  },
+@@ -3956,13 +3956,6 @@ static const struct tls_extension kExtensions[] = {
+         ext_sni_parse_clienthello,
+         ext_sni_add_serverhello,
+     },
+-    {
+-        TLSEXT_TYPE_encrypted_client_hello,
+-        ext_ech_add_clienthello,
+-        ext_ech_parse_serverhello,
+-        ext_ech_parse_clienthello,
+-        ext_ech_add_serverhello,
+-    },
+     {
+         TLSEXT_TYPE_extended_master_secret,
+         ext_ems_add_clienthello,
+@@ -4014,6 +4007,20 @@ static const struct tls_extension kExtensions[] = {
+         ext_ocsp_parse_clienthello,
+         ext_ocsp_add_serverhello,
+     },
++    {
++        TLSEXT_TYPE_key_share,
++        ext_key_share_add_clienthello,
++        forbid_parse_serverhello,
++        ignore_parse_clienthello,
++        dont_add_serverhello,
++    },
++    {
++        TLSEXT_TYPE_supported_versions,
++        ext_supported_versions_add_clienthello,
++        forbid_parse_serverhello,
++        ignore_parse_clienthello,
++        dont_add_serverhello,
++    },
+     {
+         TLSEXT_TYPE_signature_algorithms,
+         ext_sigalgs_add_clienthello,
+@@ -4049,13 +4056,6 @@ static const struct tls_extension kExtensions[] = {
+         ext_srtp_parse_clienthello,
+         ext_srtp_add_serverhello,
+     },
+-    {
+-        TLSEXT_TYPE_key_share,
+-        ext_key_share_add_clienthello,
+-        forbid_parse_serverhello,
+-        ignore_parse_clienthello,
+-        dont_add_serverhello,
+-    },
+     {
+         TLSEXT_TYPE_psk_key_exchange_modes,
+         ext_psk_key_exchange_modes_add_clienthello,
+@@ -4070,13 +4070,6 @@ static const struct tls_extension kExtensions[] = {
+         ext_early_data_parse_clienthello,
+         ext_early_data_add_serverhello,
+     },
+-    {
+-        TLSEXT_TYPE_supported_versions,
+-        ext_supported_versions_add_clienthello,
+-        forbid_parse_serverhello,
+-        ignore_parse_clienthello,
+-        dont_add_serverhello,
+-    },
+     {
+         TLSEXT_TYPE_cookie,
+         ext_cookie_add_clienthello,
+@@ -4169,6 +4162,13 @@ static const struct tls_extension kExtensions[] = {
+         ignore_parse_clienthello,
+         ext_server_cert_type_add_serverhello,
+     },
++    {
++        TLSEXT_TYPE_encrypted_client_hello,
++        ext_ech_add_clienthello,
++        ext_ech_parse_serverhello,
++        ext_ech_parse_clienthello,
++        ext_ech_add_serverhello,
++    },
  };
  
  #define kNumExtensions (sizeof(kExtensions) / sizeof(struct tls_extension))
 diff --git a/ssl/handshake_client.cc b/ssl/handshake_client.cc
-index 3bfc7ae63..3604836c7 100644
+index 7ab6d2c..00935f3 100644
 --- a/ssl/handshake_client.cc
 +++ b/ssl/handshake_client.cc
-@@ -259,15 +259,21 @@ static bool ssl_write_client_cipher_list(const SSL_HANDSHAKE *hs, CBB *out,
-         TLS1_3_CK_AES_128_GCM_SHA256 & 0xffff,
-         TLS1_3_CK_CHACHA20_POLY1305_SHA256 & 0xffff,
+@@ -127,14 +127,25 @@ static bool ssl_write_client_cipher_list(const SSL_HANDSHAKE *hs, CBB *out,
+         SSL_CIPHER_CHACHA20_POLY1305_SHA256,
      };
-+    static const uint16_t kCiphersChaCha20Middle[] = {
-+        TLS1_3_CK_AES_128_GCM_SHA256 & 0xffff,
-+        TLS1_3_CK_CHACHA20_POLY1305_SHA256 & 0xffff,
-+        TLS1_3_CK_AES_256_GCM_SHA384 & 0xffff,
-+    };
  
 -    const bool has_aes_hw = ssl->config->aes_hw_override
 -                                ? ssl->config->aes_hw_override_value
 -                                : EVP_has_aes_hardware();
++    static const uint16_t kCiphersChaCha20Middle[] = {
++        SSL_CIPHER_AES_128_GCM_SHA256,
++        SSL_CIPHER_CHACHA20_POLY1305_SHA256,
++        SSL_CIPHER_AES_256_GCM_SHA384,
++    };
++
 +    const bool has_aes_hw = EVP_has_aes_hardware();
-+    const bool chacha20_middle = ssl->config->aes_hw_override && !ssl->config->aes_hw_override_value;
++    const bool chacha20_middle =
++        ssl->config->aes_hw_override && !ssl->config->aes_hw_override_value;
      const bssl::Span<const uint16_t> ciphers =
--        ssl->config->tls13_cipher_policy == ssl_compliance_policy_cnsa_202407
+-        ssl->config->compliance_policy == ssl_compliance_policy_cnsa_202407
 -            ? bssl::Span<const uint16_t>(kCiphersCNSA)
 -            : (has_aes_hw ? bssl::Span<const uint16_t>(kCiphersAESHardware)
 -                          : bssl::Span<const uint16_t>(kCiphersNoAESHardware));
 +        chacha20_middle
 +            ? bssl::Span<const uint16_t>(kCiphersChaCha20Middle)
-+            : (ssl->config->tls13_cipher_policy == ssl_compliance_policy_cnsa_202407
-+                ? bssl::Span<const uint16_t>(kCiphersCNSA)
-+                : (has_aes_hw ? bssl::Span<const uint16_t>(kCiphersAESHardware)
-+                              : bssl::Span<const uint16_t>(kCiphersNoAESHardware)));
++            : (ssl->config->compliance_policy ==
++                       ssl_compliance_policy_cnsa_202407
++                   ? bssl::Span<const uint16_t>(kCiphersCNSA)
++                   : (has_aes_hw
++                          ? bssl::Span<const uint16_t>(kCiphersAESHardware)
++                          : bssl::Span<const uint16_t>(
++                                kCiphersNoAESHardware)));
  
      for (auto cipher : ciphers) {
        if (!ssl_add_tls13_cipher(&child, cipher,
 diff --git a/ssl/internal.h b/ssl/internal.h
-index 5051182bf..da9fb6218 100644
+index 26df546..73f8ade 100644
 --- a/ssl/internal.h
 +++ b/ssl/internal.h
-@@ -1242,6 +1242,11 @@ bool ssl_name_to_group_id(uint16_t *out_group_id, const char *name, size_t len);
+@@ -933,6 +933,11 @@ bool ssl_name_to_group_id(uint16_t *out_group_id, const char *name, size_t len);
  // |NID_undef| if unknown.
  int ssl_group_id_to_nid(uint16_t group_id);
  
@@ -194,11 +198,11 @@ index 5051182bf..da9fb6218 100644
  // Handshake messages.
  
 diff --git a/ssl/ssl_key_share.cc b/ssl/ssl_key_share.cc
-index 923b8bb48..eae1c748b 100644
+index d155b55..1a7f0d5 100644
 --- a/ssl/ssl_key_share.cc
 +++ b/ssl/ssl_key_share.cc
-@@ -373,6 +373,16 @@ class X25519MLKEM768KeyShare : public SSLKeyShare {
-   MLKEM768_private_key mlkem_private_key_;
+@@ -435,6 +435,16 @@ class MLKEM1024KeyShare : public SSLKeyShare {
+   MLKEM1024_private_key private_key_;
  };
  
 +struct FirefoxPulpNamedGroup {
@@ -212,14 +216,14 @@ index 923b8bb48..eae1c748b 100644
 +};
 +
  constexpr NamedGroup kNamedGroups[] = {
-     {NID_secp224r1, SSL_GROUP_SECP224R1, "P-224", "secp224r1"},
      {NID_X9_62_prime256v1, SSL_GROUP_SECP256R1, "P-256", "prime256v1"},
-@@ -434,6 +444,13 @@ bool ssl_name_to_group_id(uint16_t *out_group_id, const char *name, size_t len)
+     {NID_secp384r1, SSL_GROUP_SECP384R1, "P-384", "secp384r1"},
+@@ -507,6 +517,13 @@ bool ssl_name_to_group_id(uint16_t *out_group_id, const char *name,
        return true;
      }
    }
 +  for (const auto &group : kFirefoxPulpNamedGroups) {
-+    if (len == strlen(group.name) &&
++    if (len == strlen(group.name) &&  //
 +        !strncmp(group.name, name, len)) {
 +      *out_group_id = group.group_id;
 +      return true;
@@ -228,7 +232,7 @@ index 923b8bb48..eae1c748b 100644
    return false;
  }
  
-@@ -446,6 +463,15 @@ int ssl_group_id_to_nid(uint16_t group_id) {
+@@ -519,6 +536,15 @@ int ssl_group_id_to_nid(uint16_t group_id) {
    return NID_undef;
  }
  
@@ -245,10 +249,10 @@ index 923b8bb48..eae1c748b 100644
  
  using namespace bssl;
 diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
-index 2e7859994..b1e657646 100644
+index a0ed9e8..842aefa 100644
 --- a/ssl/ssl_lib.cc
 +++ b/ssl/ssl_lib.cc
-@@ -1996,7 +1996,7 @@ int SSL_CTX_set_tlsext_ticket_key_cb(
+@@ -1879,7 +1879,7 @@ static bool check_no_duplicates(Span<const uint16_t> list) {
  
  static bool check_group_ids(Span<const uint16_t> group_ids) {
    for (uint16_t group_id : group_ids) {
@@ -257,7 +261,7 @@ index 2e7859994..b1e657646 100644
        OPENSSL_PUT_ERROR(SSL, SSL_R_UNSUPPORTED_ELLIPTIC_CURVE);
        return false;
      }
-@@ -2167,16 +2167,12 @@ const char *SSL_get_cipher_list(const SSL *ssl, int n) {
+@@ -2176,16 +2176,12 @@ const char *SSL_get_cipher_list(const SSL *ssl, int n) {
  }
  
  int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str) {
@@ -276,7 +280,7 @@ index 2e7859994..b1e657646 100644
                                  true /* strict */);
  }
  
-@@ -2184,10 +2180,7 @@ int SSL_set_cipher_list(SSL *ssl, const char *str) {
+@@ -2193,10 +2189,7 @@ int SSL_set_cipher_list(SSL *ssl, const char *str) {
    if (!ssl->config) {
      return 0;
    }
@@ -288,7 +292,7 @@ index 2e7859994..b1e657646 100644
                                  false /* not strict */);
  }
  
-@@ -2195,10 +2188,7 @@ int SSL_set_strict_cipher_list(SSL *ssl, const char *str) {
+@@ -2204,10 +2197,7 @@ int SSL_set_strict_cipher_list(SSL *ssl, const char *str) {
    if (!ssl->config) {
      return 0;
    }
@@ -301,17 +305,19 @@ index 2e7859994..b1e657646 100644
  }
  
 diff --git a/ssl/tls13_server.cc b/ssl/tls13_server.cc
-index 932c82cb2..d165bd752 100644
+index 376e1a3..3c3b3cf 100644
 --- a/ssl/tls13_server.cc
 +++ b/ssl/tls13_server.cc
-@@ -118,9 +118,7 @@ static const SSL_CIPHER *choose_tls13_cipher(
+@@ -142,10 +142,8 @@ static const SSL_CIPHER *choose_tls13_cipher(
+ 
    const uint16_t version = ssl_protocol_version(ssl);
  
-   return ssl_choose_tls13_cipher(cipher_suites,
+-  return ssl_choose_tls13_cipher(cipher_suites,
 -                                 ssl->config->aes_hw_override
 -                                     ? ssl->config->aes_hw_override_value
 -                                     : EVP_has_aes_hardware(),
++  return ssl_choose_tls13_cipher(cipher_suites,  //
 +                                 EVP_has_aes_hardware(),
-                                  version, ssl->config->tls13_cipher_policy);
+                                  version, ssl->config->compliance_policy);
  }
  

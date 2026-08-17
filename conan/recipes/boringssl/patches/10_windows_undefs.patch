@@ -1,8 +1,8 @@
 diff --git a/include/openssl/target.h b/include/openssl/target.h
-index 2760f52ce..6f0eb4cda 100644
+index 34a812f..3422c09 100644
 --- a/include/openssl/target.h
 +++ b/include/openssl/target.h
-@@ -80,6 +80,15 @@
+@@ -82,6 +82,15 @@
  
  #if defined(_WIN32)
  #define OPENSSL_WINDOWS

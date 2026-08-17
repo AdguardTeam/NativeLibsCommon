@@ -1,8 +1,8 @@
 diff --git a/ssl/extensions.cc b/ssl/extensions.cc
-index 30591a6..83fc5e3 100644
+index a9b834a..d4b9395 100644
 --- a/ssl/extensions.cc
 +++ b/ssl/extensions.cc
-@@ -3326,6 +3326,19 @@ bool ssl_setup_extension_permutation(SSL_HANDSHAKE *hs) {
+@@ -4200,6 +4200,19 @@ bool ssl_setup_extension_permutation(SSL_HANDSHAKE *hs) {
      // Set element |i| to a randomly-selected element 0 <= j <= i.
      std::swap(permutation[i], permutation[seeds[i - 1] % (i + 1)]);
    }

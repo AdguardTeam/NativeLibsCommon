@@ -1,5 +1,5 @@
 diff --git a/include/openssl/target.h b/include/openssl/target.h
-index 2760f52ce..f020d3bb2 100644
+index 2c03389..34a812f 100644
 --- a/include/openssl/target.h
 +++ b/include/openssl/target.h
 @@ -34,10 +34,10 @@
@@ -15,4 +15,3 @@ index 2760f52ce..f020d3bb2 100644
  #define OPENSSL_64_BIT
  #define OPENSSL_MIPS64
  #elif defined(__riscv) && __SIZEOF_POINTER__ == 8
-
