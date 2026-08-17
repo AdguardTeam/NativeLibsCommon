@@ -13,9 +13,13 @@ env:
   CORELIBS_IMAGE: adguard/core-libs:2.12
 
 jobs:
+  resolve-images:
+    uses: ./.github/workflows/resolve-images.yml
+
   container-ipv6:
     name: IPv6 in container
-    runs-on: '["ephemeral","ephemeral-linux","${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
+    needs: resolve-images
+    runs-on: '["ephemeral","ephemeral-linux","${{ needs.resolve-images.outputs.corelibs-builder }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
     container:
       image: adguard/core-libs:2.12
     steps:
@@ -66,7 +70,8 @@ jobs:
 
   docker-build-ipv6:
     name: IPv6 in docker build
-    runs-on: '["ephemeral","ephemeral-linux","${{ vars.BUILD_IMAGE_VERSION_CORELIBS_BUILDER }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
+    needs: resolve-images
+    runs-on: '["ephemeral","ephemeral-linux","${{ needs.resolve-images.outputs.corelibs-builder }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
