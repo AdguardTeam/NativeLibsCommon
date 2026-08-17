@@ -88,6 +88,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Enable IPv6 in Docker
+        shell: bash
+        run: |
+          set -eux
+
+          # Privileged commands run as root directly, otherwise through sudo.
+          if [ "$(id -u)" -ne 0 ]; then SUDO=sudo; else SUDO=; fi
+
+          # A ULA prefix out of fc00::/7 for the Docker bridge. Same value in
+          # daemon.json (fixed-cidr-v6) and the masquerade rule below.
+          PREFIX="fd00:dead:beef::/64"
+
+          $SUDO mkdir -p /etc/docker
+          # Throwaway agent, so overwrite rather than merge the existing file.
+          $SUDO tee /etc/docker/daemon.json >/dev/null <<JSON
+          {
+            "ipv6": true,
+            "fixed-cidr-v6": "${PREFIX}"
+          }
+          JSON
+
+          # Apply the new daemon config.
+          $SUDO systemctl restart docker || $SUDO service docker restart
+
+          # Docker does not NAT IPv6, so masquerade the ULA prefix out through
+          # the host uplink; without this, containers get a source address that
+          # is not routable off the box.
+          $SUDO ip6tables -t nat -A POSTROUTING -s "${PREFIX}" -j MASQUERADE
+
       - name: Probe IPv6 during docker build
         uses: AdGuardSoftwareLimited/actions/actions/docker-build@master
         with:
