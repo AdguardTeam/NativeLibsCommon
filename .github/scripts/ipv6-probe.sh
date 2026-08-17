@@ -1,9 +1,11 @@
 #!/bin/sh
-# AG-55096 IPv6 probe. Report-only: it prints what it finds and never exits
-# non-zero on a missing IPv6, so every path (host, container, docker run,
-# docker build) reports side by side in one run. POSIX sh so it runs the same
-# in a bash step and in a Dockerfile RUN.
+# AG-55096 IPv6 probe. Prints what it finds on every path (host, container,
+# docker run, docker build) and then exits non-zero when outbound IPv6 is not
+# reachable, so a job's pass/fail reflects real connectivity. POSIX sh so it
+# runs the same in a bash step and in a Dockerfile RUN.
 set -u
+
+rc=0
 
 section() { printf '\n=== %s ===\n' "$1"; }
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -29,18 +31,30 @@ section "Outbound IPv6 connectivity"
 # A missing route or firewall makes this the real signal, so run it even when a
 # global address exists.
 if have curl; then
-  code=$(curl -6 -sS --max-time 15 -o /dev/null \
-         -w '%{http_code}' https://ipv6.google.com 2>&1) \
-    && echo "PASS: curl -6 https://ipv6.google.com -> HTTP ${code}" \
-    || echo "FAIL: curl -6 could not reach ipv6.google.com (${code})"
+  if code=$(curl -6 -sS --max-time 15 -o /dev/null \
+            -w '%{http_code}' https://ipv6.google.com 2>&1); then
+    echo "PASS: curl -6 https://ipv6.google.com -> HTTP ${code}"
+  else
+    echo "FAIL: curl -6 could not reach ipv6.google.com (${code})"
+    rc=1
+  fi
 elif have ping6 || have ping; then
   p="ping6"; have ping6 || p="ping -6"
-  $p -c 2 -W 5 ipv6.google.com \
-    && echo "PASS: ${p} reached ipv6.google.com" \
-    || echo "FAIL: ${p} could not reach ipv6.google.com"
+  if $p -c 2 -W 5 ipv6.google.com; then
+    echo "PASS: ${p} reached ipv6.google.com"
+  else
+    echo "FAIL: ${p} could not reach ipv6.google.com"
+    rc=1
+  fi
 else
-  echo "SKIP: neither curl nor ping available"
+  echo "FAIL: neither curl nor ping available to test connectivity"
+  rc=1
 fi
 
 echo
-echo "IPv6 probe finished (report-only)."
+if [ "$rc" -eq 0 ]; then
+  echo "IPv6 probe: outbound IPv6 reachable."
+else
+  echo "IPv6 probe: outbound IPv6 NOT reachable."
+fi
+exit "$rc"
