@@ -96,32 +96,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Probe IPv6 during docker build
+      - name: Enable IPv6 in Docker
         shell: bash
-        env:
-          DOCKER_BUILDKIT: '1'
-        run: |
-          set -eux
+        run: sh .github/scripts/enable-docker-ipv6.sh
 
-          # BuildKit's default build network has no IPv6, and the shared
-          # docker-build action exposes no entitlement flag — so build here
-          # directly, granting network.host so the RUN uses the host stack,
-          # the only place with working IPv6 on this agent.
-          #
-          # .dockerignore excludes .github, so stage the probe at the context
-          # root where COPY can see it.
-          cp .github/scripts/ipv6-probe.sh ipv6-probe.sh
+      - name: Stage probe into build context
+        shell: bash
+        # .dockerignore excludes .github, so copy the probe to the context root
+        # where COPY can see it.
+        run: cp .github/scripts/ipv6-probe.sh ipv6-probe.sh
 
-          cat > Dockerfile.ipv6 <<'DOCKERFILE'
-          # syntax=docker/dockerfile:1
-          FROM adguard/core-libs:2.11 AS probe
-          COPY ipv6-probe.sh /probe.sh
-          # Changes every run so the probe is never served from cache.
-          ARG CACHEBUST
-          RUN --network=host sh /probe.sh
-          DOCKERFILE
+      - name: Probe IPv6 during docker build
+        uses: AdGuardSoftwareLimited/actions/actions/docker-build@master
+        with:
+          target: probe
+          output: type=cacheonly
+          build-args: |
+            CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
+          content: |
+            # syntax=docker/dockerfile:1
+            FROM ${{ env.CORELIBS_IMAGE }} AS probe
 
-          docker build --allow network.host --progress plain \
-            --target probe --output type=cacheonly \
-            --build-arg CACHEBUST="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
-            -f Dockerfile.ipv6 .
+            COPY ipv6-probe.sh /probe.sh
+
+            # Changes on every run so the probe below is never served from cache.
+            ARG CACHEBUST
+
+            RUN sh /probe.sh
