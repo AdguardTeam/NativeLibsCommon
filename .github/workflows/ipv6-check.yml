@@ -19,7 +19,13 @@ jobs:
   container-ipv6:
     name: IPv6 in container
     needs: resolve-images
-    runs-on: '["ephemeral","ephemeral-linux","${{ needs.resolve-images.outputs.corelibs-builder }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - ephemeral-limit-memory-6144
+      - ephemeral-limit-cpu-4
+      - ephemeral-run-id-${{ github.run_id }}
     container:
       image: adguard/core-libs:2.12
     steps:
@@ -71,7 +77,13 @@ jobs:
   docker-build-ipv6:
     name: IPv6 in docker build
     needs: resolve-images
-    runs-on: '["ephemeral","ephemeral-linux","${{ needs.resolve-images.outputs.corelibs-builder }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - ephemeral-limit-memory-6144
+      - ephemeral-limit-cpu-4
+      - ephemeral-run-id-${{ github.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
