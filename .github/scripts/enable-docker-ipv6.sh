@@ -31,16 +31,40 @@ $SUDO sysctl -w net.ipv6.conf.all.accept_ra=2
 $SUDO sysctl -w net.ipv6.conf.default.accept_ra=2
 
 # The default FORWARD policy is DROP once Docker is up, so allow the prefix both
-# ways (inserted at the top to beat the policy), then masquerade it out through
-# the host uplink so containers reach IPv6 with a routable source address.
+# ways (inserted at the top to beat the policy).
 $SUDO ip6tables -I FORWARD 1 -s "${PREFIX}" -j ACCEPT
 $SUDO ip6tables -I FORWARD 1 -d "${PREFIX}" -j ACCEPT
-$SUDO ip6tables -t nat -A POSTROUTING -s "${PREFIX}" ! -o docker0 -j MASQUERADE
 
-# Diagnostics: what the kernel would pick as the egress source, and the rules in
-# force. Useful when a run shows containers with an address but no connectivity.
-echo "--- ip -6 route get (egress source the kernel picks) ---"
-$SUDO ip -6 route get 2001:4860:4860::8888 || true
+# NAT the container prefix out through the host uplink. A plain MASQUERADE picks
+# the source the same way the kernel does, and this agent has no global IPv6 —
+# only the site-local address QEMU user-mode networking NATs upstream. Because a
+# ULA counts as global scope, the kernel prefers the docker0 ULA over that
+# site-local address and masquerades to a source that cannot receive replies. So
+# pin the source explicitly to the uplink's own address instead.
+PUBLIC6="2001:4860:4860::8888"
+EGRESS_IF=$($SUDO ip -6 route get "$PUBLIC6" 2>/dev/null \
+  | sed -n 's/.* dev \([^ ]*\).*/\1/p')
+if [ -z "$EGRESS_IF" ]; then
+  echo "ERROR: host has no IPv6 route to the internet" >&2
+  exit 1
+fi
+# The uplink's own routable address — NOT the route's `src`, which is the ULA
+# the kernel wrongly prefers. Skip link-local and our own container prefix.
+SRC=$($SUDO ip -6 addr show dev "$EGRESS_IF" | awk '
+  /inet6/ && $2 !~ /^fe80/ && $2 !~ /^fd00:dead:beef/ {
+    sub(/\/.*/, "", $2); print $2; exit
+  }')
+if [ -z "$SRC" ]; then
+  echo "ERROR: no routable IPv6 address on ${EGRESS_IF}" >&2
+  exit 1
+fi
+echo "egress interface: ${EGRESS_IF}, SNAT source: ${SRC}"
+# Insert at the top so this beats the MASQUERADE rule Docker installs itself.
+$SUDO ip6tables -t nat -I POSTROUTING 1 -s "${PREFIX}" -o "${EGRESS_IF}" \
+  -j SNAT --to-source "${SRC}"
+
+# Diagnostics: the rules in force, handy when a container has an address but no
+# connectivity.
 echo "--- ip6tables nat POSTROUTING ---"
 $SUDO ip6tables -t nat -S POSTROUTING
 echo "--- ip6tables FORWARD (head) ---"
