@@ -72,6 +72,23 @@ jobs:
         shell: bash
         run: sh .github/scripts/ipv6-probe.sh
 
+  emulate-runner-network:
+    name: IPv6 in emulated runner network
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-2048
+      - ephemeral-limit-memory-6144
+      - ephemeral-limit-cpu-4
+      - ephemeral-run-id-${{ github.run_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Emulate the runner's container-job network
+        shell: bash
+        run: sh .github/scripts/emulate-runner-network.sh
+
   docker-run-ipv6:
     name: IPv6 in docker run
     runs-on:
