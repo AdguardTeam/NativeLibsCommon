@@ -56,6 +56,17 @@ docker network create --ipv6 --label ag55096 ag55096-v6 >/dev/null 2>&1 &&
   docker network inspect ag55096-v6 \
     --format 'EnableIPv6={{.EnableIPv6}} subnets=[{{range .IPAM.Config}}{{.Subnet}} {{end}}]'
 
+section "NAT/forward rules after --ipv6 network create (why doesn't it route?)"
+# docker run (default bridge) routes via our fc00::/7 SNAT, but runner-created
+# --ipv6 networks do not — most likely Docker adds its own masquerade for user
+# networks that picks a non-routable source. Show who touches these packets.
+echo "--- ip6tables -t nat -S ---"; ip6tables -t nat -S 2>&1
+echo "--- ip6tables -S FORWARD (head) ---"; ip6tables -S FORWARD 2>&1 | head -20
+echo "--- nft ip6 ruleset (Docker 28+ native firewall backend) ---"
+nft list ruleset ip6 2>/dev/null | grep -iE 'table|chain|masquerade|snat|drop|fd20|fdc7|fc00' | head -50 ||
+  echo "(nft unavailable)"
+echo "--- docker firewall backend ---"; docker info 2>/dev/null | grep -iE 'firewall|iptables'
+
 section "Container on the wrapped network: address + outbound IPv6"
 # Note: the baked SNAT only masquerades the default-bridge prefix, so a new
 # network's subnet may get an address but still fail to route — that tells us
