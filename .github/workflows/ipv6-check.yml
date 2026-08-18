@@ -4,27 +4,23 @@ name: IPv6 check
 # every way CI reaches the network — on the bare host, inside a job `container`,
 # inside `docker run`, and inside `docker build`. All jobs only report; they
 # never fail on a missing IPv6, so a single run shows every path side by side.
-# The probe itself lives in .github/scripts/ipv6-probe.sh; the Docker jobs first
-# run .github/scripts/enable-docker-ipv6.sh to give containers routable IPv6.
+# The probe lives in .github/scripts/ipv6-probe.sh. Container IPv6 is provided
+# by the corelibs-builder image itself now, so the workflow does no setup.
 
 on:
   pull_request:
 
 env:
-  # Same image the containerized Linux and Android builds use.
-  CORELIBS_IMAGE: adguard/core-libs:2.11
+  # Pre-pulled by the corelibs-builder image below.
+  CORELIBS_IMAGE: adguard/core-libs:2.12
 
 jobs:
-  resolve-images:
-    uses: ./.github/workflows/resolve-images.yml
-
   runner-startup:
     name: Investigate runner startup
-    needs: resolve-images
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -38,11 +34,10 @@ jobs:
 
   host-ipv6:
     name: IPv6 on host
-    needs: resolve-images
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -56,16 +51,15 @@ jobs:
 
   container-ipv6:
     name: IPv6 in container
-    needs: resolve-images
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
     container:
-      image: adguard/core-libs:2.11
+      image: adguard/core-libs:2.12
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -76,21 +70,16 @@ jobs:
 
   docker-run-ipv6:
     name: IPv6 in docker run
-    needs: resolve-images
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Enable IPv6 in Docker
-        shell: bash
-        run: sh .github/scripts/enable-docker-ipv6.sh
 
       - name: Probe IPv6 in docker run
         shell: bash
@@ -102,21 +91,16 @@ jobs:
 
   docker-build-ipv6:
     name: IPv6 in docker build
-    needs: resolve-images
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Enable IPv6 in Docker
-        shell: bash
-        run: sh .github/scripts/enable-docker-ipv6.sh
 
       - name: Stage probe into build context
         shell: bash
