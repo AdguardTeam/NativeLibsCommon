@@ -32,6 +32,10 @@ jobs:
         shell: bash
         run: sh .github/scripts/investigate-runner-startup.sh
 
+      - name: Investigate docker network create wrapper feasibility
+        shell: bash
+        run: sh .github/scripts/investigate-docker-network.sh
+
   host-ipv6:
     name: IPv6 on host
     runs-on:
