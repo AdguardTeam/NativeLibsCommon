@@ -18,6 +18,24 @@ jobs:
   resolve-images:
     uses: ./.github/workflows/resolve-images.yml
 
+  runner-startup:
+    name: Investigate runner startup
+    needs: resolve-images
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - ephemeral-limit-memory-6144
+      - ephemeral-limit-cpu-4
+      - ephemeral-run-id-${{ github.run_id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Investigate how the VM agent starts actions-runner
+        shell: bash
+        run: sh .github/scripts/investigate-runner-startup.sh
+
   host-ipv6:
     name: IPv6 on host
     needs: resolve-images
