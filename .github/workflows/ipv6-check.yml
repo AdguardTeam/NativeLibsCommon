@@ -20,7 +20,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-2048
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -41,7 +41,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-2048
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -58,7 +58,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-2048
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -77,7 +77,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-2048
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -98,7 +98,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260818-1559
+      - registry.int.agrd.dev/linux/corelibs-builder:20260818-2048
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
