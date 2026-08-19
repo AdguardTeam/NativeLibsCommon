@@ -1,0 +1,68 @@
+name: Artifact upload test
+
+# AG-55096: run an ubuntu container job on two ephemeral images and upload a
+# generated file with upload-artifact@v7 — to check artifact upload works from
+# inside a container job on both the base debian13-github image and the latest
+# corelibs-builder image (whose container network is IPv6-enabled).
+
+on:
+  pull_request:
+
+jobs:
+  upload-debian13-github:
+    name: Upload from ubuntu on debian13-github
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - registry.int.agrd.dev/linux/debian13-github:20260816-2356
+      - ephemeral-limit-memory-6144
+      - ephemeral-limit-cpu-4
+      - ephemeral-run-id-${{ github.run_id }}
+    container:
+      image: ubuntu
+    steps:
+      - name: Generate a file
+        shell: bash
+        run: |
+          set -eux
+          mkdir -p out
+          {
+            echo "runner image: debian13-github:20260816-2356"
+            echo "generated at run ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          } > out/artifact.txt
+          head -c 1024 /dev/urandom | base64 > out/random.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifact-debian13-github
+          path: out/
+
+  upload-corelibs-builder:
+    name: Upload from ubuntu on corelibs-builder
+    runs-on:
+      - ephemeral
+      - ephemeral-linux
+      - registry.int.agrd.dev/linux/corelibs-builder:20260819-0643
+      - ephemeral-limit-memory-6144
+      - ephemeral-limit-cpu-4
+      - ephemeral-run-id-${{ github.run_id }}
+    container:
+      image: ubuntu
+    steps:
+      - name: Generate a file
+        shell: bash
+        run: |
+          set -eux
+          mkdir -p out
+          {
+            echo "runner image: corelibs-builder:20260819-0643"
+            echo "generated at run ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          } > out/artifact.txt
+          head -c 1024 /dev/urandom | base64 > out/random.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifact-corelibs-builder
+          path: out/
