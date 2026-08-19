@@ -1,8 +1,8 @@
 name: Ephemeral Linux test
 
-# Run two ephemeral Linux jobs on the corelibs-builder image — resolved by the
-# resolve-images reusable workflow — each idling for two minutes and then
-# quitting, to check the ephemeral agents come up and tear down cleanly.
+# Run two ephemeral Linux jobs on the debian13-github image — each idling for
+# two minutes and then quitting, to check the ephemeral agents come up and tear
+# down cleanly.
 
 on:
   pull_request:
@@ -13,12 +13,8 @@ permissions:
   id-token: write
 
 jobs:
-  resolve-images:
-    uses: ./.github/workflows/resolve-images.yml
-
   idle:
     name: Idle ${{ matrix.name }}
-    needs: resolve-images
     strategy:
       fail-fast: false
       matrix:
@@ -26,7 +22,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - registry.int.agrd.dev/linux/debian13-github:20260816-2356
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -35,7 +31,7 @@ jobs:
         shell: bash
         run: |
           set -eux
-          echo "runner image: ${{ needs.resolve-images.outputs.corelibs-builder }}"
+          echo "runner image: registry.int.agrd.dev/linux/debian13-github:20260816-2356"
           echo "job: ${{ matrix.name }}, run ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           sleep 120
           echo "done"
