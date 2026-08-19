@@ -43,7 +43,7 @@ jobs:
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - registry.int.agrd.dev/linux/corelibs-builder:20260819-0643
+      - registry.int.agrd.dev/linux/corelibs-builder:20260819-1214
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -56,7 +56,7 @@ jobs:
           set -eux
           mkdir -p out
           {
-            echo "runner image: corelibs-builder:20260819-0643"
+            echo "runner image: corelibs-builder:20260819-1214"
             echo "generated at run ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           } > out/artifact.txt
           head -c 1024 /dev/urandom | base64 > out/random.txt
