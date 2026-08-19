@@ -85,6 +85,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Apply candidate fix in place (disable Docker IPv6 firewall)
+        shell: bash
+        # Test the PR #49 fix on the real agent without the hour-long image
+        # rebuild: turn off Docker's own IPv6 firewall so it stops prepending a
+        # per-network MASQUERADE, restart, then re-assert our NAT so the single
+        # fc00::/7 SNAT owns all IPv6 NAT.
+        run: |
+          set -eux
+          tmp=$(mktemp)
+          jq '. + {"ip6tables": false}' /etc/docker/daemon.json > "$tmp"
+          mv "$tmp" /etc/docker/daemon.json
+          cat /etc/docker/daemon.json
+          systemctl restart docker || service docker restart
+          /usr/local/bin/enable-docker-ipv6.sh
+
       - name: Emulate the runner's container-job network
         shell: bash
         run: sh .github/scripts/emulate-runner-network.sh
