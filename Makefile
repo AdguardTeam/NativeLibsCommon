@@ -41,6 +41,17 @@ OSX_ARCH_ARGS = -DCMAKE_OSX_ARCHITECTURES="$(ARCH)"
 endif
 endif
 
+# Optional compiler launcher (e.g. sccache) for the C and C++ compilers.
+# Set on the make command line like `make test CMAKE_LAUNCHER=sccache` -- the
+# Linux CI job does this to avoid recompiling on every push. When non-empty,
+# the matching -DCMAKE_*_COMPILER_LAUNCHER=... flags are appended to the
+# configure command line so every cmake configure (re)uses the launcher.
+# Empty by default, so local builds are unaffected.
+CMAKE_LAUNCHER ?=
+ifneq ($(CMAKE_LAUNCHER),)
+CMAKE_LAUNCHER_FLAGS = -DCMAKE_C_COMPILER_LAUNCHER=$(CMAKE_LAUNCHER) -DCMAKE_CXX_COMPILER_LAUNCHER=$(CMAKE_LAUNCHER)
+endif
+
 .PHONY: all
 ## Build the libraries (default target).
 all: build_libs
@@ -56,12 +67,12 @@ export_conan:
 ## Extra CMake flags can be passed via CMAKE_ARGS, e.g.
 ##   make CMAKE_ARGS=-DCMAKE_OSX_ARCHITECTURES=arm64 test
 setup_cmake:
-	cmake --preset $(PRESET) $(OSX_ARCH_ARGS) $(CMAKE_ARGS)
+	cmake --preset $(PRESET) $(OSX_ARCH_ARGS) $(CMAKE_LAUNCHER_FLAGS) $(CMAKE_ARGS)
 
 .PHONY: compile_commands
 ## Generate compile_commands.json for IDE / clang-tidy integration.
 compile_commands:
-	cmake --preset $(PRESET) $(OSX_ARCH_ARGS) $(CMAKE_ARGS) -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+	cmake --preset $(PRESET) $(OSX_ARCH_ARGS) $(CMAKE_LAUNCHER_FLAGS) $(CMAKE_ARGS) -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 .PHONY: build_libs
 ## Build all libraries (ag_common, ag_common_http, ag_common_tls).

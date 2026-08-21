@@ -102,9 +102,32 @@ jobs:
     name: Linux build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on: team-corelibs
+    env:
+      # sccache local-disk store, restored/saved across runs by the
+      # registry-cache action as an OCI registry blob. SCCACHE_CACHE_SIZE caps
+      # the on-disk store (and thus the per-key blob) so a force-save stays
+      # bounded.
+      SCCACHE_DIR: ${{ github.workspace }}/.sccache
+      SCCACHE_CACHE_SIZE: 512M
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # sccache wraps the compilers so objects are reused across runs. The
+      # binary is installed on the runner by the action (used by the stats
+      # step); inside the container it is installed by the docker stage.
+      - name: Configure sccache
+        uses: AdguardTeam/sccache-action@main
+
+      - name: Restore sccache store
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
+        with:
+          config: ${{ secrets.REGISTRY_CACHE_AUTH }}
+          # Per-job prefix + conanfile.py hash so the store resets when the
+          # dependency graph changes. sccache is content-addressed, so
+          # source-only changes accumulate without invalidating the key.
+          key: sccache-linux-${{ hashFiles('conanfile.py') }}
+          path: ${{ env.SCCACHE_DIR }}
 
       - name: Run tests
         uses: AdGuardSoftwareLimited/actions/actions/docker-build@master
@@ -128,6 +151,15 @@ jobs:
             # layer nor downloaded again on the next run.
             ENV CONAN_HOME=/conan
 
+            # sccache caches the C/C++ compilations; the pinned binary is
+            # installed once (this layer is not affected by CACHEBUST). The
+            # store itself lives in the context (restored on the runner into
+            # .sccache, carried by COPY . . below) and is exported back after
+            # the build.
+            ENV SCCACHE_CACHE_SIZE=512M
+            RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.8.2/sccache-v0.8.2-x86_64-unknown-linux-musl.tar.gz \
+                | tar -xz -C /usr/local/bin --strip-components=1
+
             # Changes on every run so the tests are never served from the cache.
             ARG CACHEBUST
 
@@ -140,7 +172,10 @@ jobs:
             python3 -m pip install conan --upgrade
             conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
 
-            make PRESET=clang-debug-sanitizer test || test_status=$?
+            # The store was restored into .sccache and copied here by COPY . .;
+            # CMAKE_LAUNCHER makes cmake use sccache for C/C++ compilations.
+            export SCCACHE_DIR=/src/.sccache
+            make PRESET=clang-debug-sanitizer test CMAKE_LAUNCHER=sccache || test_status=$?
 
             # Upload whatever was built, then report the test result.
             conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
@@ -156,6 +191,7 @@ jobs:
             FROM scratch AS results
 
             COPY --from=tests /src/cmake-build-clang-debug-sanitizer/junit.xml /junit.xml
+            COPY --from=tests /src/.sccache /sccache
 
       - name: JUnit summary
         if: always()
@@ -172,6 +208,32 @@ jobs:
           # The report is only exported when the build succeeds, so a failing
           # test run leaves nothing to upload.
           if-no-files-found: warn
+
+      # Print sccache counters and decide whether to force-save the store: the
+      # save action skips the upload when the key already exists, so the store
+      # would freeze after the first run. force=true whenever sccache wrote new
+      # entries this run, so source-only changes accumulate.
+      - name: sccache stats
+        id: sccache-stats
+        if: always()
+        run: |
+          SCCACHE_DIR=build/sccache sccache --show-stats || true
+          cache_writes=$(SCCACHE_DIR=build/sccache sccache --show-stats --stats-format=json 2>/dev/null \
+            | grep -o '"cache_writes":[0-9]*' | grep -o '[0-9]*' || echo 0)
+          if [ "$cache_writes" -gt 0 ] 2>/dev/null; then
+            echo "force=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "force=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save sccache store
+        if: always()
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/save@master
+        with:
+          config: ${{ secrets.REGISTRY_CACHE_AUTH }}
+          key: sccache-linux-${{ hashFiles('conanfile.py') }}
+          path: build/sccache
+          force: ${{ steps.sccache-stats.outputs.force }}
 
   android-build:
     name: Android build
