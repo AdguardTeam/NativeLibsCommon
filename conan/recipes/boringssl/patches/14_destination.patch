@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 75d750e..3ef6525 100644
+index 6d71eda..a8ca0e1 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -803,7 +803,11 @@ endif()
+@@ -902,7 +902,11 @@ endif()
  
  if(INSTALL_ENABLED)
    install(TARGETS crypto ssl EXPORT OpenSSLTargets)

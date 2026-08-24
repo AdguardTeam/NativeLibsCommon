@@ -108,7 +108,11 @@ TEST(MakeSsl, Ja4Profiles) {
             {ag::tls::TlsClientProfile::OKHTTP, "OkHttp5", "t13d1613h2_46e7e9700bed_eca864cca44a"},
             // Reference captured from `openssl s_client -servername ... ` (OpenSSL 3.6.2).
             {ag::tls::TlsClientProfile::OPENSSL_DEFAULT, "OpenSSL3.6", "t13d301100_1d37bd780c83_8e6e362c5eac"},
-            // Library-default ClientHello (no mimicry). Informational: tracks the BoringSSL version.
+            // Library-default ClientHello (no mimicry). Informational: tracks the BoringSSL version,
+            // so it is printed but not asserted — a bump is expected to move it. The next move to
+            // watch for is ML-DSA: boring-2026-05-08 can verify it but does not advertise it here
+            // (see the note in make_ssl.cpp), so when a later BoringSSL adds the codepoints to its
+            // default verify list, this fingerprint gains them without any change on our side.
             {ag::tls::TlsClientProfile::DEFAULT, "Default", ""},
     };
     for (const auto &c : cases) {

@@ -1,8 +1,8 @@
 diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
-index f76e0a1b5..a4e35a137 100644
+index e9fd44a..f3ab1aa 100644
 --- a/include/openssl/ssl.h
 +++ b/include/openssl/ssl.h
-@@ -5824,6 +5824,8 @@ OPENSSL_EXPORT int SSL_set_compliance_policy(
+@@ -6655,6 +6655,8 @@ OPENSSL_EXPORT enum ssl_compliance_policy_t SSL_get_compliance_policy(
  
  extern "C++" {
  
@@ -11,7 +11,7 @@ index f76e0a1b5..a4e35a137 100644
  BSSL_NAMESPACE_BEGIN
  
  BORINGSSL_MAKE_DELETER(SSL, SSL_free)
-@@ -5901,6 +5903,13 @@ OPENSSL_EXPORT bool SSL_get_traffic_secrets(
+@@ -6735,6 +6737,13 @@ OPENSSL_EXPORT bool SSL_get_traffic_secrets(
      const SSL *ssl, Span<const uint8_t> *out_read_traffic_secret,
      Span<const uint8_t> *out_write_traffic_secret);
  
@@ -26,10 +26,10 @@ index f76e0a1b5..a4e35a137 100644
  // override checking for aes hardware support for testing. If |override_value|
  // is set to true, the library will behave as if aes hardware support is
 diff --git a/ssl/internal.h b/ssl/internal.h
-index e6518286f..5051182bf 100644
+index cac3ff4..26df546 100644
 --- a/ssl/internal.h
 +++ b/ssl/internal.h
-@@ -1313,6 +1313,11 @@ void ssl_do_info_callback(const SSL *ssl, int type, int value);
+@@ -996,6 +996,11 @@ void ssl_do_info_callback(const SSL *ssl, int type, int value);
  void ssl_do_msg_callback(const SSL *ssl, int is_write, int content_type,
                           Span<const uint8_t> in);
  
@@ -41,7 +41,7 @@ index e6518286f..5051182bf 100644
  
  // Transport buffers.
  
-@@ -3962,6 +3967,12 @@ struct ssl_st {
+@@ -4219,6 +4224,12 @@ struct ssl_st {
    void (*msg_callback)(int write_p, int version, int content_type,
                         const void *buf, size_t len, SSL *ssl,
                         void *arg) = nullptr;
@@ -55,10 +55,10 @@ index e6518286f..5051182bf 100644
  
    // session info
 diff --git a/ssl/s3_both.cc b/ssl/s3_both.cc
-index b0e298cc0..76d46738b 100644
+index d3036c3..448683d 100644
 --- a/ssl/s3_both.cc
 +++ b/ssl/s3_both.cc
-@@ -186,6 +186,10 @@ bool tls_finish_message(const SSL *ssl, CBB *cbb, Array<uint8_t> *out_msg) {
+@@ -91,6 +91,10 @@ bool tls_finish_message(const SSL *ssl, CBB *cbb, Array<uint8_t> *out_msg) {
  }
  
  bool tls_add_message(SSL *ssl, Array<uint8_t> msg) {
@@ -69,19 +69,19 @@ index b0e298cc0..76d46738b 100644
    // Pack handshake data into the minimal number of records. This avoids
    // unnecessary encryption overhead, notably in TLS 1.3 where we send several
    // encrypted messages in a row. For now, we do not do this for the null
-@@ -231,7 +235,6 @@ bool tls_add_message(SSL *ssl, Array<uint8_t> msg) {
+@@ -136,7 +140,6 @@ bool tls_add_message(SSL *ssl, Array<uint8_t> msg) {
      }
    }
  
 -  ssl_do_msg_callback(ssl, 1 /* write */, SSL3_RT_HANDSHAKE, msg);
    // TODO(svaldez): Move this up a layer to fix abstraction for SSLTranscript on
    // hs.
-   if (ssl->s3->hs != NULL &&
+   if (ssl->s3->hs != nullptr &&  //
 diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
-index 2e7859994..f2a5a6ebe 100644
+index 6e9571a..a0ed9e8 100644
 --- a/ssl/ssl_lib.cc
 +++ b/ssl/ssl_lib.cc
-@@ -146,6 +146,7 @@
+@@ -23,6 +23,7 @@
  #include <limits.h>
  #include <stdlib.h>
  #include <string.h>
@@ -89,7 +89,7 @@ index 2e7859994..f2a5a6ebe 100644
  
  #include <openssl/bytestring.h>
  #include <openssl/crypto.h>
-@@ -364,6 +365,36 @@ void ssl_do_msg_callback(const SSL *ssl, int is_write, int content_type,
+@@ -230,6 +231,36 @@ void ssl_do_msg_callback(const SSL *ssl, int is_write, int content_type,
                      const_cast<SSL *>(ssl), ssl->msg_callback_arg);
  }
  
@@ -123,10 +123,10 @@ index 2e7859994..f2a5a6ebe 100644
 +  }
 +}
 +
- void ssl_get_current_time(const SSL *ssl, struct OPENSSL_timeval *out_clock) {
-   // TODO(martinkr): Change callers to |ssl_ctx_get_current_time| and drop the
-   // |ssl| arg from |current_time_cb| if possible.
-@@ -501,6 +532,13 @@ void SSL_set_aes_hw_override_for_testing(SSL *ssl, bool override_value) {
+ OPENSSL_timeval ssl_ctx_get_current_time(const SSL_CTX *ctx) {
+   if (ctx->current_time_cb != nullptr) {
+     // TODO(davidben): Update current_time_cb to use OPENSSL_timeval. See
+@@ -356,6 +387,13 @@ void SSL_set_aes_hw_override_for_testing(SSL *ssl, bool override_value) {
    ssl->config->aes_hw_override_value = override_value;
  }
  

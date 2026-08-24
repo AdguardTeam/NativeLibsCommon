@@ -1,9 +1,28 @@
 This patch is imported from https://github.com/0x676e67/wreq project under Apache-2.0 license.
 
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+index 8b9e0de..7ee9739 100644
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -3049,6 +3049,13 @@ OPENSSL_EXPORT void SSL_CTX_enable_signed_cert_timestamps(SSL_CTX *ctx);
+ // handshake.
+ OPENSSL_EXPORT void SSL_enable_ocsp_stapling(SSL *ssl);
+ 
++// SSL_set_record_size_limit advertises the record_size_limit extension (RFC 8449).
++OPENSSL_EXPORT void SSL_set_record_size_limit(SSL *ssl, uint16_t limit);
++// SSL_set_delegated_credentials advertises the delegated_credential extension
++// (RFC 9345) with the given signature algorithms |prefs|.
++OPENSSL_EXPORT void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
++                                                  size_t num_prefs);
++
+ // SSL_CTX_enable_ocsp_stapling enables OCSP stapling on all client SSL objects
+ // created from |ctx|.
+ //
 diff --git a/include/openssl/tls1.h b/include/openssl/tls1.h
+index 5c49764..5ce0a6f 100644
 --- a/include/openssl/tls1.h
 +++ b/include/openssl/tls1.h
-@@ -222,6 +222,9 @@
+@@ -93,6 +93,9 @@ extern "C" {
  // ExtensionType value from RFC 8879
  #define TLSEXT_TYPE_cert_compression 27
  
@@ -13,28 +32,11 @@ diff --git a/include/openssl/tls1.h b/include/openssl/tls1.h
  // ExtensionType value from RFC 4507
  #define TLSEXT_TYPE_session_ticket 35
  
-diff --git a/ssl/internal.h b/ssl/internal.h
---- a/ssl/internal.h
-+++ b/ssl/internal.h
-@@ -3240,6 +3240,14 @@
-   // verify_sigalgs, if not empty, is the set of signature algorithms
-   // accepted from the peer in decreasing order of preference.
-   Array<uint16_t> verify_sigalgs;
-+
-+  // delegated_credentials, if not empty, are advertised in the
-+  // delegated_credential ClientHello extension (RFC 9345).
-+  Array<uint16_t> delegated_credentials;
-+
-+  // record_size_limit, if non-zero, is advertised in the
-+  // record_size_limit ClientHello extension (RFC 8449).
-+  uint16_t record_size_limit = 0;
- 
-   // srtp_profiles is the list of configured SRTP protection profiles for
-   // DTLS-SRTP.
 diff --git a/ssl/extensions.cc b/ssl/extensions.cc
+index 72ef05f..2e301aa 100644
 --- a/ssl/extensions.cc
 +++ b/ssl/extensions.cc
-@@ -2764,7 +2764,23 @@
+@@ -3148,7 +3148,23 @@ static bool ext_quic_transport_params_add_serverhello_legacy(SSL_HANDSHAKE *hs,
  static bool ext_delegated_credential_add_clienthello(
      const SSL_HANDSHAKE *hs, CBB *out, CBB *out_compressible,
      ssl_client_hello_type_t type) {
@@ -59,7 +61,7 @@ diff --git a/ssl/extensions.cc b/ssl/extensions.cc
  }
  
  static bool ext_delegated_credential_parse_clienthello(SSL_HANDSHAKE *hs,
-@@ -3114,6 +3131,39 @@
+@@ -3947,6 +3963,39 @@ static bool ext_server_cert_type_add_serverhello(SSL_HANDSHAKE *hs, CBB *out) {
    return true;
  }
  
@@ -98,37 +100,55 @@ diff --git a/ssl/extensions.cc b/ssl/extensions.cc
 +
  // kExtensions contains all the supported extensions.
  static const struct tls_extension kExtensions[] = {
-   {
-@@ -3295,6 +3345,13 @@
-     ext_ech_parse_clienthello,
-     ext_ech_add_serverhello,
-   },
-+  {
-+    TLSEXT_TYPE_record_size_limit,
-+    ext_record_size_limit_add_clienthello,
-+    ext_record_size_limit_parse_serverhello,
-+    ext_record_size_limit_parse_clienthello,
-+    ext_record_size_limit_add_serverhello,
-+  },
+     {
+@@ -4169,6 +4218,13 @@ static const struct tls_extension kExtensions[] = {
+         ext_ech_parse_clienthello,
+         ext_ech_add_serverhello,
+     },
++    {
++        TLSEXT_TYPE_record_size_limit,
++        ext_record_size_limit_add_clienthello,
++        ext_record_size_limit_parse_serverhello,
++        ext_record_size_limit_parse_clienthello,
++        ext_record_size_limit_add_serverhello,
++    },
  };
  
  #define kNumExtensions (sizeof(kExtensions) / sizeof(struct tls_extension))
+diff --git a/ssl/internal.h b/ssl/internal.h
+index 73f8ade..ec4ed7e 100644
+--- a/ssl/internal.h
++++ b/ssl/internal.h
+@@ -3448,6 +3448,14 @@ struct SSL_CONFIG {
+   // accepted from the peer in decreasing order of preference.
+   Array<uint16_t> verify_sigalgs;
+ 
++  // delegated_credentials, if not empty, are advertised in the
++  // delegated_credential ClientHello extension (RFC 9345).
++  Array<uint16_t> delegated_credentials;
++
++  // record_size_limit, if non-zero, is advertised in the
++  // record_size_limit ClientHello extension (RFC 8449).
++  uint16_t record_size_limit = 0;
++
+   // srtp_profiles is the list of configured SRTP protection profiles for
+   // DTLS-SRTP.
+   UniquePtr<STACK_OF(SRTP_PROTECTION_PROFILE)> srtp_profiles;
 diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
+index 842aefa..151fe05 100644
 --- a/ssl/ssl_lib.cc
 +++ b/ssl/ssl_lib.cc
-@@ -2250,8 +2250,24 @@
-     return;
-   }
+@@ -2261,6 +2261,22 @@ void SSL_enable_ocsp_stapling(SSL *ssl) {
    ssl->config->ocsp_stapling_enabled = true;
-+}
-+
+ }
+ 
 +void SSL_set_record_size_limit(SSL *ssl, uint16_t limit) {
 +  if (!ssl->config) {
 +    return;
 +  }
 +  ssl->config->record_size_limit = limit;
- }
- 
++}
++
 +void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
 +                                   size_t num_prefs) {
 +  if (!ssl->config) {
@@ -141,20 +161,3 @@ diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
  void SSL_get0_signed_cert_timestamp_list(const SSL *ssl, const uint8_t **out,
                                           size_t *out_len) {
    SSL_SESSION *session = SSL_get_session(ssl);
-diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
---- a/include/openssl/ssl.h
-+++ b/include/openssl/ssl.h
-@@ -2912,6 +2912,13 @@
- // Call |SSL_get0_ocsp_response| to recover the OCSP response after the
- // handshake.
- OPENSSL_EXPORT void SSL_enable_ocsp_stapling(SSL *ssl);
-+
-+// SSL_set_record_size_limit advertises the record_size_limit extension (RFC 8449).
-+OPENSSL_EXPORT void SSL_set_record_size_limit(SSL *ssl, uint16_t limit);
-+// SSL_set_delegated_credentials advertises the delegated_credential extension
-+// (RFC 9345) with the given signature algorithms |prefs|.
-+OPENSSL_EXPORT void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
-+                                                  size_t num_prefs);
- 
- // SSL_CTX_enable_ocsp_stapling enables OCSP stapling on all client SSL objects
- // created from |ctx|.

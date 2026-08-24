@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2308d5721..11eb5aca7 100644
+index de8b78d..6d71eda 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -367,6 +367,12 @@ if(FIPS_DELOCATE OR NOT OPENSSL_NO_ASM)
+@@ -275,6 +275,12 @@ if(FIPS_DELOCATE OR NOT OPENSSL_NO_ASM)
      enable_language(ASM_NASM)
      set(OPENSSL_NASM TRUE)
      set(CMAKE_ASM_NASM_FLAGS "${CMAKE_ASM_NASM_FLAGS} -gcv8")

@@ -35,7 +35,9 @@ bool is_browser_profile(TlsClientProfile p) {
 #ifdef OPENSSL_IS_BORINGSSL
 
 // Per-profile TLS 1.2 cipher list. The TLS 1.3 suites are always offered by BoringSSL, so only the
-// legacy TLS 1.2 suites are listed here. Order is JA4-irrelevant.
+// legacy TLS 1.2 suites are listed here. JA4 sorts the cipher list before hashing, so order does not
+// move the JA4 — but JA3 and byte-exact comparison do see it, so each list is kept in its reference
+// client's own order rather than a tidied one.
 const char *cipher_list_for(TlsClientProfile profile) {
     // clang-format off
     // Enumerated explicitly (rather than an "ALL:!…" filter) so the fingerprint stays
@@ -53,10 +55,16 @@ const char *cipher_list_for(TlsClientProfile profile) {
             "ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:"
             "AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA:AES128-SHA:"
             "ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:DES-CBC3-SHA";
+    // NSS order, verbatim from wreq-util's Firefox CIPHER_LIST_1 (what its Firefox 135+ profiles,
+    // including 151, emit). Note the two quirks: the ECDSA/RSA pairs interleave per algorithm rather
+    // than listing all ECDSA first, and the ECDHE CBC block runs ECDSA AES256-then-AES128 but RSA
+    // AES128-then-AES256.
     static const char *const FIREFOX =
-            "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:"
-            "ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:"
-            "ECDHE-ECDSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:"
+            "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
+            "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:"
+            "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"
+            "ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:"
+            "ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:"
             "AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA:AES256-SHA";
     // OkHttp / Conscrypt default suite set.
     static const char *const OKHTTP =
@@ -397,6 +405,16 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
 #endif
 
 // Mimic a browser's ClientHello if we are using BoringSSL.
+//
+// DEFAULT is deliberately left alone: it inherits BoringSSL's own ClientHello, so its fingerprint
+// tracks the library version rather than anything we picked. Note that as of boring-2026-05-08 that
+// means DEFAULT does *not* advertise ML-DSA, even though the library can verify it: upstream added
+// the ML-DSA codepoints to `kSignSignatureAlgorithms` (what it will sign with) but not to
+// `kVerifySignatureAlgorithms` (what a client advertises for the server's certificate). Chrome
+// overrides the same list explicitly, which is why the CHROME profile below carries them and this
+// one does not. When a future BoringSSL bump adds ML-DSA to the verify list, DEFAULT picks it up on
+// its own and the expected JA4 in `MakeSsl.Ja4Profiles` needs re-recording — that change is
+// expected, not a regression.
 #ifdef OPENSSL_IS_BORINGSSL
     if (profile != TlsClientProfile::DEFAULT) {
         // ECH GREASE: sent by Chrome and Firefox.
@@ -488,12 +506,7 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
                         ssl.get(), OPENSSL_SIGALGS, std::size(OPENSSL_SIGALGS));
             } else {
                 auto [sigalgs, sigalgs_len] = sigalgs_for(profile);
-                if (is_chrome_profile(profile)) {
-                    // Since Chrome 150 the list leads with ML-DSA, which BoringSSL does not know;
-                    // as with OPENSSL_SIGALGS these can only be advertised through the raw setter,
-                    // which skips the supported-algorithm check.
-                    SSL_set_raw_verify_algorithm_prefs(ssl.get(), sigalgs, sigalgs_len);
-                } else if (!SSL_set_verify_algorithm_prefs(ssl.get(), sigalgs, sigalgs_len)) {
+                if (!SSL_set_verify_algorithm_prefs(ssl.get(), sigalgs, sigalgs_len)) {
                     return "Failed to set signature algorithms";
                 }
             }

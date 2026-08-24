@@ -1,60 +1,76 @@
 This patch is imported from https://github.com/0x676e67/wreq project under Apache-2.0 license.
 
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+index 618fb74..8b9e0de 100644
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -1503,6 +1503,9 @@ DEFINE_CONST_STACK_OF(SSL_CIPHER)
+ #define SSL_CIPHER_PSK_WITH_AES_128_CBC_SHA 0x008c
+ #define SSL_CIPHER_PSK_WITH_AES_256_CBC_SHA 0x008d
+ #define SSL_CIPHER_RSA_WITH_3DES_EDE_CBC_SHA 0x000a
++// Re-added for Safari ClientHello imitation.
++#define SSL_CIPHER_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA 0xc008
++#define SSL_CIPHER_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA 0xc012
+ 
+ // The following constants are not cipher suites, but are used in the protocol
+ // as signalling values.
 diff --git a/ssl/ssl_cipher.cc b/ssl/ssl_cipher.cc
+index 1ef231c..2603f67 100644
 --- a/ssl/ssl_cipher.cc
 +++ b/ssl/ssl_cipher.cc
-@@ -287,6 +287,18 @@
-       SSL_HANDSHAKE_MAC_SHA256,
+@@ -165,6 +165,18 @@ static constexpr SSL_CIPHER kCiphers[] = {
+         SSL_HANDSHAKE_MAC_SHA256,
      },
  
 +    // Cipher C008
 +    {
-+     TLS1_TXT_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA,
-+     "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA",
-+     TLS1_CK_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA,
-+     SSL_kECDHE,
-+     SSL_aECDSA,
-+     SSL_3DES,
-+     SSL_SHA1,
-+     SSL_HANDSHAKE_MAC_DEFAULT,
++        "ECDHE-ECDSA-DES-CBC3-SHA",
++        "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA",
++        SSL_CIPHER_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,
++        SSL_kECDHE,
++        SSL_aECDSA,
++        SSL_3DES,
++        SSL_SHA1,
++        SSL_HANDSHAKE_MAC_DEFAULT,
 +    },
 +
      // Cipher C009
      {
-      TLS1_TXT_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-@@ -311,6 +323,18 @@
-      SSL_HANDSHAKE_MAC_DEFAULT,
+         TLS1_TXT_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+@@ -189,6 +201,18 @@ static constexpr SSL_CIPHER kCiphers[] = {
+         SSL_HANDSHAKE_MAC_DEFAULT,
      },
  
 +    // Cipher C012
 +    {
-+     TLS1_TXT_ECDHE_RSA_WITH_DES_192_CBC3_SHA,
-+     "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
-+     TLS1_CK_ECDHE_RSA_WITH_DES_192_CBC3_SHA,
-+     SSL_kECDHE,
-+     SSL_aRSA_SIGN,
-+     SSL_3DES,
-+     SSL_SHA1,
-+     SSL_HANDSHAKE_MAC_DEFAULT,
++        "ECDHE-RSA-DES-CBC3-SHA",
++        "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
++        SSL_CIPHER_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
++        SSL_kECDHE,
++        SSL_aRSA_SIGN,
++        SSL_3DES,
++        SSL_SHA1,
++        SSL_HANDSHAKE_MAC_DEFAULT,
 +    },
 +
      // Cipher C013
      {
-      TLS1_TXT_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-@@ -1167,6 +1191,9 @@
-       TLS1_CK_PSK_WITH_AES_128_CBC_SHA & 0xffff,
-       TLS1_CK_RSA_WITH_AES_256_SHA & 0xffff,
-       TLS1_CK_PSK_WITH_AES_256_CBC_SHA & 0xffff,
+         TLS1_TXT_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+@@ -1045,6 +1069,9 @@ bool ssl_create_cipher_list(UniquePtr<SSLCipherPreferenceList> *out_cipher_list,
+       SSL_CIPHER_PSK_WITH_AES_128_CBC_SHA,
+       SSL_CIPHER_RSA_WITH_AES_256_CBC_SHA,
+       SSL_CIPHER_PSK_WITH_AES_256_CBC_SHA,
 +      // ECDHE-3DES suites re-added for Safari ClientHello imitation.
-+      TLS1_CK_ECDHE_ECDSA_WITH_DES_192_CBC3_SHA & 0xffff,
-+      TLS1_CK_ECDHE_RSA_WITH_DES_192_CBC3_SHA & 0xffff,
-       SSL3_CK_RSA_DES_192_CBC3_SHA & 0xffff,
++      SSL_CIPHER_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,
++      SSL_CIPHER_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+       SSL_CIPHER_RSA_WITH_3DES_EDE_CBC_SHA,
    };
  
 diff --git a/ssl/ssl_privkey.cc b/ssl/ssl_privkey.cc
+index 2947529..bb8f723 100644
 --- a/ssl/ssl_privkey.cc
 +++ b/ssl/ssl_privkey.cc
-@@ -597,9 +597,11 @@
+@@ -577,9 +577,11 @@ static bool sigalgs_unique(Span<const uint16_t> in_sigalgs) {
  }
  
  static bool set_sigalg_prefs(Array<uint16_t> *out, Span<const uint16_t> prefs) {
