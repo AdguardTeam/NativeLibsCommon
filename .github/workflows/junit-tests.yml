@@ -1,0 +1,191 @@
+# Local copy of AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml
+# extended with optional sccache steps (sccache-key input).
+# Keep in sync with the upstream file; merge the sccache changes back
+# into actions when convenient, then switch run-tests.yml back to
+# `uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master`.
+name: JUnit tests
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        required: true
+        description: 'JSON array of runner labels'
+      container-image:
+        type: string
+        default: ''
+        description: 'Docker image for the job container. Empty string = no container (e.g. macOS runners)'
+      vault-role:
+        type: string
+        default: ''
+        description: 'Vault JWT auth role name. Empty = skip Vault step'
+      vault-secrets:
+        type: string
+        default: ''
+        description: 'Vault secrets specification (multi-line, vault-action format). Secrets are exported as env vars. Empty = skip Vault step'
+      prepare-script:
+        type: string
+        default: ''
+        description: 'Shell commands to run after checkout (e.g. keystore setup). Vault secrets are available as env vars. Empty = skip'
+      test-command:
+        type: string
+        required: true
+        description: 'Shell command to run unit tests (e.g. ./gradlew testDebugUnitTest)'
+      finally-script:
+        type: string
+        default: ''
+        description: 'Shell commands to run after tests complete (always, even on failure). Use for cache uploads, cleanup, etc.'
+      results-path:
+        type: string
+        required: true
+        description: 'Glob pattern for JUnit XML test results'
+      artifact-name:
+        type: string
+        default: 'unit-test-results'
+        description: 'Name for the uploaded test results artifact'
+      shell:
+        type: string
+        default: 'bash'
+        description: 'Shell interpreter for prepare-script and test-command (e.g. bash, powershell, pwsh)'
+      sccache-key:
+        type: string
+        default: ''
+        description: >
+          Registry-cache key for the sccache store. Empty = skip the sccache
+          steps entirely. When set, the store is restored into
+          $GITHUB_WORKSPACE/.sccache before the tests (inside the docker
+          context) and saved back from `sccache-path` after them.
+      sccache-path:
+        type: string
+        default: 'build/sccache'
+        description: 'Path (relative to the workspace) where the sccache store is exported and saved from.'
+    secrets:
+      test-env:
+        required: false
+        description: 'Multi-line KEY=VALUE pairs exported as masked env vars before prepare-script and test-command. Use with `secrets: inherit` on the caller side.'
+      sccache-config:
+        required: false
+        description: 'Auth config for the registry-cache restore/save actions (REGISTRY_CACHE_AUTH). Required when sccache-key is set.'
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ${{ fromJson(inputs.runs-on) }}
+    container: ${{ inputs.container-image || null }}
+    defaults:
+      run:
+        shell: ${{ inputs.shell || 'bash' }}
+    env:
+      # sccache local-disk store, restored/saved across runs by the
+      # registry-cache action as an OCI registry blob. Only used when
+      # sccache-key is set.
+      SCCACHE_DIR: ${{ github.workspace }}/.sccache
+      SCCACHE_CACHE_SIZE: 512M
+    steps:
+      - name: Fetch secrets from Vault
+        if: inputs.vault-role != ''
+        id: vault
+        uses: hashicorp/vault-action@v4
+        with:
+          url: ${{ vars.VAULT_URL }}
+          method: jwt
+          path: jwt
+          role: ${{ inputs.vault-role }}
+          secrets: ${{ inputs.vault-secrets }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # sccache wraps the compilers so objects are reused across runs. The
+      # binary is installed on the runner by the action (used by the stats
+      # step); inside a docker build it is installed by the test-command's
+      # Dockerfile. The store is restored into the workspace, so it is part of
+      # the docker context (COPY . . seeds the container) and exported back to
+      # sccache-path after the build.
+      - name: Configure sccache
+        if: inputs.sccache-key != ''
+        uses: AdguardTeam/sccache-action@main
+
+      - name: Restore sccache store
+        if: inputs.sccache-key != ''
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
+        with:
+          config: ${{ secrets.sccache-config }}
+          key: ${{ inputs.sccache-key }}
+          path: ${{ env.SCCACHE_DIR }}
+
+      - name: Apply PR overrides
+        uses: AdGuardSoftwareLimited/actions/actions/apply-pr-overrides@master
+
+      - name: Export extra environment variables
+        uses: actions/github-script@v8
+        env:
+          _TEST_ENV: ${{ secrets.test-env }}
+        with:
+          script: |
+            const fs = require('fs');
+            const raw = process.env._TEST_ENV || '';
+            if (!raw.trim()) return;
+            for (const line of raw.split('\n')) {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed.startsWith('#')) continue;
+              const idx = trimmed.indexOf('=');
+              if (idx < 1) continue;
+              const value = trimmed.substring(idx + 1);
+              core.setSecret(value);
+              fs.appendFileSync(process.env.GITHUB_ENV, trimmed + '\n');
+            }
+
+      - name: Prepare environment
+        if: inputs.prepare-script != ''
+        run: ${{ inputs.prepare-script }}
+
+      - name: Run unit tests
+        run: ${{ inputs.test-command }}
+
+      - name: Finally
+        if: always() && inputs.finally-script != ''
+        run: ${{ inputs.finally-script }}
+
+      # Print sccache counters and decide whether to force-save the store: the
+      # save action skips the upload when the key already exists, so the store
+      # would freeze after the first run. force=true whenever sccache wrote new
+      # entries this run, so source-only changes accumulate.
+      - name: sccache stats
+        id: sccache-stats
+        if: always() && inputs.sccache-key != ''
+        run: |
+          SCCACHE_DIR=${{ inputs.sccache-path }} sccache --show-stats || true
+          cache_writes=$(SCCACHE_DIR=${{ inputs.sccache-path }} sccache --show-stats --stats-format=json 2>/dev/null \
+            | grep -o '"cache_writes":[0-9]*' | grep -o '[0-9]*' || echo 0)
+          if [ "$cache_writes" -gt 0 ] 2>/dev/null; then
+            echo "force=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "force=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save sccache store
+        if: always() && inputs.sccache-key != ''
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/save@master
+        with:
+          config: ${{ secrets.sccache-config }}
+          key: ${{ inputs.sccache-key }}
+          path: ${{ inputs.sccache-path }}
+          force: ${{ steps.sccache-stats.outputs.force }}
+
+      - name: JUnit summary
+        if: always()
+        uses: AdGuardSoftwareLimited/actions/actions/junit-summary@master
+        with:
+          path: ${{ inputs.results-path }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.results-path }}
+          if-no-files-found: error

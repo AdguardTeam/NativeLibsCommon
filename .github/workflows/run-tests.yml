@@ -36,6 +36,7 @@ jobs:
             shell: powershell
             artifact-name: test-results-windows
             results-path: 'cmake-build-msvc-debug/junit.xml'
+            sccache-key: sccache-windows-${{ hashFiles('conanfile.py') }}
             test-command: |
               $ErrorActionPreference = 'Stop'
 
@@ -53,7 +54,7 @@ jobs:
                 }
               }
 
-              & make PRESET=msvc-debug test
+              & make PRESET=msvc-debug test CMAKE_LAUNCHER=sccache
               if (!$?) { exit 1 }
             finally-script: |
               $ErrorActionPreference = 'Continue'
@@ -66,6 +67,7 @@ jobs:
             shell: bash
             artifact-name: test-results-macos
             results-path: 'cmake-build-clang-debug/junit.xml'
+            sccache-key: sccache-macos-${{ hashFiles('conanfile.py') }}
             test-command: |
               set -eux
 
@@ -77,18 +79,19 @@ jobs:
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
               # CMAKE_OSX_ARCHITECTURES defaults to the host arch (override: ARCH=...).
-              make PRESET=clang-debug test
+              make PRESET=clang-debug test CMAKE_LAUNCHER=sccache
             finally-script: |
               set -eux
 
               source ./venv/bin/activate
               conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
               conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
+    uses: ./.github/workflows/junit-tests.yml
     secrets:
       test-env: |
         ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
         ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
+      sccache-config: ${{ secrets.REGISTRY_CACHE_AUTH }}
     with:
       runs-on: ${{ matrix.runs-on }}
       container-image: ${{ matrix.container-image }}
@@ -97,6 +100,8 @@ jobs:
       finally-script: ${{ matrix.finally-script }}
       results-path: ${{ matrix.results-path }}
       artifact-name: ${{ matrix.artifact-name }}
+      sccache-key: ${{ matrix.sccache-key }}
+      sccache-path: build/sccache
 
   linux-tests:
     name: Linux build
@@ -239,15 +244,31 @@ jobs:
     name: Android build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on: team-corelibs
+    env:
+      SCCACHE_DIR: ${{ github.workspace }}/.sccache
+      SCCACHE_CACHE_SIZE: 512M
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Configure sccache
+        uses: AdguardTeam/sccache-action@main
+
+      - name: Restore sccache store
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
+        with:
+          config: ${{ secrets.REGISTRY_CACHE_AUTH }}
+          # NDK clang is a different toolchain than the Linux system clang, so
+          # a distinct prefix keeps the stores from colliding even though both
+          # hash conanfile.py identically.
+          key: sccache-android-${{ hashFiles('conanfile.py') }}
+          path: ${{ env.SCCACHE_DIR }}
+
       - name: Build Android library
         uses: AdGuardSoftwareLimited/actions/actions/docker-build@master
         with:
-          target: android-build
-          output: type=cacheonly
+          target: android-build-output
+          output: type=local,dest=build
           build-args: |
             CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
           secrets: |
@@ -257,6 +278,14 @@ jobs:
           content: |
             # syntax=docker/dockerfile:1
             FROM ${{ env.CORELIBS_IMAGE }} AS android-build
+
+            # sccache caches the NDK clang compilations; the pinned binary is
+            # installed once (this layer is not affected by CACHEBUST). The
+            # store lives in the context (restored on the runner into .sccache,
+            # carried by COPY . . below) and is exported back after the build.
+            ENV SCCACHE_CACHE_SIZE=512M
+            RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.8.2/sccache-v0.8.2-x86_64-unknown-linux-musl.tar.gz \
+                | tar -xz -C /usr/local/bin --strip-components=1
 
             WORKDIR /src
 
@@ -311,6 +340,10 @@ jobs:
             conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
 
             cd android/NativeLibsCommon
+            # Route NDK clang through sccache (see lib/build.gradle's USE_SCCACHE
+            # gate); the store was restored into /src/.sccache by COPY . .
+            export SCCACHE_DIR=/src/.sccache
+            export USE_SCCACHE=1
             ./gradlew $GRADLE_FLAGS :lib:assembleRelease || build_status=$?
 
             conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
@@ -321,3 +354,32 @@ jobs:
             ./gradlew $GRADLE_FLAGS clean || true
             exit ${build_status:-0}
             END
+
+            FROM scratch AS android-build-output
+
+            COPY --from=android-build /src/.sccache /sccache
+
+      # Print sccache counters and decide whether to force-save the store; see
+      # the linux-tests job for the rationale. The native build is the only
+      # sccache-using step, so saving right here captures the complete store.
+      - name: sccache stats
+        id: sccache-stats
+        if: always()
+        run: |
+          SCCACHE_DIR=build/sccache sccache --show-stats || true
+          cache_writes=$(SCCACHE_DIR=build/sccache sccache --show-stats --stats-format=json 2>/dev/null \
+            | grep -o '"cache_writes":[0-9]*' | grep -o '[0-9]*' || echo 0)
+          if [ "$cache_writes" -gt 0 ] 2>/dev/null; then
+            echo "force=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "force=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save sccache store
+        if: always()
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/save@master
+        with:
+          config: ${{ secrets.REGISTRY_CACHE_AUTH }}
+          key: sccache-android-${{ hashFiles('conanfile.py') }}
+          path: build/sccache
+          force: ${{ steps.sccache-stats.outputs.force }}

@@ -4,6 +4,12 @@ set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "cmake/conan_provider.cmake")
 endif()
 project(native_libs_common C CXX)
 
+# Route MSVC builds safely through a compiler launcher (sccache/ccache) by
+# switching the debug-information format from /Zi (shared PDB) to /Z7
+# (embedded in each .obj) when CMAKE_*_COMPILER_LAUNCHER is set. No-op for
+# non-MSVC toolchains and when no launcher is configured.
+include(cmake/sccache_msvc.cmake)
+
 SET(CMAKE_CXX_STANDARD 20)
 SET(CMAKE_C_STANDARD 11)
 set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
