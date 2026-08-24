@@ -10,11 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- BoringSSL is updated from the `0.20240913.0` tag to `0.20260508.0`, primarily to pick up upstream ML-DSA support. The Conan package reference changes from `openssl/boring-2024-09-13@adguard/oss` to `openssl/boring-2026-05-08@adguard/oss` in the top-level `conanfile.py` and in the `libevent` and `ngtcp2-1.22.1` recipes.
+
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- `TlsClientProfile::FIREFOX`: the TLS 1.2 cipher list is now emitted in NSS's own order instead of a tidied one. JA4 sorts the cipher list before hashing, so the JA4 is unchanged, but JA3 and byte-exact comparison against a real Firefox ClientHello now match.
 
 ### Security
 

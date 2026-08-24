@@ -1,17 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2308d5721..ff45611df 100644
+index db6565d..9ce6c63 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -185,6 +185,8 @@ elseif(MSVC)
-   set(MSVC_DISABLED_WARNINGS_LIST
-       "C4100" # 'exarg' : unreferenced formal parameter
-       "C4127" # conditional expression is constant
-+      "C4132" # const object should be initialized
-+      "C4146" # unary minus operator applied to unsigned type, result still unsigned
-       "C4244" # 'function' : conversion from 'int' to 'uint8_t',
-               # possible loss of data
-       "C4267" # conversion from 'size_t' to 'int', possible loss of data
-@@ -392,6 +394,10 @@ if(OPENSSL_NO_SSE2_FOR_TESTING)
+@@ -294,6 +294,10 @@ if(OPENSSL_NO_SSE2_FOR_TESTING)
    add_definitions(-DOPENSSL_NO_SSE2_FOR_TESTING)
  endif()
  
@@ -19,6 +10,15 @@ index 2308d5721..ff45611df 100644
 +  add_definitions(-DOPENSSL_STATIC_ARMCAP)
 +endif()
 +
+ # Build a custom libc++. This must be the first target, so that it is linked to
+ # every subsequent target.
  if(USE_CUSTOM_LIBCXX)
-   if(NOT CLANG)
-     message(FATAL_ERROR "USE_CUSTOM_LIBCXX only supported with Clang")
+@@ -525,6 +529,8 @@ elseif(MSVC)
+       "-wd4702" # unreachable code; MSVC's warning is too aggressive. See
+                 # https://crbug.com/385161043
+       "-wd4706" # assignment within conditional expression
++      "-wd4132" # const object should be initialized
++      "-wd4146" # unary minus operator applied to unsigned type, result still unsigned
+       )
+   add_compile_options(
+     "$<$<COMPILE_LANGUAGE:C,CXX>:-W4;-WX;${MSVC_DISABLED_WARNINGS_LIST}>")

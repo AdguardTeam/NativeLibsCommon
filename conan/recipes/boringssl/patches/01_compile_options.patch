@@ -1,10 +1,10 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2308d5721..e5278c42d 100644
+index aaf3bf1..1a98244 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -486,6 +486,24 @@ target_include_directories(
- # themselves as dependencies next to the target definition.
- add_custom_target(all_tests)
+@@ -530,6 +530,24 @@ elseif(MSVC)
+     "$<$<COMPILE_LANGUAGE:C,CXX>:-W4;-WX;${MSVC_DISABLED_WARNINGS_LIST}>")
+ endif()
  
 +# Begin AdGuard compile options
 +if(WIN32)
@@ -24,7 +24,6 @@ index 2308d5721..e5278c42d 100644
 +endif()
 +# End AdGuard compile options
 +
- add_subdirectory(ssl/test)
- add_subdirectory(util/fipstools)
- add_subdirectory(util/fipstools/acvp/modulewrapper)
-
+ if(OPENSSL_ASM)
+   set(CRYPTO_SOURCES_ASM_USED ${CRYPTO_SOURCES_ASM})
+   set(BCM_SOURCES_ASM_USED ${BCM_SOURCES_ASM})

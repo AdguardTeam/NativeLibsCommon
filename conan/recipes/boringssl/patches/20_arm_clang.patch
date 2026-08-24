@@ -1,12 +1,12 @@
 This patch synchronizes the condition of enabling X25519_NEON with CMakeLists.txt
 
 diff --git a/crypto/curve25519/internal.h b/crypto/curve25519/internal.h
-index 5cf8fb5..86e964d 100644
+index a28a774..0f9bbee 100644
 --- a/crypto/curve25519/internal.h
 +++ b/crypto/curve25519/internal.h
-@@ -23,7 +23,7 @@
- extern "C" {
- #endif
+@@ -21,7 +21,7 @@
+ 
+ BSSL_NAMESPACE_BEGIN
  
 -#if defined(OPENSSL_ARM) && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_APPLE) && defined(__clang__)
 +#if defined(OPENSSL_ARM) && !defined(OPENSSL_NO_ASM) && defined(__ANDROID__)

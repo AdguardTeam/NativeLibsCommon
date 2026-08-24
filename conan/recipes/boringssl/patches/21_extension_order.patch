@@ -1,10 +1,10 @@
 This patch is imported from https://github.com/0x676e67/wreq project under Apache-2.0 license.
    
 diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
-index ca243c4..3c3e798 100644
+index 0d9eee4..47ab65b 100644
 --- a/include/openssl/ssl.h
 +++ b/include/openssl/ssl.h
-@@ -2919,6 +2919,13 @@ OPENSSL_EXPORT void SSL_set_record_size_limit(SSL *ssl, uint16_t limit);
+@@ -3067,6 +3067,13 @@ OPENSSL_EXPORT void SSL_set_record_size_limit(SSL *ssl, uint16_t limit);
  // (RFC 9345) with the given signature algorithms |prefs|.
  OPENSSL_EXPORT void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
                                                    size_t num_prefs);
@@ -19,10 +19,10 @@ index ca243c4..3c3e798 100644
  // encrypt_then_mac ClientHello extension (RFC 7366). This is advertise-only for
  // ClientHello fingerprinting; BoringSSL does not implement Encrypt-then-MAC.
 diff --git a/ssl/extensions.cc b/ssl/extensions.cc
-index 8820497..966fa16 100644
+index 97346cb..d74d013 100644
 --- a/ssl/extensions.cc
 +++ b/ssl/extensions.cc
-@@ -3420,6 +3420,38 @@ static_assert(kNumExtensions <=
+@@ -4294,6 +4294,38 @@ static_assert(kNumExtensions <=
                "too many extensions for received bitset");
  
  bool ssl_setup_extension_permutation(SSL_HANDSHAKE *hs) {
@@ -62,10 +62,10 @@ index 8820497..966fa16 100644
      return true;
    }
 diff --git a/ssl/internal.h b/ssl/internal.h
-index d391573..df74f79 100644
+index e759b27..e278922 100644
 --- a/ssl/internal.h
 +++ b/ssl/internal.h
-@@ -3267,6 +3267,14 @@ struct SSL_CONFIG {
+@@ -3474,6 +3474,14 @@ struct SSL_CONFIG {
    // record_size_limit ClientHello extension (RFC 8449).
    uint16_t record_size_limit = 0;
  
@@ -81,10 +81,10 @@ index d391573..df74f79 100644
    // ClientHello extension (RFC 7366). BoringSSL does not implement
    // Encrypt-then-MAC record protection; this is advertise-only, to reproduce a
 diff --git a/ssl/ssl_lib.cc b/ssl/ssl_lib.cc
-index b63ca17..290d01a 100644
+index 2a2ef51..4d6a73e 100644
 --- a/ssl/ssl_lib.cc
 +++ b/ssl/ssl_lib.cc
-@@ -2268,6 +2268,13 @@ void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
+@@ -2277,6 +2277,13 @@ void SSL_set_delegated_credentials(SSL *ssl, const uint16_t *prefs,
        bssl::MakeConstSpan(prefs, num_prefs));
  }
  
