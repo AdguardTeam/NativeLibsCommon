@@ -26,8 +26,6 @@ jobs:
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
-    container:
-      image: adguard/core-libs:2.12
     steps:
       - name: Sleep five minutes
         shell: bash
