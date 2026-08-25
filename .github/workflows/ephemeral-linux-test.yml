@@ -1,8 +1,8 @@
 name: Ephemeral Linux test
 
-# Run two ephemeral Linux jobs on the corelibs-builder image — resolved by the
-# resolve-images reusable workflow — each idling for two minutes and then
-# quitting, to check the ephemeral agents come up and tear down cleanly.
+# Run one ephemeral job inside a container on the corelibs-builder image
+# (resolved from the KV store), sleeping five minutes — enough time to attach to
+# the live agent and inspect the container network.
 
 on:
   pull_request:
@@ -16,13 +16,9 @@ jobs:
   resolve-images:
     uses: ./.github/workflows/resolve-images.yml
 
-  idle:
-    name: Idle ${{ matrix.name }}
+  sleep:
+    name: Sleep in container
     needs: resolve-images
-    strategy:
-      fail-fast: false
-      matrix:
-        name: [one, two]
     runs-on:
       - ephemeral
       - ephemeral-linux
@@ -30,12 +26,13 @@ jobs:
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
+    container:
+      image: adguard/core-libs:2.12
     steps:
-      - name: Idle for two minutes
+      - name: Sleep five minutes
         shell: bash
         run: |
           set -eux
           echo "runner image: ${{ needs.resolve-images.outputs.corelibs-builder }}"
-          echo "job: ${{ matrix.name }}, run ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          sleep 120
-          echo "done"
+          sleep 300
+          echo done
