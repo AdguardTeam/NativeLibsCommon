@@ -46,9 +46,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Probe IPv6 on host
+      - name: Probe IPv6 on host with routed prefix 2001:db8:10:300::/64
         shell: bash
-        run: sh .github/scripts/ipv6-probe.sh
+        run: |
+          set -eux
+          # Egress interface (default IPv6 route).
+          IF=$(ip -j -6 route show default | jq -r '.[0].dev // empty')
+          [ -n "$IF" ] || IF=$(ip -j -6 route get 2001:4860:4860::8888 | jq -r '.[0].dev // empty')
+
+          # Add an address from the prefix the admin routes to this agent, and
+          # source outbound traffic from it.
+          SRC=2001:db8:10:300::2
+          ip -6 addr add "${SRC}/64" dev "$IF" || true
+          ip -6 addr show dev "$IF"
+
+          curl -6 --interface "$SRC" -sS --max-time 15 -o /dev/null \
+            -w 'curl -6 (src %{local_ip}) -> HTTP %{http_code}\n' \
+            https://ipv6.google.com
 
   container-ipv6:
     name: Container (${{ matrix.name }})
