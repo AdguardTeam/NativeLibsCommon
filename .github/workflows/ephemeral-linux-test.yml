@@ -23,8 +23,8 @@ jobs:
       - ephemeral
       - ephemeral-linux
       - ${{ needs.resolve-images.outputs.corelibs-builder }}
-      - ephemeral-limit-memory-6144
-      - ephemeral-limit-cpu-4
+      - ephemeral-limit-memory-2048
+      - ephemeral-limit-cpu-2
       - ephemeral-run-id-${{ github.run_id }}
     steps:
       - name: Sleep five minutes
