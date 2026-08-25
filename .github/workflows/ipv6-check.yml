@@ -3,9 +3,10 @@ name: IPv6 check
 # AG-55096: verify IPv6 is available on the ephemeral Linux agent every way CI
 # reaches the network — bare host, a job `container`, `docker run`, `docker
 # build`, and a container network built the way the GitHub runner builds one.
-# The corelibs-builder image (resolved from the KV store) is expected to provide
-# container IPv6 with no workflow-side setup; each probe exits non-zero when
-# outbound IPv6 is unreachable, so a job's status reflects real connectivity.
+# Each path runs on two images: the base debian13-github (baseline, no IPv6
+# setup) and the corelibs-builder image resolved from the KV store (expected to
+# provide container IPv6). Each probe exits non-zero when outbound IPv6 is
+# unreachable, so a job's status reflects real connectivity.
 
 on:
   pull_request:
@@ -16,7 +17,7 @@ permissions:
   id-token: write
 
 env:
-  # Pre-pulled by the corelibs-builder image.
+  # Pre-pulled by the corelibs-builder image; pulled at runtime on debian13-github.
   CORELIBS_IMAGE: adguard/core-libs:2.12
 
 jobs:
@@ -24,12 +25,20 @@ jobs:
     uses: ./.github/workflows/resolve-images.yml
 
   host-ipv6:
-    name: IPv6 on host
+    name: Host (${{ matrix.name }})
     needs: resolve-images
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: debian13-github
+            image: registry.int.agrd.dev/linux/debian13-github:20260816-2356
+          - name: corelibs-builder
+            image: ${{ needs.resolve-images.outputs.corelibs-builder }}
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - ${{ matrix.image }}
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -42,12 +51,20 @@ jobs:
         run: sh .github/scripts/ipv6-probe.sh
 
   container-ipv6:
-    name: IPv6 in container
+    name: Container (${{ matrix.name }})
     needs: resolve-images
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: debian13-github
+            image: registry.int.agrd.dev/linux/debian13-github:20260816-2356
+          - name: corelibs-builder
+            image: ${{ needs.resolve-images.outputs.corelibs-builder }}
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - ${{ matrix.image }}
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -62,12 +79,20 @@ jobs:
         run: sh .github/scripts/ipv6-probe.sh
 
   emulate-runner-network:
-    name: IPv6 in emulated runner network
+    name: Emulated runner network (${{ matrix.name }})
     needs: resolve-images
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: debian13-github
+            image: registry.int.agrd.dev/linux/debian13-github:20260816-2356
+          - name: corelibs-builder
+            image: ${{ needs.resolve-images.outputs.corelibs-builder }}
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - ${{ matrix.image }}
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -80,12 +105,20 @@ jobs:
         run: sh .github/scripts/emulate-runner-network.sh
 
   docker-run-ipv6:
-    name: IPv6 in docker run
+    name: Docker run (${{ matrix.name }})
     needs: resolve-images
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: debian13-github
+            image: registry.int.agrd.dev/linux/debian13-github:20260816-2356
+          - name: corelibs-builder
+            image: ${{ needs.resolve-images.outputs.corelibs-builder }}
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - ${{ matrix.image }}
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
@@ -102,12 +135,20 @@ jobs:
             "$CORELIBS_IMAGE" sh /probe/ipv6-probe.sh
 
   docker-build-ipv6:
-    name: IPv6 in docker build
+    name: Docker build (${{ matrix.name }})
     needs: resolve-images
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: debian13-github
+            image: registry.int.agrd.dev/linux/debian13-github:20260816-2356
+          - name: corelibs-builder
+            image: ${{ needs.resolve-images.outputs.corelibs-builder }}
     runs-on:
       - ephemeral
       - ephemeral-linux
-      - ${{ needs.resolve-images.outputs.corelibs-builder }}
+      - ${{ matrix.image }}
       - ephemeral-limit-memory-6144
       - ephemeral-limit-cpu-4
       - ephemeral-run-id-${{ github.run_id }}
