@@ -54,9 +54,10 @@ jobs:
           IF=$(ip -j -6 route show default | jq -r '.[0].dev // empty')
           [ -n "$IF" ] || IF=$(ip -j -6 route get 2001:4860:4860::8888 | jq -r '.[0].dev // empty')
 
-          # Add an address from the prefix the admin routes to this agent, and
-          # source outbound traffic from it.
-          SRC=2001:db8:10:300::2
+          # Add an address from the prefix the admin routes to this agent, with
+          # a random host part, and source outbound traffic from it.
+          suffix=$(od -An -tx2 -N8 /dev/urandom | tr -d ' \n' | sed 's/..../&:/g; s/:$//')
+          SRC="2001:db8:10:300:${suffix}"
           ip -6 addr add "${SRC}/64" dev "$IF" || true
           ip -6 addr show dev "$IF"
 
