@@ -53,13 +53,24 @@ on:
         default: ''
         description: >
           Registry-cache key for the sccache store. Empty = skip the sccache
-          steps entirely. When set, the store is restored into
-          $GITHUB_WORKSPACE/.sccache before the tests (inside the docker
-          context) and saved back from `sccache-path` after them.
+          steps entirely. When set:
+          - the store is restored into $GITHUB_WORKSPACE/.sccache before the
+            tests, so it lands inside the docker context (COPY . . seeds the
+            container);
+          - the caller's build must export the store out of the container
+            into `sccache-path` (e.g. an output stage that copies /sccache
+            into the output dir);
+          - after the build the store is read from `sccache-path` (stats)
+            and saved back to the registry under this key.
       sccache-path:
         type: string
         default: 'build/sccache'
-        description: 'Path (relative to the workspace) where the sccache store is exported and saved from.'
+        description: >
+          Path (relative to the workspace) where the docker build exports the
+          sccache store to; the stats and save steps read it from here. The
+          caller's output stage must write the store to this path. Restore, in
+          contrast, always writes into $GITHUB_WORKSPACE/.sccache so the store
+          is part of the build context.
     secrets:
       test-env:
         required: false
@@ -102,9 +113,9 @@ jobs:
       # sccache wraps the compilers so objects are reused across runs. The
       # binary is installed on the runner by the action (used by the stats
       # step); inside a docker build it is installed by the test-command's
-      # Dockerfile. The store is restored into the workspace, so it is part of
-      # the docker context (COPY . . seeds the container) and exported back to
-      # sccache-path after the build.
+      # Dockerfile. The store is restored into $GITHUB_WORKSPACE/.sccache
+      # (part of the build context via COPY . .), the caller exports it out of
+      # the container into sccache-path, and stats/save read it from there.
       - name: Configure sccache
         if: inputs.sccache-key != ''
         uses: AdguardTeam/sccache-action@main
