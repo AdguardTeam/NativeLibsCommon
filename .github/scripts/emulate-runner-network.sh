@@ -14,6 +14,9 @@ NET="github_network_emul_$$"
 CT="gh_job_emul_$$"
 LABEL="com.github.actions.emulate"
 IMG="${CORELIBS_IMAGE:-adguard/core-libs:2.12}"
+# Global prefix routed to this agent — containers get addresses from it and
+# route directly, no ULA/NAT.
+SUBNET="2001:db8:10:300::/64"
 
 cleanup() {
   docker rm -f "$CT" >/dev/null 2>&1 || true
@@ -21,8 +24,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "=== docker network create (runner form; shim should append --ipv6) ==="
-docker network create --label "$LABEL" "$NET"
+# The host must forward for containers on a routed prefix to reach off-box.
+sysctl -w net.ipv6.conf.all.forwarding=1 || true
+
+echo "=== docker network create with routed GUA subnet ${SUBNET} ==="
+docker network create --ipv6 --subnet "$SUBNET" --label "$LABEL" "$NET"
 docker network inspect "$NET" \
   --format 'EnableIPv6={{.EnableIPv6}} subnets=[{{range .IPAM.Config}}{{.Subnet}} {{end}}]'
 
