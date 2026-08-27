@@ -11,7 +11,7 @@ jobs:
   licensing-status:
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     needs: resolve-images
-    runs-on: '["ephemeral","ephemeral-vmwin","${{ needs.resolve-images.outputs.windows }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
+    runs-on: ${{ fromJSON(format('["ephemeral","ephemeral-vmwin","{0}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]', needs.resolve-images.outputs.windows)) }}
     steps:
       - name: Show Windows licensing status
         shell: powershell
