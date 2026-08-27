@@ -1,0 +1,15 @@
+name: windows
+
+on:
+  pull_request:
+
+jobs:
+  licensing-status:
+    runs-on: '["ephemeral","ephemeral-vmwin"]'
+    steps:
+      - name: Show Windows licensing status
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_SoftwareLicensingProduct |
+            Where-Object { $_.LicenseStatus -eq 1 } |
+            Select-Object Description, GracePeriodRemaining
