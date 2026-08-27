@@ -16,6 +16,6 @@ jobs:
       - name: Show Windows licensing status
         shell: powershell
         run: |
-          Get-CimInstance Win32_SoftwareLicensingProduct |
+          Get-CimInstance SoftwareLicensingProduct |
             Where-Object { $_.LicenseStatus -eq 1 } |
             Select-Object Description, GracePeriodRemaining
