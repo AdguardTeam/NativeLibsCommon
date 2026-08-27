@@ -4,11 +4,17 @@ on:
   pull_request:
 
 jobs:
+  resolve-images:
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    uses: ./.github/workflows/resolve-images.yml
+
   licensing-status:
-    runs-on: '["ephemeral","ephemeral-vmwin"]'
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    needs: resolve-images
+    runs-on: '["ephemeral","ephemeral-vmwin","${{ needs.resolve-images.outputs.windows }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
     steps:
       - name: Show Windows licensing status
-        shell: pwsh
+        shell: powershell
         run: |
           Get-CimInstance Win32_SoftwareLicensingProduct |
             Where-Object { $_.LicenseStatus -eq 1 } |
