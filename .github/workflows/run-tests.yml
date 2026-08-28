@@ -118,12 +118,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # sccache wraps the compilers so objects are reused across runs. The
-      # binary is installed on the runner by the action (used by the stats
-      # step); inside the container it is installed by the docker stage.
-      - name: Configure sccache
-        uses: AdguardTeam/sccache-action@main
-
+      # sccache wraps the compilers inside the container (the binary is
+      # installed by the docker stage); the runner only needs the exported
+      # store and the sccache-stats.json captured in the container.
       - name: Restore sccache store
         uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
         with:
@@ -187,6 +184,12 @@ jobs:
                 --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
             conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading" || true
 
+            # Capture the sccache counters where the compilations happened: the
+            # runner-side daemon has no knowledge of them (and its binary may be
+            # a different version). The runner reads this file to decide whether
+            # to force-save the store.
+            SCCACHE_DIR=/src/.sccache sccache --show-stats --stats-format=json > /src/sccache-stats.json 2>/dev/null || true
+
             # Drop the build outputs before the layer is committed; junit.xml,
             # which the next stage copies out, is not a build artifact.
             make PRESET=clang-debug-sanitizer clean || true
@@ -196,6 +199,7 @@ jobs:
             FROM scratch AS results
 
             COPY --from=tests /src/cmake-build-clang-debug-sanitizer/junit.xml /junit.xml
+            COPY --from=tests /src/sccache-stats.json /sccache-stats.json
             COPY --from=tests /src/.sccache /sccache
 
       - name: JUnit summary
@@ -217,14 +221,15 @@ jobs:
       # Print sccache counters and decide whether to force-save the store: the
       # save action skips the upload when the key already exists, so the store
       # would freeze after the first run. force=true whenever sccache wrote new
-      # entries this run, so source-only changes accumulate.
+      # entries this run (the counters were captured inside the container and
+      # exported with /src/sccache-stats.json), so source-only changes
+      # accumulate.
       - name: sccache stats
         id: sccache-stats
         if: always()
         run: |
-          SCCACHE_DIR=build/sccache sccache --show-stats || true
-          cache_writes=$(SCCACHE_DIR=build/sccache sccache --show-stats --stats-format=json 2>/dev/null \
-            | grep -o '"cache_writes":[0-9]*' | grep -o '[0-9]*' || echo 0)
+          cache_writes=$(grep -o '"cache_writes":[0-9]*' build/sccache-stats.json 2>/dev/null \
+            | grep -o '[0-9]*' || echo 0)
           if [ "$cache_writes" -gt 0 ] 2>/dev/null; then
             echo "force=true" >> "$GITHUB_OUTPUT"
           else
@@ -251,9 +256,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Configure sccache
-        uses: AdguardTeam/sccache-action@main
-
+      # sccache wraps the compilers inside the container (the binary is
+      # installed by the docker stage); the runner only needs the exported
+      # store and the sccache-stats.json captured in the container.
       - name: Restore sccache store
         uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
         with:
@@ -350,6 +355,10 @@ jobs:
                 --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
             conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading" || true
 
+            # Capture the sccache counters where the compilations happened; the
+            # runner reads this file to decide whether to force-save the store.
+            SCCACHE_DIR=/src/.sccache sccache --show-stats --stats-format=json > /src/sccache-stats.json 2>/dev/null || true
+
             # Keep the build outputs out of the committed layer.
             ./gradlew $GRADLE_FLAGS clean || true
             exit ${build_status:-0}
@@ -357,18 +366,18 @@ jobs:
 
             FROM scratch AS android-build-output
 
+            COPY --from=android-build /src/sccache-stats.json /sccache-stats.json
             COPY --from=android-build /src/.sccache /sccache
 
       # Print sccache counters and decide whether to force-save the store; see
-      # the linux-tests job for the rationale. The native build is the only
-      # sccache-using step, so saving right here captures the complete store.
+      # the linux-tests job for the rationale. The counters were captured
+      # inside the container and exported with /src/sccache-stats.json.
       - name: sccache stats
         id: sccache-stats
         if: always()
         run: |
-          SCCACHE_DIR=build/sccache sccache --show-stats || true
-          cache_writes=$(SCCACHE_DIR=build/sccache sccache --show-stats --stats-format=json 2>/dev/null \
-            | grep -o '"cache_writes":[0-9]*' | grep -o '[0-9]*' || echo 0)
+          cache_writes=$(grep -o '"cache_writes":[0-9]*' build/sccache-stats.json 2>/dev/null \
+            | grep -o '[0-9]*' || echo 0)
           if [ "$cache_writes" -gt 0 ] 2>/dev/null; then
             echo "force=true" >> "$GITHUB_OUTPUT"
           else

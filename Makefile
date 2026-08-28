@@ -50,6 +50,10 @@ endif
 CMAKE_LAUNCHER ?=
 ifneq ($(CMAKE_LAUNCHER),)
 CMAKE_LAUNCHER_FLAGS = -DCMAKE_C_COMPILER_LAUNCHER=$(CMAKE_LAUNCHER) -DCMAKE_CXX_COMPILER_LAUNCHER=$(CMAKE_LAUNCHER)
+else
+# Define it as empty explicitly so an environment-provided value cannot leak
+# into the configure line when CMAKE_LAUNCHER is not set.
+CMAKE_LAUNCHER_FLAGS =
 endif
 
 .PHONY: all
