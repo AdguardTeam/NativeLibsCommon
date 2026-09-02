@@ -1,6 +1,6 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
-from conan.tools.files import patch, copy
+from conan.tools.files import patch, copy, get
 from conan.tools.apple import is_apple_os
 from os.path import join
 import os
@@ -19,8 +19,9 @@ class LibeventConan(ConanFile):
             del self.options.fPIC
 
     def source(self):
-        self.run("git clone https://github.com/libevent/libevent.git source_subfolder")
-        self.run("cd source_subfolder && git checkout release-2.1.11-stable")
+        get(self,
+            url="https://github.com/libevent/libevent/archive/refs/tags/release-2.1.11-stable.tar.gz",
+            destination="source_subfolder", strip_root=True)
         # Apply all patches from the `patches` directory
         patches_path = os.path.join("patches")
         patches = sorted([f for f in os.listdir(patches_path) if os.path.isfile(os.path.join(patches_path, f))])
