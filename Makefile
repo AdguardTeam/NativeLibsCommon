@@ -41,20 +41,14 @@ OSX_ARCH_ARGS = -DCMAKE_OSX_ARCHITECTURES="$(ARCH)"
 endif
 endif
 
-# Optional compiler launcher (e.g. sccache) for the C and C++ compilers.
-# Set on the make command line like `make test CMAKE_LAUNCHER=sccache` -- the
-# Linux CI job does this to avoid recompiling on every push. When non-empty,
-# the matching -DCMAKE_*_COMPILER_LAUNCHER=... flags are appended to the
-# configure command line so every cmake configure (re)uses the launcher.
-# Empty by default, so local builds are unaffected.
-CMAKE_LAUNCHER ?=
-ifneq ($(CMAKE_LAUNCHER),)
-CMAKE_LAUNCHER_FLAGS = -DCMAKE_C_COMPILER_LAUNCHER=$(CMAKE_LAUNCHER) -DCMAKE_CXX_COMPILER_LAUNCHER=$(CMAKE_LAUNCHER)
-else
-# Define it as empty explicitly so an environment-provided value cannot leak
-# into the configure line when CMAKE_LAUNCHER is not set.
-CMAKE_LAUNCHER_FLAGS =
+# Optional compiler launcher (e.g. sccache). Set on the make command line
+# like `make test CMAKE_LAUNCHER=sccache`; environment values are ignored so a
+# stray exported variable cannot enable it for local builds.
+ifeq ($(origin CMAKE_LAUNCHER),environment)
+CMAKE_LAUNCHER :=
 endif
+CMAKE_LAUNCHER ?=
+CMAKE_LAUNCHER_FLAGS = $(if $(CMAKE_LAUNCHER),-DCMAKE_C_COMPILER_LAUNCHER=$(CMAKE_LAUNCHER) -DCMAKE_CXX_COMPILER_LAUNCHER=$(CMAKE_LAUNCHER))
 
 .PHONY: all
 ## Build the libraries (default target).

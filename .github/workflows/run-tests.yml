@@ -172,8 +172,8 @@ jobs:
 
             RUN --mount=type=cache,id=conan-linux-${{ github.run_id }},target=/conan \
                 --mount=type=secret,id=CONAN_REPO_URL,required=true \
-                --mount=type=secret,id=ARTIFACTORY_USER \
-                --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'
+                --mount=type=secret,id=ARTIFACTORY_USER,required=true \
+                --mount=type=secret,id=ARTIFACTORY_API_KEY,required=true <<'END'
             set -eux
 
             python3 -m pip install conan --upgrade
@@ -344,8 +344,8 @@ jobs:
 
             RUN --mount=type=cache,id=conan-android,target=/conan \
                 --mount=type=secret,id=CONAN_REPO_URL,required=true \
-                --mount=type=secret,id=ARTIFACTORY_USER \
-                --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'
+                --mount=type=secret,id=ARTIFACTORY_USER,required=true \
+                --mount=type=secret,id=ARTIFACTORY_API_KEY,required=true <<'END'
             set -eux
 
             # The remote lives in the cache mount, so it is configured here
