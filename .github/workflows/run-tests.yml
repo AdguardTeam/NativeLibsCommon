@@ -29,6 +29,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Static keys: hashFiles is not available in strategy.matrix (only in
+        # steps), and sccache hashes the compilation inputs itself.
         include:
           - name: Win
             runs-on: '["ephemeral","ephemeral-vmwin","${{ needs.resolve-images.outputs.windows }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
@@ -36,7 +38,7 @@ jobs:
             shell: powershell
             artifact-name: test-results-windows
             results-path: 'cmake-build-msvc-debug/junit.xml'
-            sccache-key: sccache-windows-${{ hashFiles('conanfile.py') }}
+            sccache-key: sccache-windows
             test-command: |
               $ErrorActionPreference = 'Stop'
 
@@ -67,7 +69,7 @@ jobs:
             shell: bash
             artifact-name: test-results-macos
             results-path: 'cmake-build-clang-debug/junit.xml'
-            sccache-key: sccache-macos-${{ hashFiles('conanfile.py') }}
+            sccache-key: sccache-macos
             test-command: |
               set -eux
 
