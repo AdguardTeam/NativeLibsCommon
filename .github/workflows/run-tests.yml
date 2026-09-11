@@ -128,7 +128,15 @@ jobs:
       # sccache wraps the compilers inside the container (the binary is
       # installed by the docker stage); the runner only needs the exported
       # store and the sccache-stats.json captured in the container.
+
+      # A cache restore must never block or fail the run: the action turns its
+      # own errors into a "miss" warning, but a stalled registry connection
+      # hangs the step (oci.js's req() only listens for errors on the request,
+      # so an aborted response body never settles the promise). The timeout
+      # kills such a step, continue-on-error keeps it non-fatal.
       - name: Restore sccache store
+        continue-on-error: true
+        timeout-minutes: 5
         uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
         with:
           config: ${{ secrets.REGISTRY_CACHE_AUTH }}
@@ -276,7 +284,15 @@ jobs:
       # sccache wraps the compilers inside the container (the binary is
       # installed by the docker stage); the runner only needs the exported
       # store and the sccache-stats.json captured in the container.
+
+      # A cache restore must never block or fail the run: the action turns its
+      # own errors into a "miss" warning, but a stalled registry connection
+      # hangs the step (oci.js's req() only listens for errors on the request,
+      # so an aborted response body never settles the promise). The timeout
+      # kills such a step, continue-on-error keeps it non-fatal.
       - name: Restore sccache store
+        continue-on-error: true
+        timeout-minutes: 5
         uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
         with:
           config: ${{ secrets.REGISTRY_CACHE_AUTH }}
