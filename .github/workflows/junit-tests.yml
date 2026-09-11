@@ -71,6 +71,19 @@ on:
           caller's output stage must write the store to this path. Restore, in
           contrast, always writes into $GITHUB_WORKSPACE/.sccache so the store
           is part of the build context.
+      sccache-stats-path:
+        type: string
+        default: 'build/sccache-stats.json'
+        description: >
+          Path (relative to the workspace) of the sccache counters captured by
+          the docker build (sccache --show-stats --stats-format=json). The
+          stats step reads them from here to decide whether to force-save the
+          store: the runner-side daemon never sees the container's
+          compilations and would report all zeros. A job that compiles on the
+          runner itself (no docker) leaves this file absent, and the daemon is
+          queried directly instead. A human-readable file with the same name
+          but a .txt extension (e.g. build/sccache-stats.txt) is printed to the
+          log when present.
     secrets:
       test-env:
         required: false
@@ -169,9 +182,20 @@ jobs:
         id: sccache-stats
         if: always() && inputs.sccache-key != ''
         run: |
-          SCCACHE_DIR=${{ inputs.sccache-path }} sccache --show-stats || true
-          cache_writes=$(SCCACHE_DIR=${{ inputs.sccache-path }} sccache --show-stats --stats-format=json 2>/dev/null \
-            | grep -o '"cache_writes":[0-9]*' | grep -o '[0-9]*' || echo 0)
+          # A docker-based build captures the counters inside the container and
+          # exports them (the runner-side daemon never sees those compilations
+          # and would report all zeros); a job that compiles on the runner has
+          # no such file and is queried directly.
+          stats_file="${{ inputs.sccache-stats-path }}"
+          if [ -f "$stats_file" ]; then
+            cat "${stats_file%.json}.txt" 2>/dev/null || true
+            cache_writes=$(grep -o '"cache_writes":[0-9]*' "$stats_file" 2>/dev/null \
+              | grep -o '[0-9]*' || echo 0)
+          else
+            SCCACHE_DIR=${{ inputs.sccache-path }} sccache --show-stats || true
+            cache_writes=$(SCCACHE_DIR=${{ inputs.sccache-path }} sccache --show-stats --stats-format=json 2>/dev/null \
+              | grep -o '"cache_writes":[0-9]*' | grep -o '[0-9]*' || echo 0)
+          fi
           if [ "$cache_writes" -gt 0 ] 2>/dev/null; then
             echo "force=true" >> "$GITHUB_OUTPUT"
           else
