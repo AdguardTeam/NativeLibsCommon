@@ -180,7 +180,9 @@ jobs:
       # entries this run, so source-only changes accumulate.
       - name: sccache stats
         id: sccache-stats
-        if: always() && inputs.sccache-key != ''
+        # The script below is bash; a caller that sets `shell: powershell` gets
+        # the PowerShell variant of this step instead (see right after it).
+        if: always() && inputs.sccache-key != '' && inputs.shell != 'powershell' && inputs.shell != 'pwsh'
         run: |
           # A docker-based build captures the counters inside the container and
           # exports them (the runner-side daemon never sees those compilations
@@ -202,6 +204,49 @@ jobs:
             echo "force=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # PowerShell twin of the step above: the caller's shell (e.g. the
+      # Windows runner's `shell: powershell`) applies to every `run:` step in
+      # this job, so the bash script would fail with syntax errors there.
+      - name: sccache stats (PowerShell)
+        id: sccache-stats-pwsh
+        if: always() && inputs.sccache-key != '' && (inputs.shell == 'powershell' || inputs.shell == 'pwsh')
+        run: |
+          $ErrorActionPreference = 'Continue'
+
+          # A docker-based build captures the counters inside the container and
+          # exports them (the runner-side daemon never sees those compilations
+          # and would report all zeros); a job that compiles on the runner has
+          # no such file and is queried directly.
+          $statsFile = '${{ inputs.sccache-stats-path }}'
+          $cacheWrites = 0
+          if (Test-Path -LiteralPath $statsFile) {
+            $txtFile = $statsFile -replace '\.json$', '.txt'
+            if (Test-Path -LiteralPath $txtFile) { Get-Content -LiteralPath $txtFile }
+            try {
+              $cacheWrites = [int]((Get-Content -LiteralPath $statsFile -Raw | ConvertFrom-Json).stats.cache_writes)
+            } catch {
+              $cacheWrites = 0
+            }
+          } else {
+            $env:SCCACHE_DIR = '${{ inputs.sccache-path }}'
+            & sccache --show-stats
+            $json = (& sccache --show-stats --stats-format=json 2>$null) -join "`n"
+            if ($json -and $json.Trim()) {
+              try {
+                $cacheWrites = [int](($json | ConvertFrom-Json).stats.cache_writes)
+              } catch {
+                $cacheWrites = 0
+              }
+            }
+          }
+          if ($cacheWrites -gt 0) {
+            Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value 'force=true'
+          } else {
+            Add-Content -LiteralPath $env:GITHUB_OUTPUT -Value 'force=false'
+          }
+          # A non-zero exit code of the query above must not fail the step.
+          $LASTEXITCODE = 0
+
       - name: Save sccache store
         if: always() && inputs.sccache-key != ''
         uses: AdGuardSoftwareLimited/actions/actions/registry-cache/save@master
@@ -209,7 +254,7 @@ jobs:
           config: ${{ secrets.sccache-config }}
           key: ${{ inputs.sccache-key }}
           path: ${{ inputs.sccache-path }}
-          force: ${{ steps.sccache-stats.outputs.force }}
+          force: ${{ steps.sccache-stats.outputs.force || steps.sccache-stats-pwsh.outputs.force }}
 
       - name: JUnit summary
         if: always()

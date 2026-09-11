@@ -39,6 +39,9 @@ jobs:
             artifact-name: test-results-windows
             results-path: 'cmake-build-msvc-debug/junit.xml'
             sccache-key: sccache-windows
+            # Nothing leaves the runner here, so the store stays in $SCCACHE_DIR
+            # (= .sccache relative to the workspace) all along.
+            sccache-path: .sccache
             test-command: |
               $ErrorActionPreference = 'Stop'
 
@@ -70,6 +73,8 @@ jobs:
             artifact-name: test-results-macos
             results-path: 'cmake-build-clang-debug/junit.xml'
             sccache-key: sccache-macos
+            # Runner-side job as well: the store stays in $SCCACHE_DIR.
+            sccache-path: .sccache
             test-command: |
               set -eux
 
@@ -103,7 +108,7 @@ jobs:
       results-path: ${{ matrix.results-path }}
       artifact-name: ${{ matrix.artifact-name }}
       sccache-key: ${{ matrix.sccache-key }}
-      sccache-path: build/sccache
+      sccache-path: ${{ matrix.sccache-path }}
 
   linux-tests:
     name: Linux build
