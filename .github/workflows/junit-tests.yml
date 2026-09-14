@@ -1,8 +1,6 @@
 # Local copy of AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml
-# extended with optional sccache steps (sccache-key input).
-# Keep in sync with the upstream file; merge the sccache changes back
-# into actions when convenient, then switch run-tests.yml back to
-# `uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master`.
+# extended with optional sccache steps (sccache-key input). Keep in sync with
+# upstream: merge the sccache changes back into actions when convenient.
 name: JUnit tests
 
 on:
@@ -123,21 +121,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      # sccache wraps the compilers so objects are reused across runs. The
-      # binary is installed on the runner by the action (used by the stats
-      # step); inside a docker build it is installed by the test-command's
-      # Dockerfile. The store is restored into $GITHUB_WORKSPACE/.sccache
-      # (part of the build context via COPY . .), the caller exports it out of
-      # the container into sccache-path, and stats/save read it from there.
+      # sccache wraps the compilers so objects are reused across runs; the store
+      # is restored into $GITHUB_WORKSPACE/.sccache and read back from sccache-path.
       - name: Configure sccache
         if: inputs.sccache-key != ''
         uses: AdguardTeam/sccache-action@main
 
-      # A cache restore must never block or fail the run: the action turns its
-      # own errors into a "miss" warning, but a stalled registry connection
-      # hangs the step (oci.js's req() only listens for errors on the request,
-      # so an aborted response body never settles the promise). The timeout
-      # kills such a step, continue-on-error keeps it non-fatal.
+      # Bound the restore and keep it non-fatal: the action turns its own errors
+      # into a "miss", but a stalled registry connection hangs the step.
       - name: Restore sccache store
         if: inputs.sccache-key != ''
         continue-on-error: true
@@ -181,20 +172,16 @@ jobs:
         if: always() && inputs.finally-script != ''
         run: ${{ inputs.finally-script }}
 
-      # Print sccache counters and decide whether to force-save the store: the
-      # save action skips the upload when the key already exists, so the store
-      # would freeze after the first run. force=true whenever sccache wrote new
-      # entries this run, so source-only changes accumulate.
+      # force=true when sccache wrote new entries this run: the save action skips
+      # the upload while the key exists, so the store would otherwise freeze.
       - name: sccache stats
         id: sccache-stats
         # The script below is bash; a caller that sets `shell: powershell` gets
         # the PowerShell variant of this step instead (see right after it).
         if: always() && inputs.sccache-key != '' && inputs.shell != 'powershell' && inputs.shell != 'pwsh'
         run: |
-          # A docker-based build captures the counters inside the container and
-          # exports them (the runner-side daemon never sees those compilations
-          # and would report all zeros); a job that compiles on the runner has
-          # no such file and is queried directly.
+          # A docker build exports the counters it captured (the runner daemon
+          # would report zeros); a runner-side build is queried directly.
           stats_file="${{ inputs.sccache-stats-path }}"
           if [ -f "$stats_file" ]; then
             cat "${stats_file%.json}.txt" 2>/dev/null || true
@@ -220,10 +207,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
 
-          # A docker-based build captures the counters inside the container and
-          # exports them (the runner-side daemon never sees those compilations
-          # and would report all zeros); a job that compiles on the runner has
-          # no such file and is queried directly.
+          # A docker build exports the counters it captured (the runner daemon
+          # would report zeros); a runner-side build is queried directly.
           $statsFile = '${{ inputs.sccache-stats-path }}'
           $cacheWrites = 0
           if (Test-Path -LiteralPath $statsFile) {
