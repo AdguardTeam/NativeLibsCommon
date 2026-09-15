@@ -62,13 +62,15 @@ on:
             and saved back to the registry under this key.
       sccache-path:
         type: string
-        default: 'build/sccache'
+        default: 'build/.sccache'
         description: >
           Path (relative to the workspace) where the docker build exports the
           sccache store to; the stats and save steps read it from here. The
           caller's output stage must write the store to this path. Restore, in
           contrast, always writes into $GITHUB_WORKSPACE/.sccache so the store
-          is part of the build context.
+          is part of the build context -- hence the last path component must
+          stay `.sccache`: registry-cache stores a path's basename inside the
+          tarball and the restore extracts that exact member.
       sccache-stats-path:
         type: string
         default: 'build/sccache-stats.json'
