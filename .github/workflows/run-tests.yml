@@ -29,6 +29,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Static keys: hashFiles is not available in strategy.matrix (only in
+        # steps), and sccache hashes the compilation inputs itself.
         include:
           - name: Win
             runs-on: '["ephemeral","ephemeral-vmwin","${{ needs.resolve-images.outputs.windows }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
@@ -36,6 +38,10 @@ jobs:
             shell: powershell
             artifact-name: test-results-windows
             results-path: 'cmake-build-msvc-debug/junit.xml'
+            sccache-key: sccache-windows
+            # Nothing leaves the runner here, so the store stays in $SCCACHE_DIR
+            # (= .sccache relative to the workspace) all along.
+            sccache-path: .sccache
             test-command: |
               $ErrorActionPreference = 'Stop'
 
@@ -53,7 +59,7 @@ jobs:
                 }
               }
 
-              & make PRESET=msvc-debug test
+              & make PRESET=msvc-debug test CMAKE_LAUNCHER=sccache
               if (!$?) { exit 1 }
             finally-script: |
               $ErrorActionPreference = 'Continue'
@@ -66,6 +72,9 @@ jobs:
             shell: bash
             artifact-name: test-results-macos
             results-path: 'cmake-build-clang-debug/junit.xml'
+            sccache-key: sccache-macos
+            # Runner-side job as well: the store stays in $SCCACHE_DIR.
+            sccache-path: .sccache
             test-command: |
               set -eux
 
@@ -77,18 +86,19 @@ jobs:
               conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
 
               # CMAKE_OSX_ARCHITECTURES defaults to the host arch (override: ARCH=...).
-              make PRESET=clang-debug test
+              make PRESET=clang-debug test CMAKE_LAUNCHER=sccache
             finally-script: |
               set -eux
 
               source ./venv/bin/activate
               conan remote login art "$ARTIFACTORY_USER" --password "$ARTIFACTORY_API_KEY"
               conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading"
-    uses: AdGuardSoftwareLimited/actions/.github/workflows/junit-tests.yml@master
+    uses: ./.github/workflows/junit-tests.yml
     secrets:
       test-env: |
         ARTIFACTORY_USER=${{ secrets.ARTIFACTORY_USER }}
         ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
+      sccache-config: ${{ secrets.REGISTRY_CACHE_AUTH }}
     with:
       runs-on: ${{ matrix.runs-on }}
       container-image: ${{ matrix.container-image }}
@@ -97,14 +107,39 @@ jobs:
       finally-script: ${{ matrix.finally-script }}
       results-path: ${{ matrix.results-path }}
       artifact-name: ${{ matrix.artifact-name }}
+      sccache-key: ${{ matrix.sccache-key }}
+      sccache-path: ${{ matrix.sccache-path }}
 
   linux-tests:
     name: Linux build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on: team-corelibs
+    env:
+      # sccache local-disk store, restored/saved by the registry-cache action as
+      # an OCI blob; SCCACHE_CACHE_SIZE bounds the store (and the saved blob).
+      SCCACHE_DIR: ${{ github.workspace }}/.sccache
+      SCCACHE_CACHE_SIZE: 512M
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      # sccache wraps the compilers inside the container (the binary is
+      # installed by the docker stage); the runner only needs the exported
+      # store and the sccache-stats.json captured in the container.
+
+      # Bound the restore and keep it non-fatal: the action turns its own errors
+      # into a "miss", but a stalled registry connection hangs the step.
+      - name: Restore sccache store
+        continue-on-error: true
+        timeout-minutes: 5
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
+        with:
+          config: ${{ secrets.REGISTRY_CACHE_AUTH }}
+          # Per-job prefix + conanfile.py hash so the store resets when the
+          # dependency graph changes. sccache is content-addressed, so
+          # source-only changes accumulate without invalidating the key.
+          key: sccache-linux-${{ hashFiles('conanfile.py') }}
+          path: ${{ env.SCCACHE_DIR }}
 
       - name: Run tests
         uses: AdGuardSoftwareLimited/actions/actions/docker-build@master
@@ -122,6 +157,13 @@ jobs:
             FROM ${{ env.CORELIBS_IMAGE }} AS tests
 
             WORKDIR /src
+
+            # sccache caches the compilations; the pinned binary is installed
+            # before COPY . . so this layer stays cached across source changes.
+            ENV SCCACHE_CACHE_SIZE=512M
+            RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl.tar.gz \
+                | tar -xz -C /usr/local/bin --strip-components=1
+
             COPY . .
 
             # A cache mount below, so the packages are neither committed to the
@@ -129,23 +171,37 @@ jobs:
             ENV CONAN_HOME=/conan
 
             # Changes on every run so the tests are never served from the cache.
+            # The ENV layer bakes the build-arg value into the layer history, so
+            # changing CACHEBUST invalidates everything below it.
             ARG CACHEBUST
+            ENV CACHEBUST=$CACHEBUST
 
             RUN --mount=type=cache,id=conan-linux-${{ github.run_id }},target=/conan \
                 --mount=type=secret,id=CONAN_REPO_URL,required=true \
-                --mount=type=secret,id=ARTIFACTORY_USER \
-                --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'
+                --mount=type=secret,id=ARTIFACTORY_USER,required=true \
+                --mount=type=secret,id=ARTIFACTORY_API_KEY,required=true <<'END'
             set -eux
 
             python3 -m pip install conan --upgrade
             conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
 
-            make PRESET=clang-debug-sanitizer test || test_status=$?
+            # The store was restored into .sccache and copied here by COPY . .;
+            # CMAKE_LAUNCHER makes cmake use sccache for C/C++ compilations.
+            export SCCACHE_DIR=/src/.sccache
+            # Pin the daemon to this container: a foreign one on the shared
+            # builder cannot see our sources ("No such file or directory").
+            export SCCACHE_SERVER_UDS=/tmp/sccache.sock
+            make PRESET=clang-debug-sanitizer test CMAKE_LAUNCHER=sccache || test_status=$?
 
             # Upload whatever was built, then report the test result.
             conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
-                --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
+                --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)" || true
             conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading" || true
+
+            # Counters from the daemon that compiled (.txt for the log, .json
+            # for force-save); the runner daemon knows nothing of them.
+            SCCACHE_DIR=/src/.sccache sccache --show-stats > /src/sccache-stats.txt 2>&1 || true
+            SCCACHE_DIR=/src/.sccache sccache --show-stats --stats-format=json > /src/sccache-stats.json 2>/dev/null || true
 
             # Drop the build outputs before the layer is committed; junit.xml,
             # which the next stage copies out, is not a build artifact.
@@ -156,6 +212,11 @@ jobs:
             FROM scratch AS results
 
             COPY --from=tests /src/cmake-build-clang-debug-sanitizer/junit.xml /junit.xml
+            COPY --from=tests /src/sccache-stats.json /sccache-stats.json
+            COPY --from=tests /src/sccache-stats.txt /sccache-stats.txt
+            # Keep the .sccache name: the restore extracts a member named after
+            # its own path, so renaming this silently turns restores into misses.
+            COPY --from=tests /src/.sccache /.sccache
 
       - name: JUnit summary
         if: always()
@@ -173,19 +234,66 @@ jobs:
           # test run leaves nothing to upload.
           if-no-files-found: warn
 
+      # force=true when sccache wrote new entries this run: the save action skips
+      # the upload while the key exists, so the store would otherwise freeze.
+      - name: sccache stats
+        id: sccache-stats
+        if: always()
+        run: |
+          # Print the counters captured inside the build container; the
+          # runner-side daemon has no knowledge of those compilations.
+          cat build/sccache-stats.txt 2>/dev/null || true
+          cache_writes=$(grep -o '"cache_writes":[0-9]*' build/sccache-stats.json 2>/dev/null \
+            | grep -o '[0-9]*' || echo 0)
+          if [ "$cache_writes" -gt 0 ] 2>/dev/null; then
+            echo "force=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "force=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save sccache store
+        if: always()
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/save@master
+        with:
+          config: ${{ secrets.REGISTRY_CACHE_AUTH }}
+          key: sccache-linux-${{ hashFiles('conanfile.py') }}
+          path: build/.sccache
+          force: ${{ steps.sccache-stats.outputs.force }}
+
   android-build:
     name: Android build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
     runs-on: team-corelibs
+    env:
+      SCCACHE_DIR: ${{ github.workspace }}/.sccache
+      SCCACHE_CACHE_SIZE: 512M
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
+      # sccache wraps the compilers inside the container (the binary is
+      # installed by the docker stage); the runner only needs the exported
+      # store and the sccache-stats.json captured in the container.
+
+      # Bound the restore and keep it non-fatal: the action turns its own errors
+      # into a "miss", but a stalled registry connection hangs the step.
+      - name: Restore sccache store
+        continue-on-error: true
+        timeout-minutes: 5
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/restore@master
+        with:
+          config: ${{ secrets.REGISTRY_CACHE_AUTH }}
+          # NDK clang is a different toolchain than the Linux system clang, so
+          # a distinct prefix keeps the stores from colliding even though both
+          # hash conanfile.py identically.
+          key: sccache-android-${{ hashFiles('conanfile.py') }}
+          path: ${{ env.SCCACHE_DIR }}
+
       - name: Build Android library
         uses: AdGuardSoftwareLimited/actions/actions/docker-build@master
         with:
-          target: android-build
-          output: type=cacheonly
+          target: android-build-output
+          output: type=local,dest=build
           build-args: |
             CACHEBUST=${{ github.run_id }}-${{ github.run_attempt }}
           secrets: |
@@ -195,6 +303,12 @@ jobs:
           content: |
             # syntax=docker/dockerfile:1
             FROM ${{ env.CORELIBS_IMAGE }} AS android-build
+
+            # sccache caches the compilations; the pinned binary is installed
+            # before COPY . . so this layer stays cached across source changes.
+            ENV SCCACHE_CACHE_SIZE=512M
+            RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl.tar.gz \
+                | tar -xz -C /usr/local/bin --strip-components=1
 
             WORKDIR /src
 
@@ -236,12 +350,15 @@ jobs:
             COPY . .
 
             # Changes on every run, so the build below is never cached.
+            # The ENV layer bakes the build-arg value into the layer history, so
+            # changing CACHEBUST invalidates everything below it.
             ARG CACHEBUST
+            ENV CACHEBUST=$CACHEBUST
 
             RUN --mount=type=cache,id=conan-android,target=/conan \
                 --mount=type=secret,id=CONAN_REPO_URL,required=true \
-                --mount=type=secret,id=ARTIFACTORY_USER \
-                --mount=type=secret,id=ARTIFACTORY_API_KEY <<'END'
+                --mount=type=secret,id=ARTIFACTORY_USER,required=true \
+                --mount=type=secret,id=ARTIFACTORY_API_KEY,required=true <<'END'
             set -eux
 
             # The remote lives in the cache mount, so it is configured here
@@ -249,13 +366,59 @@ jobs:
             conan remote add --index 0 art "$(cat /run/secrets/CONAN_REPO_URL)" || true
 
             cd android/NativeLibsCommon
+            # Route NDK clang through sccache (see lib/build.gradle's USE_SCCACHE
+            # gate); the store was restored into /src/.sccache by COPY . .
+            export SCCACHE_DIR=/src/.sccache
+            # Pin the daemon to this container: a foreign one on the shared
+            # builder cannot see our sources ("No such file or directory").
+            export SCCACHE_SERVER_UDS=/tmp/sccache.sock
+            export USE_SCCACHE=1
             ./gradlew $GRADLE_FLAGS :lib:assembleRelease || build_status=$?
 
             conan remote login art "$(cat /run/secrets/ARTIFACTORY_USER)" \
-                --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)"
+                --password "$(cat /run/secrets/ARTIFACTORY_API_KEY)" || true
             conan upload -r art -c "*" 2>&1 | grep --line-buffered "Uploading" || true
+
+            # Capture the sccache counters where the compilations happened; the
+            # .txt is printed by the sccache-stats step, the .json drives the
+            # force-save decision.
+            SCCACHE_DIR=/src/.sccache sccache --show-stats > /src/sccache-stats.txt 2>&1 || true
+            SCCACHE_DIR=/src/.sccache sccache --show-stats --stats-format=json > /src/sccache-stats.json 2>/dev/null || true
 
             # Keep the build outputs out of the committed layer.
             ./gradlew $GRADLE_FLAGS clean || true
             exit ${build_status:-0}
             END
+
+            FROM scratch AS android-build-output
+
+            COPY --from=android-build /src/sccache-stats.json /sccache-stats.json
+            COPY --from=android-build /src/sccache-stats.txt /sccache-stats.txt
+            COPY --from=android-build /src/.sccache /.sccache
+
+      # Print sccache counters and decide whether to force-save the store; see
+      # the linux-tests job for the rationale. The counters were captured
+      # inside the container and exported with /src/sccache-stats.json.
+      - name: sccache stats
+        id: sccache-stats
+        if: always()
+        run: |
+          # Print the counters captured inside the build container; the
+          # runner-side daemon has no knowledge of those compilations.
+          cat build/sccache-stats.txt 2>/dev/null || true
+          cache_writes=$(grep -o '"cache_writes":[0-9]*' build/sccache-stats.json 2>/dev/null \
+            | grep -o '[0-9]*' || echo 0)
+          if [ "$cache_writes" -gt 0 ] 2>/dev/null; then
+            echo "force=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "force=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save sccache store
+        if: always()
+        uses: AdGuardSoftwareLimited/actions/actions/registry-cache/save@master
+        with:
+          config: ${{ secrets.REGISTRY_CACHE_AUTH }}
+          key: sccache-android-${{ hashFiles('conanfile.py') }}
+          path: build/.sccache
+          force: ${{ steps.sccache-stats.outputs.force }}
