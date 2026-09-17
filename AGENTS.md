@@ -68,6 +68,17 @@ For offline builds, or when the AdGuard Conan remote is not configured, run
 | `make list-deps-dirs` | List Conan dependency package directories |
 | `make clean` | Clean build artifacts |
 
+## CI Workflow Conventions
+
+- The Linux/Android CI jobs run the tests inside a docker build (remote
+  buildkit on `team-corelibs`); see `.github/workflows/run-tests.yml`.
+- **`conan upload -r art -c "*" ... | grep "Uploading" || true` is deliberate.
+  Do NOT "fix" it** (e.g. by capturing `upload_status` and failing the step):
+  a non-zero `conan upload` when nothing is uploaded is a normal state (the
+  packages are already in Artifactory), and `grep` returning 1 on empty output
+  must not fail the build. The `|| true` also keeps the sccache store / junit
+  export running on failure inside the docker stage.
+
 Builds are driven by the CMake presets in
 [CMakePresets.json](CMakePresets.json). The Makefile selects a preset from
 `COMPILER` (default `clang`, or `msvc` on Windows) and `BUILD_TYPE`
