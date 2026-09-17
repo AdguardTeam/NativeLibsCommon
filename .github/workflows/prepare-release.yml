@@ -8,7 +8,7 @@ on:
         required: false
         type: string
       flatten-prereleases:
-        description: 'Flatten the beta/rc sections of the released version cycle into the final version section of the changelog (use when releasing the stable version after a beta/rc cycle).'
+        description: 'Flatten the beta/rc sections of the released version cycle into the final version section of the changelog (use when releasing the stable version after a beta/rc cycle). Requires an explicit version: fails fast when combined with the empty-version auto-increment.'
         required: false
         type: boolean
         default: false
@@ -19,7 +19,7 @@ on:
         required: false
         type: string
       flatten-prereleases:
-        description: 'Flatten the beta/rc sections of the released version cycle into the final version section of the changelog (use when releasing the stable version after a beta/rc cycle).'
+        description: 'Flatten the beta/rc sections of the released version cycle into the final version section of the changelog (use when releasing the stable version after a beta/rc cycle). Requires an explicit version: fails fast when combined with the empty-version auto-increment.'
         required: false
         type: boolean
         default: false
@@ -38,6 +38,20 @@ jobs:
     outputs:
       version: ${{ steps.pick.outputs.version }}
     steps:
+      - name: Validate inputs
+        # Flattening finalizes a beta/rc cycle with the stable target version,
+        # so it requires an explicit `version`. With an empty `version` the
+        # auto-increment would roll yet another pre-release (1.2.0-rc.5 ->
+        # 1.2.0-rc.6), and the flatten flag would silently not apply — fail
+        # fast instead.
+        if: inputs.flatten-prereleases && inputs.version == ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "::error::flatten-prereleases requires an explicit version. Flattening finalizes a beta/rc cycle, but the empty-version auto-increment would roll another pre-release instead (e.g. 1.2.0-rc.5 -> 1.2.0-rc.6). Pass the stable version explicitly (e.g. 1.2.1)." >&2
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v6
 
