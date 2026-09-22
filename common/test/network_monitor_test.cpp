@@ -262,6 +262,35 @@ TEST_F(LinuxRoutingTableTest, HandleDelRoute) {
     ASSERT_EQ(m_table.get_routes_v4().size(), 0);
 }
 
+// Deleting a temporary high-metric default route at link-up must not remove
+// the real default from the cache (the match has to include the metric).
+TEST_F(LinuxRoutingTableTest, HandleDelRouteMetricAware) {
+    // NM adds a temporary high-metric default, then the real low-metric one
+    MockRouteMsg temp(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    temp.add_attr_u32(RTA_OIF, 2);
+    temp.add_attr_u32(RTA_PRIORITY, 20100);
+    m_table.handle_new_route(&temp.nlh);
+
+    MockRouteMsg real(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    real.add_attr_u32(RTA_OIF, 2);
+    real.add_attr_u32(RTA_PRIORITY, 100);
+    m_table.handle_new_route(&real.nlh);
+
+    // Same prefix and if_index, different metrics: both entries are kept
+    ASSERT_EQ(m_table.get_routes_v4().size(), 2);
+
+    // Deleting the temporary route must not remove the real default
+    MockRouteMsg del_temp(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    del_temp.add_attr_u32(RTA_OIF, 2);
+    del_temp.add_attr_u32(RTA_PRIORITY, 20100);
+    del_temp.nlh.nlmsg_type = RTM_DELROUTE;
+    m_table.handle_del_route(&del_temp.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 1);
+    ASSERT_EQ(m_table.get_routes_v4()[0].metric, 100);
+    ASSERT_EQ(m_table.get_default_if_index(), 2);
+}
+
 TEST_F(LinuxRoutingTableTest, HasDefaultChangedAndReset) {
     // Initially no change
     ASSERT_FALSE(m_table.has_default_changed_and_reset());

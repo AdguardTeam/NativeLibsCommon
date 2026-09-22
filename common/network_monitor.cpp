@@ -495,7 +495,7 @@ void LinuxRoutingTable::handle_new_route(const nlmsghdr *nlh) {
     auto &routes = get_routes_by_addr_size(entry->prefix.get_address().size());
 
     auto it = std::ranges::find_if(routes, [&entry](const RouteEntry &r) {
-        return r.prefix == entry->prefix && r.if_index == entry->if_index;
+        return r.prefix == entry->prefix && r.if_index == entry->if_index && r.metric == entry->metric;
     });
 
     if (it != routes.end()) {
@@ -521,7 +521,9 @@ void LinuxRoutingTable::handle_del_route(const nlmsghdr *nlh) {
 
     size_t before = routes.size();
     std::erase_if(routes, [&entry](const RouteEntry &r) {
-        return r.prefix == entry->prefix && r.if_index == entry->if_index;
+        // Match on the metric too, so deleting a temporary high-metric default
+        // route at link-up doesn't erase the real one.
+        return r.prefix == entry->prefix && r.if_index == entry->if_index && r.metric == entry->metric;
     });
 
     if (routes.size() < before) {
@@ -654,6 +656,18 @@ void NetworkMonitorImpl::changed_handler() {
         return;
     }
 
+    bool truncated = (msg.msg_flags & MSG_TRUNC) != 0;
+    if (truncated) {
+        // The kernel truncated the batch; drain it and rebuild the routing
+        // table from the kernel so no route change is missed.
+        warnlog(m_logger, "Netlink batch truncated; draining socket and reloading the routing table");
+        while (recvmsg(m_monitor_sock_fd, &msg, MSG_DONTWAIT) > 0) {
+        }
+        if (m_netlink_available && m_routing_table.reload()) {
+            m_routing_table.has_default_changed_and_reset();
+        }
+    }
+
     bool addr_changed = false;
 
     for (auto nlh = (nlmsghdr *) buf; NLMSG_OK(nlh, len); nlh = NLMSG_NEXT(nlh, len)) {
@@ -678,8 +692,13 @@ void NetworkMonitorImpl::changed_handler() {
     }
 
     if (m_netlink_available) {
-        if (addr_changed || m_routing_table.has_default_changed_and_reset()) {
+        if (addr_changed || truncated || m_routing_table.has_default_changed_and_reset()) {
             auto new_if_name = m_routing_table.get_default_if_name();
+            if (new_if_name.empty() && addr_changed) {
+                // The cache may be out of sync with the kernel; ask it
+                // directly so a recovered network is reported as CONNECTED.
+                new_if_name = get_default_interface();
+            }
             handle_network_change(new_if_name, !new_if_name.empty());
         }
     } else if (addr_changed) {
