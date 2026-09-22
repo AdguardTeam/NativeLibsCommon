@@ -128,6 +128,13 @@ class OpenSSLConan(ConanFile):
             self.options.no_asm = True
             self.options.no_threads = True
             self.options.no_stdio = True
+        if str(self.settings.arch) in ("mips", "mipsel"):
+            # MIPS assembly (sha256-mips.S etc.) uses GOT-relative table addressing
+            # that zig/lld's MIPS relaxation resolves wrongly (R_MIPS_GOT16/LO16
+            # mismatch), producing a corrupted K-table pointer -> SIGSEGV at the
+            # .rodata boundary (trusttunnel_client 1.1.5 crash on IPv4-only hosts).
+            # Build the C implementations instead.
+            self.options.no_asm = True
 
     def configure(self):
         if self.options.shared:
