@@ -18,11 +18,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.52] - 2026-09-23
+
+### Fixed
+
+- `openssl/3.1.5-quic1` (mips/mipsel): patch the SHA-256/AES perlasm to declare local symbols before use, so clang's integrated assembler emits the ABI-required `R_MIPS_GOT16` + `R_MIPS_LO16` pair instead of a lone `R_MIPS_GOT16`. Fixes corrupted SHA-256 K-table pointers (SIGSEGV on first use) and silently wrong AES ciphertext; the MIPS assembly stays enabled.
+
 ## [8.1.51] - 2026-09-23
 
 ### Fixed
 
-Keep the real default route in the Linux netlink routing-table cache
+- Keep the real default route in the Linux netlink routing-table cache
 
 ## [8.1.50] - 2026-08-24
 
@@ -1288,7 +1294,8 @@ Keep the real default route in the Linux netlink routing-table cache
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.51...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.52...HEAD
+[8.1.52]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.51...v8.1.52
 [8.1.51]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.50...v8.1.51
 [8.1.50]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.49...v8.1.50
 [8.1.49]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.48...v8.1.49
