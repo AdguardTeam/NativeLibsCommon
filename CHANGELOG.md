@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [8.1.51] - 2026-09-23
 
+### Fixed
+
+Keep the real default route in the Linux netlink routing-table cache
+
 ## [8.1.50] - 2026-08-24
 
 ### Changed
