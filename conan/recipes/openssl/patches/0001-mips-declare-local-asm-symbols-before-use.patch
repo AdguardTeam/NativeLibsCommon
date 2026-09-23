@@ -1,0 +1,41 @@
+mips: declare local assembly symbols before use
+
+Clang's integrated assembler expands PIC `la` macros as soon as they are
+parsed. When a local symbol is defined later in the file, LLVM does not yet
+know its binding and emits a lone R_MIPS_GOT16 (without the required
+R_MIPS_LO16 pair). Under the MIPS ELF ABI the linker then stores the 64 KiB
+page address in the GOT while the generated code expects a full address,
+corrupting the SHA-256 K-table and AES T-table pointers.
+
+Declare the internal AES functions and the AES/SHA tables local before any
+reference to work around this assembler limitation.
+
+Adapted from OpenSSL PR #32620 for openssl-3.1.5-quic1.
+Link: https://github.com/llvm/llvm-project/issues/65020
+Link: https://github.com/openssl/openssl/pull/32620
+---
+--- a/crypto/aes/asm/aes-mips.pl
++++ b/crypto/aes/asm/aes-mips.pl
+@@ -110,6 +110,12 @@
+ #include "mips_arch.h"
+ 
+ .text
++.local	_mips_AES_encrypt
++.local	_mips_AES_decrypt
++.local	_mips_AES_set_encrypt_key
++.local	AES_Te
++.local	AES_Td
++.local	AES_Te4
+ #if !defined(__mips_eabi) && (!defined(__vxworks) || defined(__pic__))
+ .option	pic2
+ #endif
+--- a/crypto/sha/asm/sha512-mips.pl
++++ b/crypto/sha/asm/sha512-mips.pl
+@@ -311,6 +311,7 @@
+ #include "mips_arch.h"
+ 
+ .text
++.local	K${label}
+ .set	noat
+ #if !defined(__mips_eabi) && (!defined(__vxworks) || defined(__pic__))
+ .option	pic2

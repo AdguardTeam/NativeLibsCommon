@@ -128,6 +128,10 @@ class OpenSSLConan(ConanFile):
             self.options.no_asm = True
             self.options.no_threads = True
             self.options.no_stdio = True
+        # mips/mipsel keep the MIPS assembly: patches/0001-* declares the local
+        # table/function symbols before use, so clang's integrated assembler emits
+        # the ABI-required R_MIPS_GOT16 + R_MIPS_LO16 pair instead of a lone
+        # GOT16. See https://github.com/llvm/llvm-project/issues/65020.
 
     def configure(self):
         if self.options.shared:
