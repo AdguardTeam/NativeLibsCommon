@@ -100,7 +100,10 @@ jobs:
         ARTIFACTORY_API_KEY=${{ secrets.ARTIFACTORY_API_KEY }}
       sccache-config: ${{ secrets.REGISTRY_CACHE_AUTH }}
     with:
-      runs-on: ${{ matrix.runs-on }}
+      # A job-unique label pins the ephemeral runner to this exact matrix leg.
+      # The strategy context is not available inside `strategy.matrix`, so the
+      # label is appended here instead, where `strategy.job-index` resolves.
+      runs-on: ${{ format('["{0}","ephemeral-job-key-{1}-{2}-{3}"]', join(fromJSON(matrix.runs-on), '","'), github.run_id, github.job, strategy.job-index || 0) }}
       container-image: ${{ matrix.container-image }}
       shell: ${{ matrix.shell || 'bash' }}
       test-command: ${{ matrix.test-command }}
