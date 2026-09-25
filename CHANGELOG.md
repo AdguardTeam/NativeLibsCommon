@@ -10,8 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- `mips/mipsel`: replace the abandoned `openssl/3.1.5-quic1` (quictls) with upstream `openssl/4.0.2` and ngtcp2's `libngtcp2_crypto_ossl` backend; the MIPS perlasm `.local` workaround is retained.
-
 ### Deprecated
 
 ### Removed
@@ -19,6 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 ### Security
+
+## [8.1.53] - 2026-09-25
+
+### Changed
+
+- `mips/mipsel`: replace the abandoned `openssl/3.1.5-quic1` (quictls) with upstream `openssl/4.0.2` and ngtcp2's `libngtcp2_crypto_ossl` backend; the MIPS perlasm `.local` workaround is retained.
 
 ## [8.1.52] - 2026-09-23
 
@@ -1296,7 +1300,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.52...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.53...HEAD
+[8.1.53]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.52...v8.1.53
 [8.1.52]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.51...v8.1.52
 [8.1.51]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.50...v8.1.51
 [8.1.50]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.49...v8.1.50
