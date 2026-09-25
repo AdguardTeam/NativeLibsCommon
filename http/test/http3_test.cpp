@@ -23,7 +23,7 @@
 #ifdef OPENSSL_IS_BORINGSSL
 #include <ngtcp2/ngtcp2_crypto_boringssl.h>
 #else
-#include <ngtcp2/ngtcp2_crypto_quictls.h>
+#include <ngtcp2/ngtcp2_crypto_ossl.h>
 #endif
 
 #include "common/http/http3.h"
@@ -91,12 +91,10 @@ protected:
 
         ASSERT_NO_FATAL_FAILURE(server_side.run());
 
-        ag::UniquePtr<SSL_CTX, &SSL_CTX_free> ssl_ctx{SSL_CTX_new(TLS_server_method())};
+        ag::UniquePtr<SSL_CTX, &SSL_CTX_free> ssl_ctx{SSL_CTX_new(TLS_client_method())};
         ASSERT_NE(ssl_ctx, nullptr) << ERR_error_string(ERR_get_error(), nullptr);
 #ifdef OPENSSL_IS_BORINGSSL
         ASSERT_EQ(ngtcp2_crypto_boringssl_configure_client_context(ssl_ctx.get()), 0);
-#else
-        ASSERT_EQ(ngtcp2_crypto_quictls_configure_client_context(ssl_ctx.get()), 0);
 #endif
         SSL_CTX_set_info_callback(ssl_ctx.get(), [](const SSL *ssl, int type_, int value) {
             uint32_t type = type_;
@@ -125,6 +123,9 @@ protected:
         });
         ssl.reset(SSL_new(ssl_ctx.get()));
         ASSERT_NE(ssl, nullptr);
+#ifndef OPENSSL_IS_BORINGSSL
+        ASSERT_EQ(0, ngtcp2_crypto_ossl_configure_client_session(ssl.get()));
+#endif
         static constexpr std::string_view ALPN = NGHTTP3_ALPN_H3;
         ASSERT_EQ(0, SSL_set_alpn_protos(ssl.get(), (uint8_t *) ALPN.data(), ALPN.size()));
         SSL_set_tlsext_host_name(ssl.get(), SERVER_NAME);
@@ -651,16 +652,17 @@ TEST(Http3FlushImpl, AllInitialPacketsSentWithPqClientHello) {
 
     ag::SocketAddress bound_addr{"127.0.0.1:0"};
 
-    ag::UniquePtr<SSL_CTX, &SSL_CTX_free> ssl_ctx{SSL_CTX_new(TLS_server_method())};
+    ag::UniquePtr<SSL_CTX, &SSL_CTX_free> ssl_ctx{SSL_CTX_new(TLS_client_method())};
     ASSERT_NE(ssl_ctx, nullptr) << ERR_error_string(ERR_get_error(), nullptr);
 #ifdef OPENSSL_IS_BORINGSSL
     ASSERT_EQ(0, ngtcp2_crypto_boringssl_configure_client_context(ssl_ctx.get()));
-#else
-    ASSERT_EQ(0, ngtcp2_crypto_quictls_configure_client_context(ssl_ctx.get()));
 #endif
 
     ag::UniquePtr<SSL, &SSL_free> ssl{SSL_new(ssl_ctx.get())};
     ASSERT_NE(ssl, nullptr);
+#ifndef OPENSSL_IS_BORINGSSL
+    ASSERT_EQ(0, ngtcp2_crypto_ossl_configure_client_session(ssl.get()));
+#endif
     static constexpr std::string_view ALPN = NGHTTP3_ALPN_H3;
     ASSERT_EQ(0, SSL_set_alpn_protos(ssl.get(), (const uint8_t *) ALPN.data(), ALPN.size()));
     SSL_set_tlsext_host_name(ssl.get(), SERVER_NAME);

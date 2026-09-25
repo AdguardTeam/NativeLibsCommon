@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `mips/mipsel`: replace the abandoned `openssl/3.1.5-quic1` (quictls) with upstream `openssl/4.0.2` and ngtcp2's `libngtcp2_crypto_ossl` backend; the MIPS perlasm `.local` workaround is retained.
+
 ### Deprecated
 
 ### Removed

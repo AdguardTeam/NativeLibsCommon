@@ -15,6 +15,7 @@
 #include <nghttp3/nghttp3.h>
 #include <ngtcp2/ngtcp2.h>
 #include <ngtcp2/ngtcp2_crypto.h>
+#include <ngtcp2/ngtcp2_crypto_ossl.h>
 
 #include "common/defs.h"
 #include "common/error.h"
@@ -182,6 +183,11 @@ protected:
     };
 
     uint32_t m_id;
+#ifndef OPENSSL_IS_BORINGSSL
+    // Per-connection state for ngtcp2's OpenSSL 3.5+ backend. Must outlive
+    // m_quic_conn (declared after it) and the SSL it references.
+    UniquePtr<ngtcp2_crypto_ossl_ctx, &ngtcp2_crypto_ossl_ctx_del> m_ossl_ctx;
+#endif
     UniquePtr<ngtcp2_conn, &ngtcp2_conn_del> m_quic_conn;
     UniquePtr<nghttp3_conn, &nghttp3_conn_del> m_http_conn;
     ngtcp2_crypto_conn_ref m_ref;

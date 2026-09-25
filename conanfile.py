@@ -33,7 +33,7 @@ class NativeLibsCommon(ConanFile):
         self.requires("nghttp3/1.0.0@adguard/oss", transitive_headers=True)
         self.requires("ngtcp2/1.22.1@adguard/oss", transitive_headers=True)
         if "mips" in str(self.settings.arch):
-            self.requires("openssl/3.1.5-quic1@adguard/oss", transitive_headers=True, force=True)
+            self.requires("openssl/4.0.2@adguard/oss", transitive_headers=True, force=True)
         else:
             self.requires("openssl/boring-2026-05-08@adguard/oss", transitive_headers=True)
         self.requires("pcre2/10.37@adguard/oss", transitive_headers=True)

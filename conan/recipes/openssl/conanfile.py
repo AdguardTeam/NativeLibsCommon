@@ -17,7 +17,7 @@ required_conan_version = ">=1.57.0"
 
 class OpenSSLConan(ConanFile):
     name = "openssl"
-    version = "3.1.5-quic1"
+    version = "4.0.2"
     url = "https://github.com/conan-io/conan-center-index"
     homepage = "https://github.com/openssl/openssl"
     license = "Apache-2.0"
@@ -166,7 +166,10 @@ class OpenSSLConan(ConanFile):
                     self.tool_requires("msys2/cci.latest")
 
     def source(self):
-        get(self, "https://github.com/quictls/openssl/archive/refs/tags/openssl-3.1.5-quic1.tar.gz", strip_root=True)
+        get(self,
+            "https://github.com/openssl/openssl/releases/download/openssl-4.0.2/openssl-4.0.2.tar.gz",
+            sha256="736b467530f916737b7031310ccb21d8218c6229e61e8e160cd1d3458cd543a8",
+            strip_root=True)
 
         # Apply all patches from the `patches` directory
         patches_path = os.path.join(self.export_sources_folder, "patches")

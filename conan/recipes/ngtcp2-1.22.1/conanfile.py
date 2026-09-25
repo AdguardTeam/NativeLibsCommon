@@ -1,6 +1,7 @@
 from conan import ConanFile
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import patch, copy, get
+from conan.tools.scm import Version
 from os.path import join
 import os
 
@@ -83,8 +84,12 @@ class Ngtcp2Conan(ConanFile):
         copy(self, "*.dylib", self.build_folder, dst=join(self.package_folder, "lib"), keep_path=False)
 
     def package_info(self):
-        if "boring" in str(self.dependencies["openssl"].ref.version):
+        openssl_version = str(self.dependencies["openssl"].ref.version)
+        if "boring" in openssl_version:
             self.cpp_info.libs = ["ngtcp2_crypto_boringssl", "ngtcp2"]
+        elif Version(openssl_version) >= "3.5.0":
+            # Upstream OpenSSL >= 3.5 uses ngtcp2's ossl backend.
+            self.cpp_info.libs = ["ngtcp2_crypto_ossl", "ngtcp2"]
         else:
             self.cpp_info.libs = ["ngtcp2_crypto_quictls", "ngtcp2"]
         self.cpp_info.defines.append("NGTCP2_STATICLIB=1")

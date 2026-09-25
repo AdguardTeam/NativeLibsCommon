@@ -10,7 +10,7 @@ corrupting the SHA-256 K-table and AES T-table pointers.
 Declare the internal AES functions and the AES/SHA tables local before any
 reference to work around this assembler limitation.
 
-Adapted from OpenSSL PR #32620 for openssl-3.1.5-quic1.
+Adapted from OpenSSL PR #32620 for openssl-4.0.2.
 Link: https://github.com/llvm/llvm-project/issues/65020
 Link: https://github.com/openssl/openssl/pull/32620
 ---

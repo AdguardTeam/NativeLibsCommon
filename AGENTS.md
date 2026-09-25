@@ -46,7 +46,7 @@ ag_common (independent) ag_common_tls
 
 - `ag_common` links `fmt`, `libevent`, `pcre2` (plus platform system libs).
 - `ag_common_http` links `ag_common` and the nghttp2/nghttp3/ngtcp2 stack.
-- `ag_common_tls` links `openssl` (BoringSSL).
+- `ag_common_tls` links `openssl` (BoringSSL; upstream OpenSSL 4.0.2 with ngtcp2's ossl backend on MIPS).
 
 ## Build Commands
 
@@ -151,7 +151,7 @@ Managed via Conan ([conanfile.py](conanfile.py)). Key libraries:
 - **libevent** — async event loop
 - **llhttp** — HTTP/1 parser
 - **nghttp2 / nghttp3 / ngtcp2** — HTTP/2, HTTP/3, QUIC
-- **openssl** (BoringSSL; OpenSSL-QUIC on MIPS) — TLS
+- **openssl** (BoringSSL; upstream OpenSSL 4.0.2 with ngtcp2's ossl backend on MIPS) — TLS
 - **pcre2** — regular expressions
 - **magic_enum** — enum reflection
 - **gtest** — unit testing (test-only)

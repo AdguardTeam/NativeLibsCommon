@@ -26,7 +26,7 @@
 #ifdef OPENSSL_IS_BORINGSSL
 #include <ngtcp2/ngtcp2_crypto_boringssl.h>
 #else
-#include <ngtcp2/ngtcp2_crypto_quictls.h>
+#include <ngtcp2/ngtcp2_crypto_ossl.h>
 #endif
 
 #include "common/http/http3.h"
@@ -115,8 +115,6 @@ static void make_ssl(ag::UniquePtr<SSL, &SSL_free> &ssl) {
     ASSERT_NE(ssl_ctx, nullptr) << ERR_error_string(ERR_get_error(), nullptr);
 #ifdef OPENSSL_IS_BORINGSSL
     ASSERT_EQ(ngtcp2_crypto_boringssl_configure_server_context(ssl_ctx.get()), 0);
-#else
-    ASSERT_EQ(ngtcp2_crypto_quictls_configure_server_context(ssl_ctx.get()), 0);
 #endif
     SSL_CTX_set_alpn_select_cb(
             ssl_ctx.get(),
@@ -157,6 +155,9 @@ static void make_ssl(ag::UniquePtr<SSL, &SSL_free> &ssl) {
     ASSERT_EQ(1, SSL_CTX_check_private_key(ssl_ctx.get()));
     ssl.reset(SSL_new(ssl_ctx.get()));
     ASSERT_NE(ssl, nullptr);
+#ifndef OPENSSL_IS_BORINGSSL
+    ASSERT_EQ(0, ngtcp2_crypto_ossl_configure_server_session(ssl.get()));
+#endif
     SSL_set_tlsext_host_name(ssl.get(), SERVER_NAME);
     SSL_set_accept_state(ssl.get());
 

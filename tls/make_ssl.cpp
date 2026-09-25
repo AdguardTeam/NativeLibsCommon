@@ -14,7 +14,7 @@
 #ifdef OPENSSL_IS_BORINGSSL
 #include <ngtcp2/ngtcp2_crypto_boringssl.h>
 #else
-#include <ngtcp2/ngtcp2_crypto_quictls.h>
+#include <ngtcp2/ngtcp2_crypto_ossl.h>
 #endif
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
@@ -353,21 +353,22 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
     }
 #endif // OPENSSL_IS_BORINGSSL
 
-    if (quic) {
 #ifdef OPENSSL_IS_BORINGSSL
-        if (0 != ngtcp2_crypto_boringssl_configure_client_context(ctx.get()))
-#else
-        if (0 != ngtcp2_crypto_quictls_configure_client_context(ctx.get()))
-#endif
-        {
-            return "Couldn't configure SSL object for QUIC";
-        }
+    if (quic && 0 != ngtcp2_crypto_boringssl_configure_client_context(ctx.get())) {
+        return "Couldn't configure SSL object for QUIC";
     }
+#endif
 
     SslPtr ssl{SSL_new(ctx.get())};
     if (ssl == nullptr) {
         return "Failed to create SSL";
     }
+#ifndef OPENSSL_IS_BORINGSSL
+    // The ossl backend configures the SSL object, not the SSL_CTX.
+    if (quic && 0 != ngtcp2_crypto_ossl_configure_client_session(ssl.get())) {
+        return "Couldn't configure SSL object for QUIC";
+    }
+#endif
     if (params.sni != nullptr && !SocketAddress{params.sni}.valid()) {
         if (0 == SSL_set_tlsext_host_name(ssl.get(), params.sni)) {
             return "Failed to set SNI";

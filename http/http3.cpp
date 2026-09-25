@@ -1,6 +1,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstring>
+#include <mutex>
 #include <utility>
 
 #include <openssl/err.h>
@@ -20,6 +21,13 @@ namespace ag::http {
 
 static const Logger g_logger("H3");    // NOLINT(*-identifier-naming)
 static std::atomic_uint32_t g_next_id; // NOLINT(*-avoid-non-const-global-variables)
+
+#ifndef OPENSSL_IS_BORINGSSL
+static void ensure_ossl_initialized() {
+    static std::once_flag flag;
+    std::call_once(flag, ngtcp2_crypto_ossl_init);
+}
+#endif
 
 // DCID length in the Initial packet matches Chrome's QUIC fingerprint (Chrome uses 8 bytes, SCID = 0 bytes)
 static constexpr size_t ORIGINAL_DCID_DATALEN = 8;
@@ -510,6 +518,14 @@ Error<Http3Error> Http3Session<T>::initialize_session(const QuicNetworkPath &pat
 
     m_ssl = std::move(ssl);
     SSL_set_app_data(m_ssl.get(), &m_ref);
+#ifndef OPENSSL_IS_BORINGSSL
+    ensure_ossl_initialized();
+    ngtcp2_crypto_ossl_ctx *ossl_ctx = nullptr;
+    if (int status = ngtcp2_crypto_ossl_ctx_new(&ossl_ctx, m_ssl.get()); status != 0) {
+        return make_error(Http3Error{status}, "Couldn't create the ngtcp2 ossl context");
+    }
+    m_ossl_ctx.reset(ossl_ctx);
+#endif
 
     nghttp3_callbacks h3_callbacks{
             .acked_stream_data = on_acked_stream_data,
@@ -688,7 +704,11 @@ Error<Http3Error> Http3Session<T>::initialize_session(const QuicNetworkPath &pat
     m_quic_conn.reset(quic_conn);
     m_http_conn.reset(h3_conn);
 
+#ifdef OPENSSL_IS_BORINGSSL
     ngtcp2_conn_set_tls_native_handle(m_quic_conn.get(), m_ssl.get());
+#else
+    ngtcp2_conn_set_tls_native_handle(m_quic_conn.get(), m_ossl_ctx.get());
+#endif
 
     return {};
 }
