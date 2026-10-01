@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.54] - 2026-10-01
+
+### Fixed
+
+- Ignore stale default routes through dead interfaces in the Linux netlink routing-table cache
+
 ## [8.1.53] - 2026-09-25
 
 ### Changed
@@ -1300,7 +1306,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.53...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.54...HEAD
+[8.1.54]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.53...v8.1.54
 [8.1.53]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.52...v8.1.53
 [8.1.52]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.51...v8.1.52
 [8.1.51]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.50...v8.1.51
