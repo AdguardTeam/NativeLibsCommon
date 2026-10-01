@@ -321,6 +321,74 @@ TEST_F(LinuxRoutingTableTest, DefaultRouteSelection) {
     ASSERT_EQ(m_table.get_default_if_index(), 20);
 }
 
+// A stale default through a dead interface must not shadow the live one.
+TEST_F(LinuxRoutingTableTest, DeadIfIndexNotSelectedAsDefault) {
+    // Stale default (dead ifindex, same metric), inserted first
+    MockRouteMsg stale(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    stale.add_attr_u32(RTA_OIF, 999999); // guaranteed-dead ifindex
+    stale.add_attr_u32(RTA_PRIORITY, 600);
+    m_table.handle_new_route(&stale.nlh);
+
+    ASSERT_EQ(m_table.get_default_if_index(), 999999);
+
+    // Live default through the re-enumerated interface (lo), same metric
+    MockRouteMsg current(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    current.add_attr_u32(RTA_OIF, 1); // lo (index=1) always exists
+    current.add_attr_u32(RTA_PRIORITY, 600);
+    m_table.handle_new_route(&current.nlh);
+
+    ASSERT_EQ(m_table.get_default_if_index(), 1);
+    ASSERT_EQ(m_table.get_default_if_name(), "lo");
+}
+
+// Purging an interface's routes must drop its stale default.
+TEST_F(LinuxRoutingTableTest, RemoveInterfaceRoutesPurgesCache) {
+    MockRouteMsg default_a(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    default_a.add_attr_u32(RTA_OIF, 2);
+    default_a.add_attr_u32(RTA_PRIORITY, 100);
+    m_table.handle_new_route(&default_a.nlh);
+
+    MockRouteMsg default_b(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    default_b.add_attr_u32(RTA_OIF, 3);
+    default_b.add_attr_u32(RTA_PRIORITY, 200);
+    m_table.handle_new_route(&default_b.nlh);
+
+    MockRouteMsg specific_a(AF_INET, 24, RT_TABLE_MAIN, RTN_UNICAST);
+    specific_a.add_attr_addr(RTA_DST, {192, 168, 1, 0});
+    specific_a.add_attr_u32(RTA_OIF, 2);
+    m_table.handle_new_route(&specific_a.nlh);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 3);
+    ASSERT_EQ(m_table.get_default_if_index(), 2); // lowest metric
+
+    m_table.remove_interface_routes(2);
+
+    ASSERT_EQ(m_table.get_routes_v4().size(), 1);
+    ASSERT_EQ(m_table.get_routes_v4()[0].if_index, 3);
+    ASSERT_EQ(m_table.get_default_if_index(), 3);
+}
+
+// Link-down purge + re-enumeration with the same metric yields the live interface.
+TEST_F(LinuxRoutingTableTest, StaleDefaultPurgedThenReenumerated) {
+    MockRouteMsg old_default(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    old_default.add_attr_u32(RTA_OIF, 2);
+    old_default.add_attr_u32(RTA_PRIORITY, 600);
+    m_table.handle_new_route(&old_default.nlh);
+    ASSERT_EQ(m_table.get_default_if_index(), 2);
+
+    m_table.remove_interface_routes(2); // what RTM_NEWLINK/DELLINK handling does
+    ASSERT_FALSE(m_table.get_default_if_index().has_value());
+
+    // Re-enumerated interface with the same metric
+    MockRouteMsg new_default(AF_INET, 0, RT_TABLE_MAIN, RTN_UNICAST);
+    new_default.add_attr_u32(RTA_OIF, 1);
+    new_default.add_attr_u32(RTA_PRIORITY, 600);
+    m_table.handle_new_route(&new_default.nlh);
+
+    ASSERT_EQ(m_table.get_default_if_index(), 1);
+    ASSERT_TRUE(m_table.has_default_changed_and_reset());
+}
+
 TEST_F(LinuxRoutingTableTest, FilterNonUnicast) {
     // Add non-unicast route (should be filtered)
     MockRouteMsg msg(AF_INET, 24, RT_TABLE_MAIN, RTN_BROADCAST);
@@ -761,8 +829,7 @@ TEST_F(LinuxRoutingTableMockFdTest, TunFilteringInDefaultRoute) {
     trigger.add_attr_u32(RTA_OIF, 99);
     m_table.handle_new_route(&trigger.nlh);
 
-    // lo (index=1) is now ignored as TUN → fallback (index=42) becomes default
-    // index=42 is fake, if_indextoname fails → is_interface_ignored returns false → selected
+    // lo is ignored as TUN; with no resolvable default left, the fallback (42) wins.
     ASSERT_EQ(m_table.get_default_if_index(), 42);
 }
 #endif // __linux__

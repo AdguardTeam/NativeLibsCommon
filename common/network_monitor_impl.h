@@ -89,6 +89,11 @@ public:
      */
     void close_query_socket();
 
+    /**
+     * Remove all cached routes of an interface (link down / interface deleted).
+     */
+    void remove_interface_routes(uint32_t if_index);
+
     static std::string get_interface_kind(int netlink_fd, uint32_t if_index);
 
     /**
@@ -114,6 +119,7 @@ private:
     static std::optional<RouteEntry> parse_route_msg(const nlmsghdr *nlh);
     std::optional<uint32_t> find_default_route(const std::vector<RouteEntry> &routes) const;
     [[nodiscard]] bool is_interface_ignored(uint32_t if_index) const;
+    [[nodiscard]] bool is_interface_resolvable(uint32_t if_index) const;
 
     std::vector<RouteEntry> &get_routes_by_addr_size(size_t addr_size);
     const std::vector<RouteEntry> &get_routes_by_addr_size(size_t addr_size) const;
@@ -180,6 +186,7 @@ protected:
     bool create_socket();
     void close_socket();
     bool init_routing_table();
+    std::string query_default_interface_from_kernel();
 #endif // __linux__
 
     void changed_handler();

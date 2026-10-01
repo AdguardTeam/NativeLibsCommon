@@ -23,6 +23,7 @@
 
 #ifdef __linux__
 #include <fcntl.h>
+#include <linux/if.h>
 #include <linux/if_link.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -347,10 +348,27 @@ const std::vector<RouteEntry> &LinuxRoutingTable::get_routes_by_addr_size(size_t
 }
 
 std::optional<uint32_t> LinuxRoutingTable::find_default_route(const std::vector<RouteEntry> &routes) const {
-    auto it = std::ranges::find_if(routes, [this](const RouteEntry &r) {
-        return r.is_default_route() && r.if_index != 0 && !is_interface_ignored(r.if_index);
-    });
-    return (it != routes.end()) ? std::optional{it->if_index} : std::nullopt;
+    // Prefer a default route whose interface still exists; a stale one (e.g. a
+    // NIC re-enumerated with a new ifindex) must not shadow the current default.
+    std::optional<uint32_t> fallback;
+    for (const auto &r : routes) {
+        if (!r.is_default_route() || r.if_index == 0 || is_interface_ignored(r.if_index)) {
+            continue;
+        }
+        if (is_interface_resolvable(r.if_index)) {
+            return r.if_index;
+        }
+        // Keep the previous behavior (first match) when nothing is resolvable.
+        if (!fallback.has_value()) {
+            fallback = r.if_index;
+        }
+    }
+    return fallback;
+}
+
+bool LinuxRoutingTable::is_interface_resolvable(uint32_t if_index) const {
+    char if_name[IF_NAMESIZE]{};
+    return if_indextoname(if_index, if_name) != nullptr;
 }
 
 void LinuxRoutingTable::set_ignore_tun_interfaces(bool ignore) {
@@ -533,6 +551,18 @@ void LinuxRoutingTable::handle_del_route(const nlmsghdr *nlh) {
     sort_and_update_cache();
 }
 
+void LinuxRoutingTable::remove_interface_routes(uint32_t if_index) {
+    size_t before = m_routes_v4.size() + m_routes_v6.size();
+    std::erase_if(m_routes_v4, [if_index](const RouteEntry &r) { return r.if_index == if_index; });
+    std::erase_if(m_routes_v6, [if_index](const RouteEntry &r) { return r.if_index == if_index; });
+
+    if (m_routes_v4.size() + m_routes_v6.size() < before) {
+        dbglog(m_logger, "Removed routes of interface index {} (link down or interface deleted)", if_index);
+    }
+
+    sort_and_update_cache();
+}
+
 bool LinuxRoutingTable::reload() {
     if (m_query_fd < 0) {
         errlog(m_logger, "Query socket not initialized");
@@ -686,6 +716,16 @@ void NetworkMonitorImpl::changed_handler() {
                 m_routing_table.handle_del_route(nlh);
             }
             break;
+        case RTM_NEWLINK:
+        case RTM_DELLINK: {
+            auto *ifm = static_cast<const ifinfomsg *>(NLMSG_DATA(nlh));
+            // Purge routes of a down/deleted interface so a stale default route
+            // cannot shadow the interface after it is re-enumerated.
+            if (m_netlink_available && (nlh->nlmsg_type == RTM_DELLINK || !(ifm->ifi_flags & IFF_LOWER_UP))) {
+                m_routing_table.remove_interface_routes(ifm->ifi_index);
+            }
+            break;
+        }
         default:
             break;
         }
@@ -695,9 +735,8 @@ void NetworkMonitorImpl::changed_handler() {
         if (addr_changed || truncated || m_routing_table.has_default_changed_and_reset()) {
             auto new_if_name = m_routing_table.get_default_if_name();
             if (new_if_name.empty() && addr_changed) {
-                // The cache may be out of sync with the kernel; ask it
-                // directly so a recovered network is reported as CONNECTED.
-                new_if_name = get_default_interface();
+                // The cache may be stale; resync from the kernel.
+                new_if_name = query_default_interface_from_kernel();
             }
             handle_network_change(new_if_name, !new_if_name.empty());
         }
@@ -707,6 +746,15 @@ void NetworkMonitorImpl::changed_handler() {
     }
 #endif // __linux__
 }
+
+#ifdef __linux__
+std::string NetworkMonitorImpl::query_default_interface_from_kernel() {
+    if (m_netlink_available && m_routing_table.reload()) {
+        return m_routing_table.get_default_if_name();
+    }
+    return get_default_interface();
+}
+#endif // __linux__
 
 void NetworkMonitorImpl::handle_network_change(const std::string &new_if_name, bool is_satisfied) {
     if (!is_satisfied) {
