@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 
+## [8.1.55] - 2026-10-08
+
+### Changed
+
+- Bump ag_profile_version for Linux to rebuild all deps.
+
 ## [8.1.54] - 2026-10-01
 
 ### Fixed
@@ -1306,7 +1312,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.54...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.55...HEAD
+[8.1.55]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.54...v8.1.55
 [8.1.54]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.53...v8.1.54
 [8.1.53]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.52...v8.1.53
 [8.1.52]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.51...v8.1.52
