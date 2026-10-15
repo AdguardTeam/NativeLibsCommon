@@ -1,0 +1,258 @@
+Subject: [PATCH] kqueue: use kevent64() with KEVENT_FLAG_IMMEDIATE on Apple
+ platforms
+
+Backport of https://github.com/libevent/libevent/pull/1931 to 2.1.11.
+
+On Apple platforms, kevent() doesn't return at once on a zero timeout.
+XNU turns the timeout into a deadline of "now" and puts the thread to
+sleep, and the timer code then moves a deadline that has already passed
+10 us ahead (PAST_DEADLINE_TIMER_ADJUSTMENT_NS). So every poll that finds
+nothing ready takes over 10 us instead of well under one.
+
+event_base_loop() polls with a zero timeout whenever callbacks are still
+active: after event_base_loopcontinue(), under EVLOOP_NONBLOCK, when a
+timer has already expired, and when deferred callbacks were pushed to the
+next pass.
+
+kevent64() can ask for an immediate return with KEVENT_FLAG_IMMEDIATE.
+A kqueue can't be used with both kevent() and kevent64(), so on Apple
+platforms all calls go through kevent64(). Other platforms are unchanged.
+---
+ kqueue.c | 84 ++++++++++++++++++++++++++++++++++++++------------------
+ 1 file changed, 57 insertions(+), 27 deletions(-)
+
+diff --git a/kqueue.c b/kqueue.c
+index d08f512..e1f073c 100644
+--- a/kqueue.c
++++ b/kqueue.c
+@@ -48,10 +48,37 @@
+ #include <inttypes.h>
+ #endif
+ 
++/* On Apple platforms, kevent() doesn't return immediately on a zero timeout:
++ * the kernel turns it into a deadline of "now" and puts the thread to sleep,
++ * and its timer code moves a deadline that has already passed 10 us ahead.
++ * So a poll that finds nothing ready takes over 10 us instead of under 1 us.
++ * kevent64() can ask for an immediate return with KEVENT_FLAG_IMMEDIATE.
++ * A kqueue can't be used with both kevent() and kevent64(), so on these
++ * platforms every call goes through kevent64(). */
++#if defined(__APPLE__) && defined(KEVENT_FLAG_IMMEDIATE)
++#define KQ_USE_KEVENT64
++typedef struct kevent64_s kq_kevent_t;
++#define kq_kevent(kq, changes, nchanges, events, nevents, flags, timeout) \
++	kevent64(                                                             \
++		(kq), (changes), (nchanges), (events), (nevents), (flags), (timeout))
++#define KQ_FLAG_NONE 0
++#define KQ_FLAG_IMMEDIATE KEVENT_FLAG_IMMEDIATE
++#else
++typedef struct kevent kq_kevent_t;
++#define kq_kevent(kq, changes, nchanges, events, nevents, flags, timeout) \
++	kevent((kq), (changes), (nchanges), (events), (nevents), (timeout))
++#define KQ_FLAG_NONE 0
++#define KQ_FLAG_IMMEDIATE 0
++#endif
++
+ /* Some platforms apparently define the udata field of struct kevent as
+  * intptr_t, whereas others define it as void*.  There doesn't seem to be an
+  * easy way to tell them apart via autoconf, so we need to use OS macros. */
+-#if defined(EVENT__HAVE_INTTYPES_H) && !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__darwin__) && !defined(__APPLE__) && !defined(__CloudABI__)
++#if defined(KQ_USE_KEVENT64)
++/* The udata field of struct kevent64_s is uint64_t. */
++#define PTR_TO_UDATA(x) ((uint64_t)(uintptr_t)(x))
++#define INT_TO_UDATA(x) ((uint64_t)(intptr_t)(x))
++#elif defined(EVENT__HAVE_INTTYPES_H) && !defined(__OpenBSD__) && !defined(__FreeBSD__) && !defined(__darwin__) && !defined(__APPLE__) && !defined(__CloudABI__)
+ #define PTR_TO_UDATA(x)	((intptr_t)(x))
+ #define INT_TO_UDATA(x) ((intptr_t)(x))
+ #else
+@@ -72,10 +99,10 @@
+ #define NEVENT		64
+ 
+ struct kqop {
+-	struct kevent *changes;
++	kq_kevent_t *changes;
+ 	int changes_size;
+ 
+-	struct kevent *events;
++	kq_kevent_t *events;
+ 	int events_size;
+ 	int kq;
+ 	int notify_event_added;
+@@ -135,10 +162,10 @@ kq_init(struct event_base *base)
+ 	kqueueop->pid = getpid();
+ 
+ 	/* Initialize fields */
+-	kqueueop->changes = mm_calloc(NEVENT, sizeof(struct kevent));
++	kqueueop->changes = mm_calloc(NEVENT, sizeof(kq_kevent_t));
+ 	if (kqueueop->changes == NULL)
+ 		goto err;
+-	kqueueop->events = mm_calloc(NEVENT, sizeof(struct kevent));
++	kqueueop->events = mm_calloc(NEVENT, sizeof(kq_kevent_t));
+ 	if (kqueueop->events == NULL)
+ 		goto err;
+ 	kqueueop->events_size = kqueueop->changes_size = NEVENT;
+@@ -153,8 +180,8 @@ kq_init(struct event_base *base)
+ 	 * stick an error in events[0].  If kqueue is broken, then
+ 	 * kevent will fail.
+ 	 */
+-	if (kevent(kq,
+-		kqueueop->changes, 1, kqueueop->events, NEVENT, NULL) != 1 ||
++	if (kq_kevent(kq, kqueueop->changes, 1, kqueueop->events, NEVENT,
++		KQ_FLAG_NONE, NULL) != 1 ||
+ 	    (int)kqueueop->events[0].ident != -1 ||
+ 	    !(kqueueop->events[0].flags & EV_ERROR)) {
+ 		event_warn("%s: detected broken kqueue; not using.", __func__);
+@@ -174,9 +201,9 @@ err:
+ #define ADD_UDATA 0x30303
+ 
+ static void
+-kq_setup_kevent(struct kevent *out, evutil_socket_t fd, int filter, short change)
++kq_setup_kevent(kq_kevent_t *out, evutil_socket_t fd, int filter, short change)
+ {
+-	memset(out, 0, sizeof(struct kevent));
++	memset(out, 0, sizeof(kq_kevent_t));
+ 	out->ident = fd;
+ 	out->filter = filter;
+ 
+@@ -207,21 +234,21 @@ kq_build_changes_list(const struct event_changelist *changelist,
+ 
+ 	for (i = 0; i < changelist->n_changes; ++i) {
+ 		struct event_change *in_ch = &changelist->changes[i];
+-		struct kevent *out_ch;
++		kq_kevent_t *out_ch;
+ 		if (n_changes >= kqop->changes_size - 1) {
+ 			int newsize;
+-			struct kevent *newchanges;
++			kq_kevent_t *newchanges;
+ 
+ 			if (kqop->changes_size > INT_MAX / 2 ||
+ 			    (size_t)kqop->changes_size * 2 > EV_SIZE_MAX /
+-			    sizeof(struct kevent)) {
++			    sizeof(kq_kevent_t)) {
+ 				event_warnx("%s: int overflow", __func__);
+ 				return (-1);
+ 			}
+ 
+ 			newsize = kqop->changes_size * 2;
+ 			newchanges = mm_realloc(kqop->changes,
+-			    newsize * sizeof(struct kevent));
++			    newsize * sizeof(kq_kevent_t));
+ 			if (newchanges == NULL) {
+ 				event_warn("%s: realloc", __func__);
+ 				return (-1);
+@@ -246,10 +273,10 @@ kq_build_changes_list(const struct event_changelist *changelist,
+ static int
+ kq_grow_events(struct kqop *kqop, size_t new_size)
+ {
+-	struct kevent *newresult;
++	kq_kevent_t *newresult;
+ 
+ 	newresult = mm_realloc(kqop->events,
+-	    new_size * sizeof(struct kevent));
++	    new_size * sizeof(kq_kevent_t));
+ 
+ 	if (newresult) {
+ 		kqop->events = newresult;
+@@ -264,15 +291,18 @@ static int
+ kq_dispatch(struct event_base *base, struct timeval *tv)
+ {
+ 	struct kqop *kqop = base->evbase;
+-	struct kevent *events = kqop->events;
+-	struct kevent *changes;
++	kq_kevent_t *events = kqop->events;
++	kq_kevent_t *changes;
+ 	struct timespec ts, *ts_p = NULL;
+ 	int i, n_changes, res;
++	unsigned int flags = KQ_FLAG_NONE;
+ 
+ 	if (tv != NULL) {
+ 		ts.tv_sec = tv->tv_sec;
+ 		ts.tv_nsec = tv->tv_usec * 1000;
+ 		ts_p = &ts;
++		if (!evutil_timerisset(tv))
++			flags = KQ_FLAG_IMMEDIATE;
+ 	}
+ 
+ 	/* Build "changes" from "base->changes" */
+@@ -309,8 +339,8 @@ kq_dispatch(struct event_base *base, struct timeval *tv)
+ 
+ 	EVBASE_RELEASE_LOCK(base, th_base_lock);
+ 
+-	res = kevent(kqop->kq, changes, n_changes,
+-	    events, kqop->events_size, ts_p);
++	res = kq_kevent(kqop->kq, changes, n_changes,
++	    events, kqop->events_size, flags, ts_p);
+ 
+ 	EVBASE_ACQUIRE_LOCK(base, th_base_lock);
+ 
+@@ -451,7 +481,7 @@ static int
+ kq_sig_add(struct event_base *base, int nsignal, short old, short events, void *p)
+ {
+ 	struct kqop *kqop = base->evbase;
+-	struct kevent kev;
++	kq_kevent_t kev;
+ 	struct timespec timeout = { 0, 0 };
+ 	(void)p;
+ 
+@@ -465,7 +495,7 @@ kq_sig_add(struct event_base *base, int nsignal, short old, short events, void *
+ 	/* Be ready for the signal if it is sent any
+ 	 * time between now and the next call to
+ 	 * kq_dispatch. */
+-	if (kevent(kqop->kq, &kev, 1, NULL, 0, &timeout) == -1)
++	if (kq_kevent(kqop->kq, &kev, 1, NULL, 0, KQ_FLAG_NONE, &timeout) == -1)
+ 		return (-1);
+ 
+         /* We can set the handler for most signals to SIG_IGN and
+@@ -484,7 +514,7 @@ static int
+ kq_sig_del(struct event_base *base, int nsignal, short old, short events, void *p)
+ {
+ 	struct kqop *kqop = base->evbase;
+-	struct kevent kev;
++	kq_kevent_t kev;
+ 
+ 	struct timespec timeout = { 0, 0 };
+ 	(void)p;
+@@ -499,7 +529,7 @@ kq_sig_del(struct event_base *base, int nsignal, short old, short events, void *
+ 	/* Because we insert signal events
+ 	 * immediately, we need to delete them
+ 	 * immediately, too */
+-	if (kevent(kqop->kq, &kev, 1, NULL, 0, &timeout) == -1)
++	if (kq_kevent(kqop->kq, &kev, 1, NULL, 0, KQ_FLAG_NONE, &timeout) == -1)
+ 		return (-1);
+ 
+ 	if (evsig_restore_handler_(base, nsignal) == -1)
+@@ -520,7 +550,7 @@ event_kq_add_notify_event_(struct event_base *base)
+ {
+ 	struct kqop *kqop = base->evbase;
+ #if defined(EVFILT_USER) && defined(NOTE_TRIGGER)
+-	struct kevent kev;
++	kq_kevent_t kev;
+ 	struct timespec timeout = { 0, 0 };
+ #endif
+ 
+@@ -533,7 +563,7 @@ event_kq_add_notify_event_(struct event_base *base)
+ 	kev.filter = EVFILT_USER;
+ 	kev.flags = EV_ADD | EV_CLEAR;
+ 
+-	if (kevent(kqop->kq, &kev, 1, NULL, 0, &timeout) == -1) {
++	if (kq_kevent(kqop->kq, &kev, 1, NULL, 0, KQ_FLAG_NONE, &timeout) == -1) {
+ 		event_warn("kevent: adding EVFILT_USER event");
+ 		return -1;
+ 	}
+@@ -551,7 +581,7 @@ event_kq_notify_base_(struct event_base *base)
+ {
+ 	struct kqop *kqop = base->evbase;
+ #if defined(EVFILT_USER) && defined(NOTE_TRIGGER)
+-	struct kevent kev;
++	kq_kevent_t kev;
+ 	struct timespec timeout = { 0, 0 };
+ #endif
+ 	if (! kqop->notify_event_added)
+@@ -563,7 +593,7 @@ event_kq_notify_base_(struct event_base *base)
+ 	kev.filter = EVFILT_USER;
+ 	kev.fflags = NOTE_TRIGGER;
+ 
+-	if (kevent(kqop->kq, &kev, 1, NULL, 0, &timeout) == -1) {
++	if (kq_kevent(kqop->kq, &kev, 1, NULL, 0, KQ_FLAG_NONE, &timeout) == -1) {
+ 		event_warn("kevent: triggering EVFILT_USER event");
+ 		return -1;
+ 	}

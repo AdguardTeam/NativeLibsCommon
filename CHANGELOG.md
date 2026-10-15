@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `libevent`: on Apple platforms, use `kevent64()` with `KEVENT_FLAG_IMMEDIATE` so zero-timeout polls return immediately instead of sleeping ~10 us (backport of [libevent#1931](https://github.com/libevent/libevent/pull/1931)).
+
 ### Deprecated
 
 ### Removed
