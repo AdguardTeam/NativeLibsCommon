@@ -14,17 +14,22 @@
 
 static ag::Logger g_log{"FIREWALL"}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-static constexpr uint8_t DNS_RESTRICT_DENY_WEIGHT = 1;
-static constexpr uint8_t DNS_RESTRICT_ALLOW_WEIGHT = 2;
-static constexpr uint8_t IPV6_BLOCK_DENY_WEIGHT = 3;
-static constexpr uint8_t UNTUNNELED_BLOCK_DENY_WEIGHT = 3;
-static constexpr uint8_t UNTUNNELED_BLOCK_ALLOW_WEIGHT = 4;
-static constexpr uint8_t SELF_LOOPBACK_ALLOW_WEIGHT = 15; // Must be the highest weight.
+enum Weights : uint8_t {
+    DNS_RESTRICT_DENY_WEIGHT,
+    DNS_RESTRICT_ALLOW_WEIGHT,
+    IPV6_BLOCK_DENY_WEIGHT,
+    UNTUNNELED_BLOCK_DENY_WEIGHT,
+    UNTUNNELED_BLOCK_ALLOW_WEIGHT,
+
+    // Must be the highest weight.
+    SELF_LOOPBACK_ALLOW_WEIGHT,
+};
 
 static_assert(UNTUNNELED_BLOCK_ALLOW_WEIGHT > UNTUNNELED_BLOCK_DENY_WEIGHT);
 static_assert(UNTUNNELED_BLOCK_DENY_WEIGHT > DNS_RESTRICT_ALLOW_WEIGHT);
 static_assert(IPV6_BLOCK_DENY_WEIGHT > DNS_RESTRICT_ALLOW_WEIGHT);
 static_assert(DNS_RESTRICT_ALLOW_WEIGHT > DNS_RESTRICT_DENY_WEIGHT);
+static_assert(SELF_LOOPBACK_ALLOW_WEIGHT > DNS_RESTRICT_ALLOW_WEIGHT);
 
 static FWP_V4_ADDR_AND_MASK fwp_v4_range_from_cidr_range(const ag::CidrRange &range);
 static FWP_V6_ADDR_AND_MASK fwp_v6_range_from_cidr_range(const ag::CidrRange &range);
