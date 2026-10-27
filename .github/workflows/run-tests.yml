@@ -14,7 +14,7 @@ permissions:
   id-token: write
 
 env:
-  # Image used for the containerized Linux and Android builds on `team-corelibs`.
+  # Image used for the containerized Linux and Android builds on `team-libs`.
   CORELIBS_IMAGE: adguard/core-libs:2.15
 
 jobs:
@@ -116,7 +116,7 @@ jobs:
   linux-tests:
     name: Linux build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    runs-on: team-corelibs
+    runs-on: team-libs
     env:
       # sccache local-disk store, restored/saved by the registry-cache action as
       # an OCI blob; SCCACHE_CACHE_SIZE bounds the store (and the saved blob).
@@ -266,7 +266,7 @@ jobs:
   android-build:
     name: Android build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    runs-on: team-corelibs
+    runs-on: team-libs
     env:
       SCCACHE_DIR: ${{ github.workspace }}/.sccache
       SCCACHE_CACHE_SIZE: 512M

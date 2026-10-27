@@ -24,7 +24,7 @@ jobs:
   # released entry is the same "current version" that create-release-pr.yml uses.
   resolve-version:
     if: github.repository_owner == 'AdGuardSoftwareLimited'
-    runs-on: team-corelibs
+    runs-on: team-libs
     outputs:
       version: ${{ steps.pick.outputs.version }}
     steps:
@@ -83,4 +83,4 @@ jobs:
       id-token: write
     with:
       tag: v${{ needs.resolve-version.outputs.version }}
-      team: corelibs
+      team: libs

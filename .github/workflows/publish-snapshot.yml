@@ -32,7 +32,7 @@ jobs:
   upload-conan-recipes:
     needs: mirror
     environment: conan-artifactory-dev
-    runs-on: team-corelibs
+    runs-on: team-libs
     steps:
       - name: Checkout
         uses: actions/checkout@v6

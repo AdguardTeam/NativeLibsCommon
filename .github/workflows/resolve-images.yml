@@ -19,7 +19,7 @@ permissions:
 jobs:
   resolve:
     name: Resolve build image labels
-    runs-on: [team-corelibs]
+    runs-on: [team-libs]
     outputs:
       corelibs-builder: ${{ steps.kv.outputs.CORELIBS_BUILDER }}
       macos: ${{ steps.kv.outputs.MACOS }}
