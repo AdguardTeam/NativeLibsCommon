@@ -14,17 +14,25 @@
 
 static ag::Logger g_log{"FIREWALL"}; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-static constexpr uint8_t DNS_RESTRICT_DENY_WEIGHT = 1;
-static constexpr uint8_t DNS_RESTRICT_ALLOW_WEIGHT = 2;
-static constexpr uint8_t IPV6_BLOCK_DENY_WEIGHT = 3;
-static constexpr uint8_t UNTUNNELED_BLOCK_DENY_WEIGHT = 3;
-static constexpr uint8_t UNTUNNELED_BLOCK_ALLOW_WEIGHT = 4;
-static constexpr uint8_t SELF_ALLOW_WEIGHT = 15; // Must be the highest weight.
+enum Weights : uint8_t {
+    DNS_RESTRICT_DENY_WEIGHT,
+    DNS_RESTRICT_ALLOW_WEIGHT,
+    IPV6_BLOCK_DENY_WEIGHT,
+    UNTUNNELED_BLOCK_DENY_WEIGHT,
+    UNTUNNELED_BLOCK_ALLOW_WEIGHT,
+
+    // Must be the highest weight.
+    SELF_LOOPBACK_ALLOW_WEIGHT,
+};
 
 static_assert(UNTUNNELED_BLOCK_ALLOW_WEIGHT > UNTUNNELED_BLOCK_DENY_WEIGHT);
 static_assert(UNTUNNELED_BLOCK_DENY_WEIGHT > DNS_RESTRICT_ALLOW_WEIGHT);
 static_assert(IPV6_BLOCK_DENY_WEIGHT > DNS_RESTRICT_ALLOW_WEIGHT);
 static_assert(DNS_RESTRICT_ALLOW_WEIGHT > DNS_RESTRICT_DENY_WEIGHT);
+static_assert(SELF_LOOPBACK_ALLOW_WEIGHT > DNS_RESTRICT_ALLOW_WEIGHT);
+
+static FWP_V4_ADDR_AND_MASK fwp_v4_range_from_cidr_range(const ag::CidrRange &range);
+static FWP_V6_ADDR_AND_MASK fwp_v6_range_from_cidr_range(const ag::CidrRange &range);
 
 template <typename Func>
 ag::WfpFirewallError run_transaction(HANDLE engine_handle, Func &&func) {
@@ -100,8 +108,8 @@ ag::WfpFirewall::WfpFirewall(std::wstring name, uint32_t exclude_pid)
         return nullptr;
     };
 
+    // Allow any traffic for our process. Required for, e.g., resolving exclusions through the system DNS.
     auto allow_self = [&]() -> WfpFirewallError { // NOLINT(cppcoreguidelines-avoid-capture-default-when-capturing-this)
-        // Allow any DNS traffic for our process. Required for, e.g., resolving exclusions through the system DNS.
         wchar_t module_name[4096]{}; // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
         if (exclude_pid) {
             HANDLE h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, exclude_pid);
@@ -148,7 +156,7 @@ ag::WfpFirewall::WfpFirewall(std::wstring name, uint32_t exclude_pid)
                 .weight =
                         {
                                 .type = FWP_UINT8,
-                                .uint8 = SELF_ALLOW_WEIGHT,
+                                .uint8 = SELF_LOOPBACK_ALLOW_WEIGHT,
                         },
                 .numFilterConditions = (UINT32) allow_self_conditions.size(),
                 .filterCondition = allow_self_conditions.data(),
@@ -168,6 +176,68 @@ ag::WfpFirewall::WfpFirewall(std::wstring name, uint32_t exclude_pid)
         return nullptr;
     };
 
+    // Allow all traffic to/from loopback addresses.
+    auto allow_loopback =
+            [&]() -> WfpFirewallError { // NOLINT(cppcoreguidelines-avoid-capture-default-when-capturing-this)
+        FWP_V4_ADDR_AND_MASK v4_range = fwp_v4_range_from_cidr_range(CidrRange{"127.0.0.0/8"});
+        FWP_V6_ADDR_AND_MASK v6_range = fwp_v6_range_from_cidr_range(CidrRange{"::1/128"});
+        FWPM_FILTER_CONDITION0 v4_condition{
+                .fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS,
+                .matchType = FWP_MATCH_EQUAL,
+                .conditionValue =
+                        {
+                                .type = FWP_V4_ADDR_MASK,
+                                .v4AddrMask = &v4_range,
+                        },
+        };
+        FWPM_FILTER_CONDITION0 v6_condition{
+                .fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS,
+                .matchType = FWP_MATCH_EQUAL,
+                .conditionValue =
+                        {
+                                .type = FWP_V6_ADDR_MASK,
+                                .v6AddrMask = &v6_range,
+                        },
+        };
+        FWPM_FILTER0 filter{
+                .displayData =
+                        {
+                                .name = session_name.data(),
+                        },
+                .providerKey = &m_impl->provider_key,
+                .subLayerKey = m_impl->sublayer_key,
+                .weight =
+                        {
+                                .type = FWP_UINT8,
+                                .uint8 = SELF_LOOPBACK_ALLOW_WEIGHT,
+                        },
+                .numFilterConditions = 1,
+                .action =
+                        {
+                                .type = FWP_ACTION_PERMIT,
+                        },
+        };
+        // The address type of a condition must match the address family of the layer it is added to,
+        // hence the IPv4 and the IPv6 loopback prefixes go to their own layers.
+        filter.filterCondition = &v4_condition;
+        for (GUID layer_key : {FWPM_LAYER_ALE_AUTH_CONNECT_V4, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V4}) {
+            filter.layerKey = layer_key;
+            if (DWORD error = FwpmFilterAdd0(m_impl->engine_handle, &filter, nullptr, nullptr);
+                    error != ERROR_SUCCESS) {
+                return make_error(FE_WFP_ERROR, AG_FMT("FwpmFilterAdd0 failed with code {:#x}", error));
+            }
+        }
+        filter.filterCondition = &v6_condition;
+        for (GUID layer_key : {FWPM_LAYER_ALE_AUTH_CONNECT_V6, FWPM_LAYER_ALE_AUTH_RECV_ACCEPT_V6}) {
+            filter.layerKey = layer_key;
+            if (DWORD error = FwpmFilterAdd0(m_impl->engine_handle, &filter, nullptr, nullptr);
+                    error != ERROR_SUCCESS) {
+                return make_error(FE_WFP_ERROR, AG_FMT("FwpmFilterAdd0 failed with code {:#x}", error));
+            }
+        }
+        return nullptr;
+    };
+
     if (auto error = run_transaction(m_impl->engine_handle, std::move(register_base_objects))) {
         errlog(g_log, "Failed to register base objects: {}", error->str());
         FwpmEngineClose0(m_impl->engine_handle);
@@ -176,7 +246,15 @@ ag::WfpFirewall::WfpFirewall(std::wstring name, uint32_t exclude_pid)
     }
 
     if (auto error = run_transaction(m_impl->engine_handle, std::move(allow_self))) {
-        errlog(g_log, "Failed to allow self through firewall: {}", error->str());
+        errlog(g_log, "Failed to allow {} through firewall: {}",
+                (exclude_pid == 0) ? "self" : AG_FMT("PID {}", exclude_pid), error->str());
+        FwpmEngineClose0(m_impl->engine_handle);
+        m_impl->engine_handle = INVALID_HANDLE_VALUE;
+        return;
+    }
+
+    if (auto error = run_transaction(m_impl->engine_handle, std::move(allow_loopback))) {
+        errlog(g_log, "Failed to allow loopback traffic through firewall: {}", error->str());
         FwpmEngineClose0(m_impl->engine_handle);
         m_impl->engine_handle = INVALID_HANDLE_VALUE;
         return;
@@ -391,7 +469,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
     }
     return run_transaction(m_impl->engine_handle,
             [&]() -> WfpFirewallError { // NOLINT(cppcoreguidelines-avoid-capture-default-when-capturing-this)
-                // Deny IPv4 traffic to/from addresses in `incl4`, except from/to `tunaddr4` or loopback.
+                // Deny IPv4 traffic to/from addresses in `incl4`, except from/to `tunaddr4`.
                 if (tunaddr4.get_address().size() == IPV4_ADDRESS_SIZE && !incl4.empty()) {
                     std::vector<FWPM_FILTER_CONDITION0> v4_conditions;
                     std::list<FWP_V4_ADDR_AND_MASK> v4_ranges;
@@ -438,7 +516,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                         }
                     }
 
-                    // Allow traffic to/from `tunaddr4`, loopback and excluded ports.
+                    // Allow traffic to/from `tunaddr4` and excluded ports.
                     auto v4_conditions_allow = v4_conditions;
 
                     v4_conditions_allow.emplace_back(FWPM_FILTER_CONDITION0{
@@ -451,18 +529,8 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                                                     &v4_ranges.emplace_back(fwp_v4_range_from_cidr_range(tunaddr4)),
                                     },
                     });
-                    v4_conditions_allow.emplace_back(FWPM_FILTER_CONDITION0{
-                            .fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS,
-                            .matchType = FWP_MATCH_EQUAL,
-                            .conditionValue =
-                                    {
-                                            .type = FWP_V4_ADDR_MASK,
-                                            .v4AddrMask = &v4_ranges.emplace_back(
-                                                    fwp_v4_range_from_cidr_range(CidrRange{"127.0.0.1/32"})),
-                                    },
-                    });
 
-                    name = fmt::format(L"{} block untunneled IPv4 (allow tunneled and loopback)", m_impl->name);
+                    name = fmt::format(L"{} block untunneled IPv4 (allow tunneled)", m_impl->name);
                     filter.displayData = {.name = name.data()};
                     filter.action = {.type = FWP_ACTION_PERMIT};
                     filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;
@@ -508,7 +576,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                     }
                 }
 
-                // Deny IPv6 traffic to/from addresses in `incl6`, except from/to `tunnaddr6` or loopback.
+                // Deny IPv6 traffic to/from addresses in `incl6`, except from/to `tunnaddr6`.
                 if (tunaddr6.get_address().size() == IPV6_ADDRESS_SIZE && !incl6.empty()) {
                     std::vector<FWPM_FILTER_CONDITION0> v6_conditions;
                     std::list<FWP_V6_ADDR_AND_MASK> v6_ranges;
@@ -555,7 +623,7 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                         }
                     }
 
-                    // Allow traffic to/from `tunaddr6`, loopback and excluded ports.
+                    // Allow traffic to/from `tunaddr6` and excluded ports.
                     auto v6_conditions_allow = v6_conditions;
 
                     v6_conditions_allow.emplace_back(FWPM_FILTER_CONDITION0{
@@ -568,18 +636,8 @@ ag::WfpFirewallError ag::WfpFirewall::block_untunneled(const CidrRange &tunaddr4
                                                     &v6_ranges.emplace_back(fwp_v6_range_from_cidr_range(tunaddr6)),
                                     },
                     });
-                    v6_conditions_allow.emplace_back(FWPM_FILTER_CONDITION0{
-                            .fieldKey = FWPM_CONDITION_IP_LOCAL_ADDRESS,
-                            .matchType = FWP_MATCH_EQUAL,
-                            .conditionValue =
-                                    {
-                                            .type = FWP_V6_ADDR_MASK,
-                                            .v6AddrMask = &v6_ranges.emplace_back(
-                                                    fwp_v6_range_from_cidr_range(CidrRange{"::1/128"})),
-                                    },
-                    });
 
-                    name = fmt::format(L"{} block untunneled IPv6 (allow tunneled and loopback)", m_impl->name);
+                    name = fmt::format(L"{} block untunneled IPv6 (allow tunneled)", m_impl->name);
                     filter.displayData = {.name = name.data()};
                     filter.action = {.type = FWP_ACTION_PERMIT};
                     filter.weight.uint8 = UNTUNNELED_BLOCK_ALLOW_WEIGHT;

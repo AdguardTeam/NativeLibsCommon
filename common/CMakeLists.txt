@@ -92,6 +92,9 @@ add_unit_test(rotating_log_to_file_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(regex_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(move_only_function_test ${TEST_DIR} "" TRUE TRUE)
 add_unit_test(format_test ${TEST_DIR} "" TRUE TRUE)
+if (WIN32)
+    add_unit_test(wfp_firewall_test ${TEST_DIR} "" TRUE TRUE)
+endif ()
 
 # Invalid format strings are rejected at compile time, so they are tested as builds that must fail.
 set(COMPILE_FAIL_DIR ${TEST_DIR}/compile_fail)

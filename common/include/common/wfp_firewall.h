@@ -37,7 +37,8 @@ class WfpFirewall {
 public:
     /**
      * Create an instance of the firewall. All restrictions added through this instance
-     * are active until this instance is destroyed.
+     * are active until this instance is destroyed. Traffic to/from loopback is always
+     * excluded from any restrictions.
      * @param name A string that will be used in WFP entities names.
      * @param exclude_pid ID of the process to exclude from all restrictions. If `0`, exclude the current process.
      */
@@ -60,7 +61,6 @@ public:
      * Block untunneled traffic, i.e. traffic to/from `incl4`/`incl6` and not from/to `tunnadr4`/`tunaddr6`.
      * `tunaddr4` and `tunaddr6` are the tun interface's IPv4 and IPv6 addresses.
      * `incl4` and `incl6` are included (i.e. routed through the tunnel) prefixes.
-     * Traffic to/from loopback is never blocked.
      */
     WfpFirewallError block_untunneled(const CidrRange &tunaddr4, const CidrRange &tunaddr6,
             std::span<const CidrRange> incl4, std::span<const CidrRange> incl6, std::span<const uint16_t> excl_ports);
