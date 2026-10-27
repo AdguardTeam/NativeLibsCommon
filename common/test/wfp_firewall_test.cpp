@@ -144,8 +144,8 @@ static testing::AssertionResult make_bound_socket(
     if (bind(s.get(), addr.c_sockaddr(), (int) addr.c_socklen()) != 0) {
         return wsa_failure(AG_FMT("bind({})", addr.str()));
     }
-    DWORD timeout_ms = IO_TIMEOUT_SECS * 1000;
-    if (setsockopt(s.get(), SOL_SOCKET, SO_RCVTIMEO, (const char *) &timeout_ms, sizeof(timeout_ms)) != 0) {
+    if (DWORD timeout_ms = IO_TIMEOUT_SECS * 1000;
+            setsockopt(s.get(), SOL_SOCKET, SO_RCVTIMEO, (const char *) &timeout_ms, sizeof(timeout_ms)) != 0) {
         return wsa_failure("setsockopt(SO_RCVTIMEO)");
     }
     std::optional<SocketAddress> local = utils::get_local_address((evutil_socket_t) s.get());
@@ -155,12 +155,6 @@ static testing::AssertionResult make_bound_socket(
     out_addr = *local;
     out_socket = std::move(s);
     return testing::AssertionSuccess();
-}
-
-/** Check whether `addr` can be bound, so that a test can be skipped if the port is taken. */
-static bool is_bindable(const SocketAddress &addr, int type, int protocol) {
-    Socket s{socket(addr.c_sockaddr()->sa_family, type, protocol)};
-    return s.valid() && bind(s.get(), addr.c_sockaddr(), (int) addr.c_socklen()) == 0;
 }
 
 static testing::AssertionResult wait_readable(SOCKET fd) {
@@ -458,10 +452,6 @@ TEST_P(WfpFirewallLoopbackTest, TcpDnsIsAllowed) {
     for (SocketAddress address : make_loopback_addresses()) {
         SCOPED_TRACE(address.host_str());
         address.set_port((uint16_t) utils::PLAIN_DNS_PORT_NUMBER);
-        if (!is_bindable(address, SOCK_STREAM, IPPROTO_TCP)) {
-            GTEST_LOG_(WARNING) << "The DNS port on " << address.host_str() << " is taken, skipping";
-            continue;
-        }
         EXPECT_TRUE(check_tcp(address));
     }
 }
@@ -470,10 +460,6 @@ TEST_P(WfpFirewallLoopbackTest, UdpDnsIsAllowed) {
     for (SocketAddress address : make_loopback_addresses()) {
         SCOPED_TRACE(address.host_str());
         address.set_port((uint16_t) utils::PLAIN_DNS_PORT_NUMBER);
-        if (!is_bindable(address, SOCK_DGRAM, IPPROTO_UDP)) {
-            GTEST_LOG_(WARNING) << "The DNS port on " << address.host_str() << " is taken, skipping";
-            continue;
-        }
         EXPECT_TRUE(check_udp(address));
     }
 }
@@ -491,9 +477,6 @@ TEST_P(WfpFirewallLoopbackTest, NonLoopbackDnsIsBlocked) {
     }
     SocketAddress addr = *m_non_loopback_addr;
     addr.set_port((uint16_t) utils::PLAIN_DNS_PORT_NUMBER);
-    if (!is_bindable(addr, SOCK_DGRAM, IPPROTO_UDP)) {
-        GTEST_SKIP() << "The DNS port on " << addr.host_str() << " is taken";
-    }
     EXPECT_FALSE(check_udp(addr));
 }
 
