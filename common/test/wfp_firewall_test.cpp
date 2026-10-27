@@ -49,7 +49,7 @@ static std::vector<SocketAddress> make_loopback_addresses() {
     std::mt19937 rng{rd()};
     std::uniform_int_distribution<uint32_t> dist{1, 0xFFFFFEu};
     std::vector<SocketAddress> addresses;
-    addresses.reserve(RANDOM_LOOPBACK_ADDRESS_COUNT + 1);
+    addresses.reserve(RANDOM_LOOPBACK_ADDRESS_COUNT + 2);
     for (size_t i = 0; i < RANDOM_LOOPBACK_ADDRESS_COUNT; i++) {
         uint32_t host = dist(rng);
         Ipv4Address bytes = {
@@ -63,6 +63,13 @@ static std::vector<SocketAddress> make_loopback_addresses() {
     addresses.emplace_back("::1", 0);
     addresses.emplace_back("127.0.0.1", 0);
     return addresses;
+}
+
+/** Return the wildcard address of the same address family and port as `addr`. */
+static SocketAddress any_address(const SocketAddress &addr) {
+    SocketAddress any{addr.is_ipv6() ? "::" : "0.0.0.0", 0};
+    any.set_port(addr.port());
+    return any;
 }
 
 /** Restrictions to enable on the firewall under test. */
@@ -96,8 +103,13 @@ public:
     Socket &operator=(const Socket &) = delete;
 
     ~Socket() {
+        close();
+    }
+
+    void close() {
         if (m_fd != INVALID_SOCKET) {
             closesocket(m_fd);
+            m_fd = INVALID_SOCKET;
         }
     }
 
@@ -238,21 +250,30 @@ static testing::AssertionResult receive_datagram(SOCKET fd, std::string_view exp
 }
 
 /**
- * Accept a TCP connection on `server_addr` and exchange data over it in both directions.
+ * Accept a TCP connection on a listener bound to `bind_addr` and exchange data over it in both
+ * directions. The client connects to `server_addr`; if its port is 0, the port the listener has
+ * actually been bound to is used instead.
  * The outbound half of the exchange goes through the WFP `ALE_AUTH_CONNECT` layer,
  * and the inbound one goes through the `ALE_AUTH_RECV_ACCEPT` layer.
  */
-static testing::AssertionResult check_tcp(const SocketAddress &server_addr) {
+static testing::AssertionResult check_tcp(const SocketAddress &bind_addr, const SocketAddress &server_addr) {
     Socket listener;
     SocketAddress listen_addr;
-    if (auto result = make_bound_socket(server_addr, SOCK_STREAM, IPPROTO_TCP, listener, listen_addr); !result) {
+    if (auto result = make_bound_socket(bind_addr, SOCK_STREAM, IPPROTO_TCP, listener, listen_addr); !result) {
         return result;
     }
     if (listen(listener.get(), 1) != 0) {
         return wsa_failure("listen()");
     }
 
-    Socket client{socket(listen_addr.c_sockaddr()->sa_family, SOCK_STREAM, IPPROTO_TCP)};
+    SocketAddress connect_addr = server_addr;
+    if (connect_addr.port() == 0) {
+        connect_addr.set_port(listen_addr.port());
+    } else if (connect_addr.port() != listen_addr.port()) {
+        return testing::AssertionFailure() << "The listener is bound to port " << listen_addr.port()
+                                           << ", but the client is asked to connect to port " << connect_addr.port();
+    }
+    Socket client{socket(connect_addr.c_sockaddr()->sa_family, SOCK_STREAM, IPPROTO_TCP)};
     if (!client.valid()) {
         return wsa_failure("socket()");
     }
@@ -260,9 +281,9 @@ static testing::AssertionResult check_tcp(const SocketAddress &server_addr) {
     if (ioctlsocket(client.get(), FIONBIO, &non_blocking) != 0) {
         return wsa_failure("ioctlsocket(FIONBIO)");
     }
-    if (connect(client.get(), listen_addr.c_sockaddr(), (int) listen_addr.c_socklen()) != 0
+    if (connect(client.get(), connect_addr.c_sockaddr(), (int) connect_addr.c_socklen()) != 0
             && WSAGetLastError() != WSAEWOULDBLOCK) {
-        return wsa_failure(AG_FMT("connect({})", listen_addr.str()));
+        return wsa_failure(AG_FMT("connect({})", connect_addr.str()));
     }
     if (auto result = wait_connected(client.get()); !result) {
         return result;
@@ -281,19 +302,25 @@ static testing::AssertionResult check_tcp(const SocketAddress &server_addr) {
     }
 
     if (auto result = send_and_receive(client.get(), accepted.get(), PING); !result) {
+        client.close();
         return result;
     }
-    return send_and_receive(accepted.get(), client.get(), PONG);
+    auto result = send_and_receive(accepted.get(), client.get(), PONG);
+    // Close the client first so that the listener's port doesn't end up in TIME_WAIT.
+    client.close();
+    return result;
 }
 
 /**
- * Exchange UDP datagrams with `server_addr` in both directions. Sending goes through
- * the WFP `ALE_AUTH_CONNECT` layer, and receiving goes through the `ALE_AUTH_RECV_ACCEPT` layer.
+ * Exchange UDP datagrams with a server bound to `bind_addr` in both directions. The client binds
+ * to `server_addr` with an ephemeral port and sends to `server_addr`; if its port is 0, the port
+ * the server has actually been bound to is used instead. Sending goes through the WFP
+ * `ALE_AUTH_CONNECT` layer, and receiving goes through the `ALE_AUTH_RECV_ACCEPT` layer.
  */
-static testing::AssertionResult check_udp(const SocketAddress &server_addr) {
+static testing::AssertionResult check_udp(const SocketAddress &bind_addr, const SocketAddress &server_addr) {
     Socket server;
     SocketAddress bound_server_addr;
-    if (auto result = make_bound_socket(server_addr, SOCK_DGRAM, IPPROTO_UDP, server, bound_server_addr); !result) {
+    if (auto result = make_bound_socket(bind_addr, SOCK_DGRAM, IPPROTO_UDP, server, bound_server_addr); !result) {
         return result;
     }
 
@@ -306,7 +333,14 @@ static testing::AssertionResult check_udp(const SocketAddress &server_addr) {
         return result;
     }
 
-    if (auto result = send_datagram(client.get(), bound_server_addr, PING); !result) {
+    SocketAddress server_dest_addr = server_addr;
+    if (server_dest_addr.port() == 0) {
+        server_dest_addr.set_port(bound_server_addr.port());
+    } else if (server_dest_addr.port() != bound_server_addr.port()) {
+        return testing::AssertionFailure() << "The server is bound to port " << bound_server_addr.port()
+                                           << ", but the client is asked to send to port " << server_dest_addr.port();
+    }
+    if (auto result = send_datagram(client.get(), server_dest_addr, PING); !result) {
         return result;
     }
     if (auto result = receive_datagram(server.get(), PING); !result) {
@@ -437,14 +471,16 @@ protected:
 TEST_P(WfpFirewallLoopbackTest, TcpIsAllowed) {
     for (const SocketAddress &address : make_loopback_addresses()) {
         SCOPED_TRACE(address.host_str());
-        EXPECT_TRUE(check_tcp(address));
+        EXPECT_TRUE(check_tcp(address, address)) << "specific-address listener";
+        EXPECT_TRUE(check_tcp(any_address(address), address)) << "any-address listener";
     }
 }
 
 TEST_P(WfpFirewallLoopbackTest, UdpIsAllowed) {
     for (const SocketAddress &address : make_loopback_addresses()) {
         SCOPED_TRACE(address.host_str());
-        EXPECT_TRUE(check_udp(address));
+        EXPECT_TRUE(check_udp(address, address)) << "specific-address listener";
+        EXPECT_TRUE(check_udp(any_address(address), address)) << "any-address listener";
     }
 }
 
@@ -452,7 +488,8 @@ TEST_P(WfpFirewallLoopbackTest, TcpDnsIsAllowed) {
     for (SocketAddress address : make_loopback_addresses()) {
         SCOPED_TRACE(address.host_str());
         address.set_port((uint16_t) utils::PLAIN_DNS_PORT_NUMBER);
-        EXPECT_TRUE(check_tcp(address));
+        EXPECT_TRUE(check_tcp(address, address)) << "specific-address listener";
+        EXPECT_TRUE(check_tcp(any_address(address), address)) << "any-address listener";
     }
 }
 
@@ -460,7 +497,8 @@ TEST_P(WfpFirewallLoopbackTest, UdpDnsIsAllowed) {
     for (SocketAddress address : make_loopback_addresses()) {
         SCOPED_TRACE(address.host_str());
         address.set_port((uint16_t) utils::PLAIN_DNS_PORT_NUMBER);
-        EXPECT_TRUE(check_udp(address));
+        EXPECT_TRUE(check_udp(address, address)) << "specific-address listener";
+        EXPECT_TRUE(check_udp(any_address(address), address)) << "any-address listener";
     }
 }
 
@@ -477,7 +515,7 @@ TEST_P(WfpFirewallLoopbackTest, NonLoopbackDnsIsBlocked) {
     }
     SocketAddress addr = *m_non_loopback_addr;
     addr.set_port((uint16_t) utils::PLAIN_DNS_PORT_NUMBER);
-    EXPECT_FALSE(check_udp(addr));
+    EXPECT_FALSE(check_udp(addr, addr));
 }
 
 static std::string restrictions_name(uint32_t restrictions) {
