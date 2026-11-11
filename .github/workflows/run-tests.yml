@@ -18,14 +18,9 @@ env:
   CORELIBS_IMAGE: adguard/core-libs:2.15
 
 jobs:
-  resolve-images:
-    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    uses: ./.github/workflows/resolve-images.yml
-
   tests:
     name: ${{ matrix.name }} build
     if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
-    needs: resolve-images
     strategy:
       fail-fast: false
       matrix:
@@ -33,7 +28,7 @@ jobs:
         # steps), and sccache hashes the compilation inputs itself.
         include:
           - name: Win
-            runs-on: '["ephemeral","ephemeral-vmwin","${{ needs.resolve-images.outputs.windows }}","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
+            runs-on: '["ephemeral","ephemeral-vmwin","registry.int.agrd.dev/windows/windows2022-vs2022:@edge","ephemeral-limit-memory-4096","ephemeral-limit-cpu-4"]'
             container-image: ''
             shell: powershell
             artifact-name: test-results-windows
@@ -67,7 +62,7 @@ jobs:
               & conan remote login art "$env:ARTIFACTORY_USER" --password "$env:ARTIFACTORY_API_KEY"
               & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
           - name: Mac
-            runs-on: '["ephemeral","ephemeral-mac","${{ needs.resolve-images.outputs.macos }}","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
+            runs-on: '["ephemeral","ephemeral-mac","registry.int.agrd.dev/macos/tahoe-github-xcode27-26.11:@edge","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
             container-image: ''
             shell: bash
             artifact-name: test-results-macos
