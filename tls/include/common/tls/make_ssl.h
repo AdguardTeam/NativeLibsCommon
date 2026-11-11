@@ -21,16 +21,19 @@ using SslPtr = UniquePtr<SSL, &SSL_free>;
  * (matching JA4);
  * `OKHTTP` reproduces the OkHttp Android HTTP client;
  * `OPENSSL_DEFAULT` reproduces the default OpenSSL 3.x ClientHello (matching JA4);
- * `DEFAULT` applies no mimicry and emits the plain BoringSSL/OpenSSL library-default ClientHello.
+ * `BORINGSSL_DEFAULT` applies no mimicry and emits the plain BoringSSL library-default ClientHello.
+ *
+ * In builds without BoringSSL (upstream OpenSSL on MIPS), no profile applies mimicry, and every
+ * profile emits the OpenSSL library-default ClientHello.
  */
 enum class TlsClientProfile {
-    CHROME,          ///< Chrome-like ClientHello (default)
-    CHROME_CANARY,   ///< Chrome Canary-like ClientHello
-    SAFARI,          ///< Safari-like ClientHello
-    FIREFOX,         ///< Firefox-like ClientHello
-    OKHTTP,          ///< OkHttp (Android) client
-    OPENSSL_DEFAULT, ///< OpenSSL default ClientHello
-    DEFAULT,         ///< No mimicry — library defaults
+    CHROME,            ///< Chrome-like ClientHello (default)
+    CHROME_CANARY,     ///< Chrome Canary-like ClientHello (currently the same as `CHROME`)
+    SAFARI,            ///< Safari-like ClientHello
+    FIREFOX,           ///< Firefox-like ClientHello
+    OKHTTP,            ///< OkHttp (Android) client
+    OPENSSL_DEFAULT,   ///< OpenSSL default ClientHello
+    BORINGSSL_DEFAULT, ///< No mimicry — BoringSSL library defaults
 };
 
 /** How the produced `SSL` object will be used; affects QUIC-specific configuration. */
@@ -53,7 +56,7 @@ struct SslInitParameters {
     void *verify_arg = nullptr;
 
     /**
-     * Gates the post-quantum key-share group for the `CHROME` profile only.
+     * Gates the post-quantum key-share group for the Chrome profiles (`CHROME`, `CHROME_CANARY`) only.
      * Other profiles advertise their fixed group list regardless of this flag.
      */
     bool post_quantum = true;
