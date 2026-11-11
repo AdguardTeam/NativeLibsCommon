@@ -10,11 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- `TlsClientProfile::CHROME` now tracks the current Chrome stable ClientHello (captured November 2026; JA4 `t13d1517h2_8daaf6152771_cb7bf5808d99`): it sends the `trust_anchors` extension (`0xca34`) with Chrome's list of 28 trust anchor IDs, and a GREASE value at the head of `signature_algorithms`.
-- Rename `TlsClientProfile::DEFAULT` to `TlsClientProfile::BORINGSSL_DEFAULT`. Update callers that use the old name.
-- `TlsClientProfile::CHROME_CANARY` now tracks the current Chrome Canary ClientHello (captured November 2026), which is the same as Chrome stable: it sends `trust_anchors` and no longer sends `server_padding`. The `SSL_set_server_padding_request` BoringSSL API stays, but `make_ssl` does not use it.
-- `libevent`: on Apple platforms, use `kevent64()` with `KEVENT_FLAG_IMMEDIATE` so zero-timeout polls return immediately instead of sleeping ~10 us (backport of [libevent#1931](https://github.com/libevent/libevent/pull/1931)).
-
 ### Deprecated
 
 ### Removed
@@ -22,6 +17,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 ### Security
+
+## [8.2.0] - 2026-11-11
+
+### Changed
+
+- `TlsClientProfile::CHROME` now tracks the current Chrome stable ClientHello (captured November 2026; JA4 `t13d1517h2_8daaf6152771_cb7bf5808d99`): it sends the `trust_anchors` extension (`0xca34`) with Chrome's list of 28 trust anchor IDs, and a GREASE value at the head of `signature_algorithms`.
+- Rename `TlsClientProfile::DEFAULT` to `TlsClientProfile::BORINGSSL_DEFAULT`. Update callers that use the old name.
+- `TlsClientProfile::CHROME_CANARY` now tracks the current Chrome Canary ClientHello (captured November 2026), which is the same as Chrome stable: it sends `trust_anchors` and no longer sends `server_padding`. The `SSL_set_server_padding_request` BoringSSL API stays, but `make_ssl` does not use it.
+- `libevent`: on Apple platforms, use `kevent64()` with `KEVENT_FLAG_IMMEDIATE` so zero-timeout polls return immediately instead of sleeping ~10 us (backport of [libevent#1931](https://github.com/libevent/libevent/pull/1931)).
 
 ## [8.1.55] - 2026-10-08
 
@@ -1317,7 +1321,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.55...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.2.0...HEAD
+[8.2.0]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.55...v8.2.0
 [8.1.55]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.54...v8.1.55
 [8.1.54]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.53...v8.1.54
 [8.1.53]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.52...v8.1.53
