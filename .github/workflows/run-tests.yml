@@ -62,7 +62,7 @@ jobs:
               & conan remote login art "$env:ARTIFACTORY_USER" --password "$env:ARTIFACTORY_API_KEY"
               & conan upload -r art -c "*" 2>&1 | Select-String "Uploading" -SimpleMatch
           - name: Mac
-            runs-on: '["ephemeral","ephemeral-mac","registry.int.agrd.dev/macos/tahoe-github-xcode26.4.1-26.11:@edge","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
+            runs-on: '["ephemeral","ephemeral-mac","registry.int.agrd.dev/macos/tahoe-github-xcode27-26.11:@edge","ephemeral-limit-memory-6144","ephemeral-limit-cpu-4"]'
             container-image: ''
             shell: bash
             artifact-name: test-results-macos
