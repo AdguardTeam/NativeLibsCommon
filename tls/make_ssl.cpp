@@ -482,9 +482,8 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
             // `trust_anchors` (0xca34) with Chrome's fixed list of trust anchor IDs. It is part of
             // the JA4_c extension hash. Advertise-only: `make_ssl` does not implement the retry
             // flow of the draft, and certificate verification is not affected.
-            if (1
-                    != SSL_set1_requested_trust_anchors(
-                            ssl.get(), CHROME_TRUST_ANCHOR_IDS, std::size(CHROME_TRUST_ANCHOR_IDS))) {
+            if (!SSL_set1_requested_trust_anchors(
+                        ssl.get(), CHROME_TRUST_ANCHOR_IDS, std::size(CHROME_TRUST_ANCHOR_IDS))) {
                 return "Failed to set trust anchors";
             }
         }
