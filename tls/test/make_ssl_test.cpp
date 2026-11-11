@@ -105,8 +105,8 @@ TEST(MakeSsl, Ja4Profiles) {
             // Reference captured from Chrome stable (November 2026). The resumption `pre_shared_key`
             // extension is excluded, because the test ClientHello does not resume a session.
             {ag::tls::TlsClientProfile::CHROME, "Chrome", "t13d1517h2_8daaf6152771_cb7bf5808d99"},
-            // Chrome stable plus `server_padding` (0x12e0).
-            {ag::tls::TlsClientProfile::CHROME_CANARY, "ChromeCanary", "t13d1518h2_8daaf6152771_4980c97edce0"},
+            // Reference captured from Chrome Canary (November 2026): the same as Chrome stable.
+            {ag::tls::TlsClientProfile::CHROME_CANARY, "ChromeCanary", "t13d1517h2_8daaf6152771_cb7bf5808d99"},
             {ag::tls::TlsClientProfile::SAFARI, "Safari26", "t13d2013h2_a09f3c656075_7f0f34a4126d"},
             {ag::tls::TlsClientProfile::FIREFOX, "Firefox151", "t13d1717h2_5b57614c22b0_3cbfd9057e0d"},
             {ag::tls::TlsClientProfile::OKHTTP, "OkHttp5", "t13d1613h2_46e7e9700bed_eca864cca44a"},
@@ -161,14 +161,16 @@ static std::optional<std::vector<uint8_t>> client_hello_extension(ag::tls::TlsCl
 }
 
 // Both Chrome profiles send `trust_anchors` with Chrome's ID list and a GREASE value at the head of
-// signature_algorithms. Only Chrome Canary sends `server_padding`. The other profiles send none of
-// these.
+// signature_algorithms. No profile sends `server_padding`: Chrome Canary stopped sending it. The other
+// profiles send none of these.
 TEST(MakeSsl, ChromeExtensions) {
     // Chrome's trust anchor ID list (28 IDs, 184 bytes), as captured, with the 16-bit length prefix.
     static constexpr uint8_t TRUST_ANCHORS_PREFIX[] = {0x00, 0xb8, 0x05, 0x82, 0xdf, 0x13, 0x02, 0x01};
     static constexpr uint8_t TRUST_ANCHORS_SUFFIX[] = {0x04, 0xd6, 0x79, 0x09, 0x0f};
 
     for (auto profile : {ag::tls::TlsClientProfile::CHROME, ag::tls::TlsClientProfile::CHROME_CANARY}) {
+        EXPECT_FALSE(client_hello_extension(profile, TLSEXT_TYPE_server_padding).has_value());
+
         auto anchors = client_hello_extension(profile, TLSEXT_TYPE_trust_anchors);
         ASSERT_TRUE(anchors.has_value());
         ASSERT_EQ(2 + 184, anchors->size());
@@ -181,10 +183,6 @@ TEST(MakeSsl, ChromeExtensions) {
         ASSERT_GE(sigalgs->size(), 4);
         EXPECT_TRUE(is_grease_value((uint16_t) (((*sigalgs)[2] << 8) | (*sigalgs)[3])));
     }
-
-    EXPECT_FALSE(client_hello_extension(ag::tls::TlsClientProfile::CHROME, TLSEXT_TYPE_server_padding).has_value());
-    EXPECT_TRUE(
-            client_hello_extension(ag::tls::TlsClientProfile::CHROME_CANARY, TLSEXT_TYPE_server_padding).has_value());
 
     for (auto profile :
             {ag::tls::TlsClientProfile::SAFARI, ag::tls::TlsClientProfile::FIREFOX, ag::tls::TlsClientProfile::OKHTTP,

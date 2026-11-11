@@ -22,8 +22,8 @@ namespace ag::tls {
 
 namespace {
 
-// Chrome and Chrome Canary share every ClientHello trait except `server_padding`, which only
-// Canary sends; the differences are called out at each use site.
+// Chrome Canary currently sends the same ClientHello as Chrome stable (captured November 2026),
+// so both profiles share every trait. Keep them apart here if a new Canary capture differs.
 bool is_chrome_profile(TlsClientProfile p) {
     return p == TlsClientProfile::CHROME || p == TlsClientProfile::CHROME_CANARY;
 }
@@ -487,12 +487,6 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
                             ssl.get(), CHROME_TRUST_ANCHOR_IDS, std::size(CHROME_TRUST_ANCHOR_IDS))) {
                 return "Failed to set trust anchors";
             }
-        }
-
-        if (profile == TlsClientProfile::CHROME_CANARY) {
-            // `server_padding` (0x12e0 = 4832) asks the server to pad EncryptedExtensions by the
-            // requested number of bytes; Chrome requests 1000. Chrome stable does not send it.
-            SSL_set_server_padding_request(ssl.get(), 1000);
         }
 
         // Safari does not advertise the session_ticket extension.
