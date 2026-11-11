@@ -56,7 +56,7 @@ struct SslInitParameters {
     void *verify_arg = nullptr;
 
     /**
-     * Gates the post-quantum key-share group for the `CHROME` profile only.
+     * Gates the post-quantum key-share group for the Chrome profiles (`CHROME`, `CHROME_CANARY`) only.
      * Other profiles advertise their fixed group list regardless of this flag.
      */
     bool post_quantum = true;

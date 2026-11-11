@@ -6,6 +6,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -164,19 +165,28 @@ static std::optional<std::vector<uint8_t>> client_hello_extension(ag::tls::TlsCl
 // signature_algorithms. No profile sends `server_padding`: Chrome Canary stopped sending it. The other
 // profiles send none of these.
 TEST(MakeSsl, ChromeExtensions) {
-    // Chrome's trust anchor ID list (28 IDs, 184 bytes), as captured, with the 16-bit length prefix.
-    static constexpr uint8_t TRUST_ANCHORS_PREFIX[] = {0x00, 0xb8, 0x05, 0x82, 0xdf, 0x13, 0x02, 0x01};
-    static constexpr uint8_t TRUST_ANCHORS_SUFFIX[] = {0x04, 0xd6, 0x79, 0x09, 0x0f};
+    // The whole `trust_anchors` extension body (16-bit list length, then 28 length-prefixed IDs),
+    // copied verbatim from a captured Chrome ClientHello. It is kept as hex, separately from the
+    // table in make_ssl.cpp, so that an error in either copy makes this test fail.
+    static constexpr std::string_view TRUST_ANCHORS_HEX =
+            "00b80582df1302010582df1302060582df13020d0582df13020e0582df13020f0582df1302120582"
+            "df1302130582df13021408839a648c9b2d010708839a648c9b2d010808839a648c9b2d010908839a"
+            "648c9b2d010a08839a648c9b2d010b08839a648c9b2d010c08839a648c9b2d010d08839a648c9b2d"
+            "011208839a648c9b2d011304d679090104d679090404d679090504d679090604d679090704d67909"
+            "0804d679090a04d679090b04d679090c04d679090d04d679090f";
+    std::vector<uint8_t> trust_anchors_expected;
+    for (size_t i = 0; i + 1 < TRUST_ANCHORS_HEX.size(); i += 2) {
+        trust_anchors_expected.push_back(
+                (uint8_t) std::stoul(std::string(TRUST_ANCHORS_HEX.substr(i, 2)), nullptr, 16));
+    }
+    ASSERT_EQ(2 + 184, trust_anchors_expected.size());
 
     for (auto profile : {ag::tls::TlsClientProfile::CHROME, ag::tls::TlsClientProfile::CHROME_CANARY}) {
         EXPECT_FALSE(client_hello_extension(profile, TLSEXT_TYPE_server_padding).has_value());
 
         auto anchors = client_hello_extension(profile, TLSEXT_TYPE_trust_anchors);
         ASSERT_TRUE(anchors.has_value());
-        ASSERT_EQ(2 + 184, anchors->size());
-        EXPECT_TRUE(std::equal(std::begin(TRUST_ANCHORS_PREFIX), std::end(TRUST_ANCHORS_PREFIX), anchors->begin()));
-        EXPECT_TRUE(std::equal(std::begin(TRUST_ANCHORS_SUFFIX), std::end(TRUST_ANCHORS_SUFFIX),
-                anchors->end() - (std::ptrdiff_t) std::size(TRUST_ANCHORS_SUFFIX)));
+        EXPECT_EQ(trust_anchors_expected, *anchors);
 
         auto sigalgs = client_hello_extension(profile, TLSEXT_TYPE_signature_algorithms);
         ASSERT_TRUE(sigalgs.has_value());
