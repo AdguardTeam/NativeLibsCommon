@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -101,8 +102,11 @@ TEST(MakeSsl, Ja4Profiles) {
         const char *expected;
     };
     const Case cases[] = {
-            {ag::tls::TlsClientProfile::CHROME, "Chrome150", "t13d1516h2_8daaf6152771_806a8c22fdea"},
-            {ag::tls::TlsClientProfile::CHROME_CANARY, "Chrome152", "t13d1517h2_8daaf6152771_c4845d6bf6c5"},
+            // Reference captured from Chrome stable (November 2026). The resumption `pre_shared_key`
+            // extension is excluded, because the test ClientHello does not resume a session.
+            {ag::tls::TlsClientProfile::CHROME, "Chrome", "t13d1517h2_8daaf6152771_cb7bf5808d99"},
+            // Chrome stable plus `server_padding` (0x12e0).
+            {ag::tls::TlsClientProfile::CHROME_CANARY, "ChromeCanary", "t13d1518h2_8daaf6152771_4980c97edce0"},
             {ag::tls::TlsClientProfile::SAFARI, "Safari26", "t13d2013h2_a09f3c656075_7f0f34a4126d"},
             {ag::tls::TlsClientProfile::FIREFOX, "Firefox151", "t13d1717h2_5b57614c22b0_3cbfd9057e0d"},
             {ag::tls::TlsClientProfile::OKHTTP, "OkHttp5", "t13d1613h2_46e7e9700bed_eca864cca44a"},
@@ -122,6 +126,71 @@ TEST(MakeSsl, Ja4Profiles) {
         if (c.expected[0] != '\0') {
             EXPECT_EQ(c.expected, ja4) << c.name << ": JA4 mismatch vs reference";
         }
+    }
+}
+
+// Returns the body of the first ClientHello extension of |type| for |profile|, or nullopt if the
+// extension is not sent.
+static std::optional<std::vector<uint8_t>> client_hello_extension(ag::tls::TlsClientProfile profile, uint16_t type) {
+    std::vector<uint8_t> h = build_client_hello(profile);
+    if (h.size() < 44) {
+        return std::nullopt;
+    }
+    auto u16 = [&](size_t o) {
+        return (uint16_t) ((h[o] << 8) | h[o + 1]);
+    };
+    size_t p = 5 + 4; // TLS record header + handshake header
+    p += 2 + 32;      // client_version + random
+    p += 1 + h[p];    // session_id
+    p += 2 + u16(p);  // cipher_suites
+    p += 1 + h[p];    // compression_methods
+    if (p + 2 > h.size()) {
+        return std::nullopt;
+    }
+    size_t ext_end = std::min(p + 2 + u16(p), h.size());
+    p += 2;
+    while (p + 4 <= ext_end) {
+        uint16_t len = u16(p + 2);
+        if (u16(p) == type && p + 4 + len <= ext_end) {
+            auto begin = h.begin() + (std::ptrdiff_t) (p + 4);
+            return std::vector<uint8_t>(begin, begin + len);
+        }
+        p += 4 + (size_t) len;
+    }
+    return std::nullopt;
+}
+
+// Both Chrome profiles send `trust_anchors` with Chrome's ID list and a GREASE value at the head of
+// signature_algorithms. Only Chrome Canary sends `server_padding`. The other profiles send none of
+// these.
+TEST(MakeSsl, ChromeExtensions) {
+    // Chrome's trust anchor ID list (28 IDs, 184 bytes), as captured, with the 16-bit length prefix.
+    static constexpr uint8_t TRUST_ANCHORS_PREFIX[] = {0x00, 0xb8, 0x05, 0x82, 0xdf, 0x13, 0x02, 0x01};
+    static constexpr uint8_t TRUST_ANCHORS_SUFFIX[] = {0x04, 0xd6, 0x79, 0x09, 0x0f};
+
+    for (auto profile : {ag::tls::TlsClientProfile::CHROME, ag::tls::TlsClientProfile::CHROME_CANARY}) {
+        auto anchors = client_hello_extension(profile, TLSEXT_TYPE_trust_anchors);
+        ASSERT_TRUE(anchors.has_value());
+        ASSERT_EQ(2 + 184, anchors->size());
+        EXPECT_TRUE(std::equal(std::begin(TRUST_ANCHORS_PREFIX), std::end(TRUST_ANCHORS_PREFIX), anchors->begin()));
+        EXPECT_TRUE(std::equal(std::begin(TRUST_ANCHORS_SUFFIX), std::end(TRUST_ANCHORS_SUFFIX),
+                anchors->end() - (std::ptrdiff_t) std::size(TRUST_ANCHORS_SUFFIX)));
+
+        auto sigalgs = client_hello_extension(profile, TLSEXT_TYPE_signature_algorithms);
+        ASSERT_TRUE(sigalgs.has_value());
+        ASSERT_GE(sigalgs->size(), 4);
+        EXPECT_TRUE(is_grease_value((uint16_t) (((*sigalgs)[2] << 8) | (*sigalgs)[3])));
+    }
+
+    EXPECT_FALSE(client_hello_extension(ag::tls::TlsClientProfile::CHROME, TLSEXT_TYPE_server_padding).has_value());
+    EXPECT_TRUE(
+            client_hello_extension(ag::tls::TlsClientProfile::CHROME_CANARY, TLSEXT_TYPE_server_padding).has_value());
+
+    for (auto profile :
+            {ag::tls::TlsClientProfile::SAFARI, ag::tls::TlsClientProfile::FIREFOX, ag::tls::TlsClientProfile::OKHTTP,
+                    ag::tls::TlsClientProfile::OPENSSL_DEFAULT, ag::tls::TlsClientProfile::DEFAULT}) {
+        EXPECT_FALSE(client_hello_extension(profile, TLSEXT_TYPE_trust_anchors).has_value());
+        EXPECT_FALSE(client_hello_extension(profile, TLSEXT_TYPE_server_padding).has_value());
     }
 }
 

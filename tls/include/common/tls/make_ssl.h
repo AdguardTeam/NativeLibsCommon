@@ -25,7 +25,7 @@ using SslPtr = UniquePtr<SSL, &SSL_free>;
  */
 enum class TlsClientProfile {
     CHROME,          ///< Chrome-like ClientHello (default)
-    CHROME_CANARY,   ///< Chrome Canary-like ClientHello
+    CHROME_CANARY,   ///< Chrome Canary-like ClientHello (`CHROME` plus `server_padding`)
     SAFARI,          ///< Safari-like ClientHello
     FIREFOX,         ///< Firefox-like ClientHello
     OKHTTP,          ///< OkHttp (Android) client

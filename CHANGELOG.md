@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `TlsClientProfile::CHROME` now tracks the current Chrome stable ClientHello (captured November 2026; JA4 `t13d1517h2_8daaf6152771_cb7bf5808d99`): it sends the `trust_anchors` extension (`0xca34`) with Chrome's list of 28 trust anchor IDs, and a GREASE value at the head of `signature_algorithms`.
+- `TlsClientProfile::CHROME_CANARY` also sends `trust_anchors`; it stays Chrome stable plus `server_padding`.
 - `libevent`: on Apple platforms, use `kevent64()` with `KEVENT_FLAG_IMMEDIATE` so zero-timeout polls return immediately instead of sleeping ~10 us (backport of [libevent#1931](https://github.com/libevent/libevent/pull/1931)).
 
 ### Deprecated

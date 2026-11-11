@@ -22,8 +22,8 @@ namespace ag::tls {
 
 namespace {
 
-// Chrome and Chrome Canary share every ClientHello trait except the ones Canary added; the
-// differences are called out at each use site.
+// Chrome and Chrome Canary share every ClientHello trait except `server_padding`, which only
+// Canary sends; the differences are called out at each use site.
 bool is_chrome_profile(TlsClientProfile p) {
     return p == TlsClientProfile::CHROME || p == TlsClientProfile::CHROME_CANARY;
 }
@@ -136,8 +136,8 @@ std::pair<const uint16_t *, size_t> groups_for(TlsClientProfile profile) {
 
 // Per-profile signature algorithms. Order is significant for JA4 (kept verbatim).
 std::pair<const uint16_t *, size_t> sigalgs_for(TlsClientProfile profile) {
-    // Chrome 150 prepended the ML-DSA codepoints; Chrome 152 left the list alone, so both Chrome
-    // profiles share it.
+    // Chrome 150 prepended the ML-DSA codepoints; later versions left the list alone, so both
+    // Chrome profiles share it. Both also prepend a GREASE value (see make_ssl).
     static constexpr uint16_t CHROME[] = {0x0904, 0x0905, 0x0906, // ML-DSA (mldsa44, mldsa65, mldsa87)
             SSL_SIGN_ECDSA_SECP256R1_SHA256, SSL_SIGN_RSA_PSS_RSAE_SHA256, SSL_SIGN_RSA_PKCS1_SHA256,
             SSL_SIGN_ECDSA_SECP384R1_SHA384, SSL_SIGN_RSA_PSS_RSAE_SHA384, SSL_SIGN_RSA_PKCS1_SHA384,
@@ -263,6 +263,7 @@ std::pair<const uint16_t *, size_t> extension_order_for(TlsClientProfile profile
     case TlsClientProfile::OPENSSL_DEFAULT:
         return {OPENSSL, std::size(OPENSSL)};
     case TlsClientProfile::CHROME:
+    case TlsClientProfile::CHROME_CANARY:
     case TlsClientProfile::DEFAULT:
         break;
     }
@@ -285,6 +286,44 @@ constexpr uint16_t OPENSSL_SIGALGS[] = {
         0x0401, 0x0501, 0x0601, // rsa_pkcs1_sha256/384/512
         0x0303, 0x0301, 0x0302, // ecdsa_sha224, rsa_pkcs1_sha224, dsa_sha224
         0x0402, 0x0502, 0x0602, // dsa_sha256/384/512
+};
+
+// Trust anchor IDs (draft-ietf-tls-trust-anchor-ids) that Chrome requests in the `trust_anchors`
+// ClientHello extension, in wire format (each ID 8-bit-length-prefixed) and in Chrome's order.
+// Captured from a Chrome stable ClientHello in November 2026. Chrome sends the same list to
+// every host, not only to hosts with a DNS hint. Each ID is a relative OID; it is shown in the
+// comment. Update the list when a new Chrome capture shows a different one.
+constexpr uint8_t CHROME_TRUST_ANCHOR_IDS[] = {
+        // clang-format off
+        0x05, 0x82, 0xdf, 0x13, 0x02, 0x01,                   // 44947.2.1
+        0x05, 0x82, 0xdf, 0x13, 0x02, 0x06,                   // 44947.2.6
+        0x05, 0x82, 0xdf, 0x13, 0x02, 0x0d,                   // 44947.2.13
+        0x05, 0x82, 0xdf, 0x13, 0x02, 0x0e,                   // 44947.2.14
+        0x05, 0x82, 0xdf, 0x13, 0x02, 0x0f,                   // 44947.2.15
+        0x05, 0x82, 0xdf, 0x13, 0x02, 0x12,                   // 44947.2.18
+        0x05, 0x82, 0xdf, 0x13, 0x02, 0x13,                   // 44947.2.19
+        0x05, 0x82, 0xdf, 0x13, 0x02, 0x14,                   // 44947.2.20
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x07, // 52580.200109.1.7
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x08, // 52580.200109.1.8
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x09, // 52580.200109.1.9
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x0a, // 52580.200109.1.10
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x0b, // 52580.200109.1.11
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x0c, // 52580.200109.1.12
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x0d, // 52580.200109.1.13
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x12, // 52580.200109.1.18
+        0x08, 0x83, 0x9a, 0x64, 0x8c, 0x9b, 0x2d, 0x01, 0x13, // 52580.200109.1.19
+        0x04, 0xd6, 0x79, 0x09, 0x01,                         // 11129.9.1
+        0x04, 0xd6, 0x79, 0x09, 0x04,                         // 11129.9.4
+        0x04, 0xd6, 0x79, 0x09, 0x05,                         // 11129.9.5
+        0x04, 0xd6, 0x79, 0x09, 0x06,                         // 11129.9.6
+        0x04, 0xd6, 0x79, 0x09, 0x07,                         // 11129.9.7
+        0x04, 0xd6, 0x79, 0x09, 0x08,                         // 11129.9.8
+        0x04, 0xd6, 0x79, 0x09, 0x0a,                         // 11129.9.10
+        0x04, 0xd6, 0x79, 0x09, 0x0b,                         // 11129.9.11
+        0x04, 0xd6, 0x79, 0x09, 0x0c,                         // 11129.9.12
+        0x04, 0xd6, 0x79, 0x09, 0x0d,                         // 11129.9.13
+        0x04, 0xd6, 0x79, 0x09, 0x0f,                         // 11129.9.15
+        // clang-format on
 };
 
 int DecompressBrotliCert(
@@ -432,17 +471,28 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
             SSL_set_alps_use_new_codepoint(ssl.get(), 1);
         }
 
-        if (profile == TlsClientProfile::CHROME_CANARY) {
-            // `server_padding` (0x12e0 = 4832) asks the server to pad EncryptedExtensions by the
-            // requested number of bytes; Chrome requests 1000.
-            SSL_set_server_padding_request(ssl.get(), 1000);
+        if (is_chrome_profile(profile)) {
             // A GREASE value at the head of signature_algorithms. This affects neither JA4 (which
             // strips GREASE before hashing) nor JA3 (which does not cover signature algorithms at
             // all) — only the raw bytes. It is still worth sending: implementations that hash
             // GREASE instead of stripping it (tshark, for example) derive a different JA4_c from
-            // every Chrome 152 handshake, so a client omitting it would stand out by hashing to
+            // every Chrome handshake, so a client omitting it would stand out by hashing to
             // one stable value under those tools.
             SSL_set_grease_sigalgs_enabled(ssl.get(), 1);
+            // `trust_anchors` (0xca34) with Chrome's fixed list of trust anchor IDs. It is part of
+            // the JA4_c extension hash. Advertise-only: `make_ssl` does not implement the retry
+            // flow of the draft, and certificate verification is not affected.
+            if (1
+                    != SSL_set1_requested_trust_anchors(
+                            ssl.get(), CHROME_TRUST_ANCHOR_IDS, std::size(CHROME_TRUST_ANCHOR_IDS))) {
+                return "Failed to set trust anchors";
+            }
+        }
+
+        if (profile == TlsClientProfile::CHROME_CANARY) {
+            // `server_padding` (0x12e0 = 4832) asks the server to pad EncryptedExtensions by the
+            // requested number of bytes; Chrome requests 1000. Chrome stable does not send it.
+            SSL_set_server_padding_request(ssl.get(), 1000);
         }
 
         // Safari does not advertise the session_ticket extension.
