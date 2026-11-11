@@ -117,7 +117,7 @@ TEST(MakeSsl, Ja4Profiles) {
             // watch for is ML-DSA: boring-2026-05-08 can verify it but does not advertise it here
             // (see the note in make_ssl.cpp), so when a later BoringSSL adds the codepoints to its
             // default verify list, this fingerprint gains them without any change on our side.
-            {ag::tls::TlsClientProfile::DEFAULT, "Default", ""},
+            {ag::tls::TlsClientProfile::BORINGSSL_DEFAULT, "BoringSSLDefault", ""},
     };
     for (const auto &c : cases) {
         std::string ja4 = client_hello_ja4(c.profile);
@@ -186,7 +186,7 @@ TEST(MakeSsl, ChromeExtensions) {
 
     for (auto profile :
             {ag::tls::TlsClientProfile::SAFARI, ag::tls::TlsClientProfile::FIREFOX, ag::tls::TlsClientProfile::OKHTTP,
-                    ag::tls::TlsClientProfile::OPENSSL_DEFAULT, ag::tls::TlsClientProfile::DEFAULT}) {
+                    ag::tls::TlsClientProfile::OPENSSL_DEFAULT, ag::tls::TlsClientProfile::BORINGSSL_DEFAULT}) {
         EXPECT_FALSE(client_hello_extension(profile, TLSEXT_TYPE_trust_anchors).has_value());
         EXPECT_FALSE(client_hello_extension(profile, TLSEXT_TYPE_server_padding).has_value());
     }

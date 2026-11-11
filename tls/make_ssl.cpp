@@ -94,7 +94,7 @@ const char *cipher_list_for(TlsClientProfile profile) {
         return OPENSSL;
     case TlsClientProfile::CHROME:
     case TlsClientProfile::CHROME_CANARY:
-    case TlsClientProfile::DEFAULT:
+    case TlsClientProfile::BORINGSSL_DEFAULT:
         break;
     }
     return CHROME;
@@ -128,7 +128,7 @@ std::pair<const uint16_t *, size_t> groups_for(TlsClientProfile profile) {
         return {OPENSSL, std::size(OPENSSL)};
     case TlsClientProfile::CHROME:
     case TlsClientProfile::CHROME_CANARY:
-    case TlsClientProfile::DEFAULT:
+    case TlsClientProfile::BORINGSSL_DEFAULT:
         break;
     }
     return {CHROME, std::size(CHROME)};
@@ -164,7 +164,7 @@ std::pair<const uint16_t *, size_t> sigalgs_for(TlsClientProfile profile) {
         return {OKHTTP, std::size(OKHTTP)};
     case TlsClientProfile::CHROME:
     case TlsClientProfile::CHROME_CANARY:
-    case TlsClientProfile::DEFAULT:
+    case TlsClientProfile::BORINGSSL_DEFAULT:
     // OPENSSL uses OPENSSL_SIGALGS via SSL_set_raw_verify_algorithm_prefs, not
     // this table; handled here only for switch exhaustiveness.
     case TlsClientProfile::OPENSSL_DEFAULT:
@@ -264,7 +264,7 @@ std::pair<const uint16_t *, size_t> extension_order_for(TlsClientProfile profile
         return {OPENSSL, std::size(OPENSSL)};
     case TlsClientProfile::CHROME:
     case TlsClientProfile::CHROME_CANARY:
-    case TlsClientProfile::DEFAULT:
+    case TlsClientProfile::BORINGSSL_DEFAULT:
         break;
     }
     return {nullptr, 0};
@@ -446,17 +446,17 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
 
 // Mimic a browser's ClientHello if we are using BoringSSL.
 //
-// DEFAULT is deliberately left alone: it inherits BoringSSL's own ClientHello, so its fingerprint
-// tracks the library version rather than anything we picked. Note that as of boring-2026-05-08 that
-// means DEFAULT does *not* advertise ML-DSA, even though the library can verify it: upstream added
-// the ML-DSA codepoints to `kSignSignatureAlgorithms` (what it will sign with) but not to
-// `kVerifySignatureAlgorithms` (what a client advertises for the server's certificate). Chrome
-// overrides the same list explicitly, which is why the CHROME profile below carries them and this
-// one does not. When a future BoringSSL bump adds ML-DSA to the verify list, DEFAULT picks it up on
-// its own and the expected JA4 in `MakeSsl.Ja4Profiles` needs re-recording — that change is
-// expected, not a regression.
+// BORINGSSL_DEFAULT is deliberately left alone: it inherits BoringSSL's own ClientHello, so its
+// fingerprint tracks the library version rather than anything we picked. Note that as of
+// boring-2026-05-08 that means BORINGSSL_DEFAULT does *not* advertise ML-DSA, even though the
+// library can verify it: upstream added the ML-DSA codepoints to `kSignSignatureAlgorithms` (what
+// it will sign with) but not to `kVerifySignatureAlgorithms` (what a client advertises for the
+// server's certificate). Chrome overrides the same list explicitly, which is why the CHROME profile
+// below carries them and this one does not. When a future BoringSSL bump adds ML-DSA to the verify
+// list, BORINGSSL_DEFAULT picks it up on its own and the expected JA4 in `MakeSsl.Ja4Profiles`
+// needs re-recording — that change is expected, not a regression.
 #ifdef OPENSSL_IS_BORINGSSL
-    if (profile != TlsClientProfile::DEFAULT) {
+    if (profile != TlsClientProfile::BORINGSSL_DEFAULT) {
         // ECH GREASE: sent by Chrome and Firefox.
         if (is_chrome_profile(profile) || profile == TlsClientProfile::FIREFOX) {
             SSL_set_enable_ech_grease(ssl.get(), 1);
