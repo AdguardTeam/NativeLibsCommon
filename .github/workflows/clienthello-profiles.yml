@@ -1,0 +1,112 @@
+name: ClientHello profiles
+
+# Weekly check that the ClientHello of the installed browsers still matches the
+# `make_ssl` profiles. The test needs a macOS runner with a GUI session and the
+# browsers installed, so it is not part of `run-tests.yml`.
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  clienthello:
+    name: ClientHello profiles (macOS)
+    if: github.repository == 'AdGuardSoftwareLimited/native-libs-common'
+    # The test starts a browser per profile; a cold start takes a few seconds.
+    timeout-minutes: 60
+    runs-on:
+      - ephemeral
+      - ephemeral-mac
+      # The `@edge` channel is pinned to a digest by the runner lease.
+      - registry.int.agrd.dev/macos/tahoe-github-xcode27-26.11:@edge
+      - ephemeral-limit-memory-6144
+      - ephemeral-limit-cpu-4
+      - ephemeral-job-key-${{ github.run_id }}-${{ github.job }}-${{ strategy.job-index || 0 }}
+    env:
+      # Every browser must be present on the runner image. A missing browser
+      # fails the run instead of being skipped.
+      AG_CLIENTHELLO_REQUIRED_BROWSERS: chrome,chrome-canary,firefox,safari
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Conan
+        run: |
+          set -eux
+
+          rm -rf venv
+          python3 -m venv venv
+          source ./venv/bin/activate
+
+          python3 -m pip install conan
+          conan remote add --index 0 art ${{ vars.CONAN_REPO_URL }} || true
+
+      - name: Install browsers
+        run: |
+          set -eux
+
+          # The macOS runner image ships Safari only, so install the other browsers.
+          # Skip Homebrew when the app is already present, so a reused runner spends
+          # no time on it.
+          eval "$(/opt/homebrew/bin/brew shellenv)"
+          export HOMEBREW_NO_AUTO_UPDATE=1
+
+          install_cask_if_missing() {
+              if [ ! -d "/Applications/$1.app" ]; then
+                  brew install --cask "$2"
+              fi
+          }
+
+          install_cask_if_missing "Google Chrome" google-chrome
+          install_cask_if_missing "Google Chrome Canary" google-chrome@canary
+          install_cask_if_missing "Firefox" firefox
+
+      - name: Run ClientHello test
+        run: |
+          set -eux
+
+          source ./venv/bin/activate
+
+          # The target configures with -DNLC_CLIENTHELLO_TESTS=ON and writes
+          # cmake-build-clang-debug/clienthello-junit.xml.
+          make PRESET=clang-debug test-clienthello
+
+      - name: JUnit summary
+        if: always()
+        continue-on-error: true
+        uses: AdGuardSoftwareLimited/actions/actions/junit-summary@master
+        with:
+          path: 'cmake-build-clang-debug/clienthello-junit.xml'
+
+      # The artifacts needed to explain a drift: browser versions and JA4,
+      # profile JA4, raw ClientHello bytes and the parameter diff.
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: clienthello-results
+          path: |
+            cmake-build-clang-debug/clienthello-junit.xml
+            cmake-build-clang-debug/clienthello-artifacts/
+          if-no-files-found: warn
+
+  notify:
+    name: Notify on failure
+    needs: clienthello
+    if: failure()
+    runs-on: team-libs
+    steps:
+      - name: Notify Slack
+        uses: AdGuardSoftwareLimited/actions/actions/slack@master
+        with:
+          channel: '#build-corelibs'
+          color: danger
+          message: >-
+            CoreLibs ClientHello profiles check *failed*:
+            <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|see the run and artifacts>.

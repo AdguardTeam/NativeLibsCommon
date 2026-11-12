@@ -28,7 +28,8 @@ See [README.md](README.md) for build and Conan usage details, and
 | `http/` | HTTP/1, HTTP/2, HTTP/3 stack and header handling → library `ag_common_http` |
 | `tls/` | TLS certificate utilities → library `ag_common_tls` |
 | `<module>/include/common/` | Public headers, included as `common/<...>` |
-| `<module>/test/` | Unit tests for the module |
+| `<module>/test/` | Unit tests; `tls/test/` also holds the macOS-only ClientHello integration test (`NLC_CLIENTHELLO_TESTS`, not in `make test`) |
+| `<module>/test/data/` | Test data (e.g. the self-signed certificate for the ClientHello test) |
 | `<module>/test/compile_fail/` | Code that must *not* compile, checked by `add_compile_fail_test` |
 | `android/` | Android (Kotlin/Gradle) adapter and bindings |
 | `conan/recipes/` | Custom Conan recipes for AdGuard-patched dependencies |
@@ -59,6 +60,7 @@ For offline builds, or when the AdGuard Conan remote is not configured, run
 | --- | --- |
 | `make` / `make build_libs` | CMake configure (resolves Conan deps) → build all libraries |
 | `make test` | Build the `tests` target → run `ctest` |
+| `make test-clienthello` | Build and run the macOS ClientHello integration test (needs installed browsers; not part of `test`) |
 | `make export_conan` | Export custom Conan recipes (`conan/recipes`) to the local cache |
 | `make compile_commands` | Generate `compile_commands.json` for IDE / clang-tidy |
 | `make lint` | Run all linters (`lint-cpp` + `lint-md`) |
@@ -120,6 +122,8 @@ Full rules are documented in [README.md](README.md#code-style). Key points:
 - Member variables: `m_snake_case`; public struct members: `snake_case`
 - Constants, `constexpr`, enum values, defines: `UPPER_CASE`
 - Global variables: `g_snake_case`
+- File-local functions and variables use `static`, not an anonymous namespace
+  (`static` makes the internal linkage explicit)
 - Includes order (Chromium-style): external `<...>`, then public `"..."`
   (alphabetical), then current-directory `"..."` (alphabetical; not in public headers)
 - Static analysis via [.clang-tidy](.clang-tidy); all warnings are errors

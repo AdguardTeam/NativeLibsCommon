@@ -92,6 +92,16 @@ test-cpp: setup_cmake
 	cmake --build $(BUILD_DIR) --target tests -j$(NPROC)
 	ctest --test-dir $(BUILD_DIR) --output-on-failure --output-junit junit.xml
 
+.PHONY: test-clienthello
+## Build and run the ClientHello integration test (macOS only, needs installed browsers).
+## This target is not part of `test`; see tls/test/README.md.
+test-clienthello:
+	cmake --preset $(PRESET) $(OSX_ARCH_ARGS) $(CMAKE_LAUNCHER_FLAGS) $(CMAKE_ARGS) -DNLC_CLIENTHELLO_TESTS=ON
+	cmake --build $(BUILD_DIR) --target clienthello_tests -j$(NPROC)
+	AG_CLIENTHELLO_ARTIFACTS_DIR=$(BUILD_DIR)/clienthello-artifacts \
+		$(BUILD_DIR)/tls/clienthello_profiles_test \
+		--gtest_output=xml:$(BUILD_DIR)/clienthello-junit.xml
+
 .PHONY: lint
 ## Run all linters.
 lint: lint-md lint-cpp

@@ -15,6 +15,7 @@
 
 #include "common/tls/make_ssl.h"
 
+#include "client_hello.h"
 #include "ja4.h"
 
 // Build the ClientHello bytes (the first TLS record) for the given profile.
@@ -57,39 +58,23 @@ static std::string client_hello_ja4(ag::tls::TlsClientProfile profile) {
     return ag::ja4::compute({hello.data(), hello.size()}, false);
 }
 
-static bool is_grease_value(uint16_t v) {
-    return (v & 0x0f0f) == 0x0a0a && ((v >> 8) & 0xff) == (v & 0xff);
-}
-
 // Returns the ClientHello extension types for |profile| in wire order, with
 // GREASE (RFC 8701) and padding stripped. Unlike JA4 — which sorts the extension
 // list before hashing — this preserves order, so it guards the fixed extension
 // ordering that the Safari and Firefox profiles must reproduce.
 static std::vector<uint16_t> client_hello_extensions(
         ag::tls::TlsClientProfile profile, const char *sni = "example.org") {
-    std::vector<uint16_t> out;
     std::vector<uint8_t> h = build_client_hello(profile, sni);
-    if (h.size() < 44) {
-        return out;
+    std::optional<ag::tls::test::ClientHello> hello = ag::tls::test::parse_client_hello({h.data(), h.size()}, false);
+    if (!hello.has_value()) {
+        return {};
     }
-    auto u16 = [&](size_t o) { return (uint16_t) ((h[o] << 8) | h[o + 1]); };
-    size_t p = 5 + 4; // TLS record header + handshake header
-    p += 2 + 32;      // client_version + random
-    p += 1 + h[p];    // session_id
-    p += 2 + u16(p);  // cipher_suites
-    p += 1 + h[p];    // compression_methods
-    if (p + 2 > h.size()) {
-        return out;
-    }
-    size_t ext_end = p + 2 + u16(p);
-    p += 2;
-    while (p + 4 <= ext_end && p + 4 <= h.size()) {
-        uint16_t type = u16(p);
-        uint16_t len = u16(p + 2);
-        if (!is_grease_value(type) && type != TLSEXT_TYPE_padding) {
+
+    std::vector<uint16_t> out;
+    for (uint16_t type : hello->extensions) {
+        if (!ag::tls::test::is_grease_value(type) && type != TLSEXT_TYPE_padding) {
             out.push_back(type);
         }
-        p += 4 + (size_t) len;
     }
     return out;
 }
@@ -130,33 +115,67 @@ TEST(MakeSsl, Ja4Profiles) {
     }
 }
 
+// The profile-side lists that the weekly browser test compares. Pin them here so a change in
+// make_ssl.cpp fails `make test`, not only the weekly macOS run.
+TEST(MakeSsl, ParsedClientHelloFields) {
+    struct Case {
+        ag::tls::TlsClientProfile profile;
+        const char *name;
+        std::vector<uint16_t> groups;
+        std::vector<uint16_t> key_share_groups;
+        std::vector<uint16_t> supported_versions;
+    };
+    const std::vector<uint16_t> key_shares = {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519};
+    const std::vector<uint16_t> versions = {0x0304, 0x0303};
+    const Case cases[] = {
+            {ag::tls::TlsClientProfile::CHROME, "CHROME",
+                    {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1}, key_shares,
+                    versions},
+            {ag::tls::TlsClientProfile::CHROME_CANARY, "CHROME_CANARY",
+                    {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1}, key_shares,
+                    versions},
+            {ag::tls::TlsClientProfile::FIREFOX, "FIREFOX",
+                    {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1,
+                            SSL_GROUP_SECP521R1, SSL_GROUP_FFDHE2048, SSL_GROUP_FFDHE3072},
+                    key_shares, versions},
+            {ag::tls::TlsClientProfile::SAFARI, "SAFARI",
+                    {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1,
+                            SSL_GROUP_SECP521R1},
+                    key_shares, versions},
+    };
+    for (const auto &c : cases) {
+        std::vector<uint8_t> h = build_client_hello(c.profile);
+        std::optional<ag::tls::test::ClientHello> hello =
+                ag::tls::test::parse_client_hello({h.data(), h.size()}, false);
+        ASSERT_TRUE(hello.has_value()) << c.name;
+        EXPECT_EQ(c.groups, ag::tls::test::without_grease(hello->supported_groups)) << c.name;
+        EXPECT_EQ(c.key_share_groups, ag::tls::test::without_grease(hello->key_share_groups)) << c.name;
+        EXPECT_EQ(c.supported_versions, ag::tls::test::without_grease(hello->supported_versions)) << c.name;
+    }
+}
+
+// A truncated handshake message must be rejected. The record has a 4-byte handshake header
+// that declares a 38-byte body, but the record carries only 35 body bytes.
+TEST(MakeSsl, RejectsTruncatedClientHello) {
+    // TLS record: handshake, TLS 1.2, 39 bytes; ClientHello declares 38 body bytes.
+    std::vector<uint8_t> record = {0x16, 0x03, 0x03, 0x00, 0x27, 0x01, 0x00, 0x00, 0x26};
+    record.resize(record.size() + 35, 0);
+    EXPECT_FALSE(ag::tls::test::parse_client_hello({record.data(), record.size()}, false).has_value());
+    EXPECT_TRUE(ag::ja4::compute({record.data(), record.size()}, false).empty());
+}
+
 // Returns the body of the first ClientHello extension of |type| for |profile|, or nullopt if the
 // extension is not sent.
 static std::optional<std::vector<uint8_t>> client_hello_extension(ag::tls::TlsClientProfile profile, uint16_t type) {
     std::vector<uint8_t> h = build_client_hello(profile);
-    if (h.size() < 44) {
+    std::optional<ag::tls::test::ClientHello> hello = ag::tls::test::parse_client_hello({h.data(), h.size()}, false);
+    if (!hello.has_value()) {
         return std::nullopt;
     }
-    auto u16 = [&](size_t o) {
-        return (uint16_t) ((h[o] << 8) | h[o + 1]);
-    };
-    size_t p = 5 + 4; // TLS record header + handshake header
-    p += 2 + 32;      // client_version + random
-    p += 1 + h[p];    // session_id
-    p += 2 + u16(p);  // cipher_suites
-    p += 1 + h[p];    // compression_methods
-    if (p + 2 > h.size()) {
-        return std::nullopt;
-    }
-    size_t ext_end = std::min(p + 2 + u16(p), h.size());
-    p += 2;
-    while (p + 4 <= ext_end) {
-        uint16_t len = u16(p + 2);
-        if (u16(p) == type && p + 4 + len <= ext_end) {
-            auto begin = h.begin() + (std::ptrdiff_t) (p + 4);
-            return std::vector<uint8_t>(begin, begin + len);
+    for (const ag::tls::test::Extension &extension : hello->extension_details) {
+        if (extension.type == type) {
+            return extension.data;
         }
-        p += 4 + (size_t) len;
     }
     return std::nullopt;
 }
@@ -191,7 +210,7 @@ TEST(MakeSsl, ChromeExtensions) {
         auto sigalgs = client_hello_extension(profile, TLSEXT_TYPE_signature_algorithms);
         ASSERT_TRUE(sigalgs.has_value());
         ASSERT_GE(sigalgs->size(), 4);
-        EXPECT_TRUE(is_grease_value((uint16_t) (((*sigalgs)[2] << 8) | (*sigalgs)[3])));
+        EXPECT_TRUE(ag::tls::test::is_grease_value((uint16_t) (((*sigalgs)[2] << 8) | (*sigalgs)[3])));
     }
 
     for (auto profile :

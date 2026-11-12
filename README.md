@@ -108,6 +108,13 @@ ctest --test-dir build --verbose
 ./build/common/network_monitor_test
 ```
 
+### ClientHello profile test (macOS)
+
+`clienthello_profiles_test` compares the ClientHello of installed browsers
+with the `make_ssl` profiles. It needs macOS, browsers and a GUI session, so
+it is not part of `make test`. Run it with `make PRESET=clang-debug
+test-clienthello`. See [tls/test/README.md](tls/test/README.md).
+
 ## How to use conan
 
 Conan is a C++ package manager. It is similar to maven, but stores recipes and binaries separately.
