@@ -55,15 +55,13 @@ const char *cipher_list_for(TlsClientProfile profile) {
             "ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA:ECDHE-RSA-AES128-SHA:"
             "AES256-GCM-SHA384:AES128-GCM-SHA256:AES256-SHA:AES128-SHA:"
             "ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:DES-CBC3-SHA";
-    // NSS order, verbatim from wreq-util's Firefox CIPHER_LIST_1 (what its Firefox 135+ profiles,
-    // including 151, emit). Note the two quirks: the ECDSA/RSA pairs interleave per algorithm rather
-    // than listing all ECDSA first, and the ECDHE CBC block runs ECDSA AES256-then-AES128 but RSA
-    // AES128-then-AES256.
+    // NSS order, captured from Firefox 159.0.1. Note the quirk: the ECDSA/RSA pairs interleave per
+    // algorithm rather than listing all ECDSA first. Firefox 159 no longer offers the
+    // ECDHE-ECDSA-AES128/256-SHA suites.
     static const char *const FIREFOX =
             "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"
             "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:"
             "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"
-            "ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:"
             "ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:"
             "AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA:AES256-SHA";
     // OkHttp / Conscrypt default suite set.
@@ -109,7 +107,7 @@ std::pair<const uint16_t *, size_t> groups_for(TlsClientProfile profile) {
             SSL_GROUP_SECP521R1};
     static constexpr uint16_t FIREFOX[] = {
             SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1,
-            SSL_GROUP_SECP521R1, SSL_GROUP_FFDHE2048, SSL_GROUP_FFDHE3072};
+            SSL_GROUP_SECP521R1};
     static constexpr uint16_t OKHTTP[] = {SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1};
     // Approximates OpenSSL's supported_groups. OpenSSL also advertises x448,
     // which BoringSSL does not implement; supported_groups is not part of JA4,
@@ -516,12 +514,23 @@ std::variant<SslPtr, std::string> make_ssl(const SslInitParameters &params) {
             }
         }
 
-        // Firefox-specific extensions: record_size_limit (RFC 8449) and delegated_credentials (RFC 9345).
+        // Firefox-specific traits: record_size_limit (RFC 8449), delegated_credentials (RFC 9345)
+        // and an explicit key_share list. FIREFOX_KEY_SHARES must stay a subsequence of
+        // groups_for(FIREFOX), in the same order, because BoringSSL only builds shares for
+        // advertised groups.
         if (profile == TlsClientProfile::FIREFOX) {
             SSL_set_record_size_limit(ssl.get(), 0x4001);
             static constexpr uint16_t FIREFOX_DC_SIGALGS[] = {SSL_SIGN_ECDSA_SECP256R1_SHA256,
                     SSL_SIGN_ECDSA_SECP384R1_SHA384, SSL_SIGN_ECDSA_SECP521R1_SHA512, SSL_SIGN_ECDSA_SHA1};
             SSL_set_delegated_credentials(ssl.get(), FIREFOX_DC_SIGALGS, std::size(FIREFOX_DC_SIGALGS));
+
+            // Firefox sends three key shares: one post-quantum, X25519 and P-256. BoringSSL sends
+            // only one post-quantum and one classical share by default.
+            static constexpr uint16_t FIREFOX_KEY_SHARES[] = {
+                    SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1};
+            if (!SSL_set1_client_key_shares(ssl.get(), FIREFOX_KEY_SHARES, std::size(FIREFOX_KEY_SHARES))) {
+                return "Failed to set client key shares";
+            }
         }
 
         if (!quic) {

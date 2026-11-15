@@ -94,7 +94,7 @@ TEST(MakeSsl, Ja4Profiles) {
             // Reference captured from Chrome Canary (November 2026): the same as Chrome stable.
             {ag::tls::TlsClientProfile::CHROME_CANARY, "ChromeCanary", "t13d1517h2_8daaf6152771_cb7bf5808d99"},
             {ag::tls::TlsClientProfile::SAFARI, "Safari26", "t13d2013h2_a09f3c656075_7f0f34a4126d"},
-            {ag::tls::TlsClientProfile::FIREFOX, "Firefox151", "t13d1717h2_5b57614c22b0_3cbfd9057e0d"},
+            {ag::tls::TlsClientProfile::FIREFOX, "Firefox159", "t13d1517h2_8daaf6152771_3cbfd9057e0d"},
             {ag::tls::TlsClientProfile::OKHTTP, "OkHttp5", "t13d1613h2_46e7e9700bed_eca864cca44a"},
             // Reference captured from `openssl s_client -servername ... ` (OpenSSL 3.6.2).
             {ag::tls::TlsClientProfile::OPENSSL_DEFAULT, "OpenSSL3.6", "t13d301100_1d37bd780c83_8e6e362c5eac"},
@@ -126,6 +126,7 @@ TEST(MakeSsl, ParsedClientHelloFields) {
         std::vector<uint16_t> supported_versions;
     };
     const std::vector<uint16_t> key_shares = {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519};
+    const std::vector<uint16_t> firefox_key_shares = {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1};
     const std::vector<uint16_t> versions = {0x0304, 0x0303};
     const Case cases[] = {
             {ag::tls::TlsClientProfile::CHROME, "CHROME",
@@ -136,8 +137,8 @@ TEST(MakeSsl, ParsedClientHelloFields) {
                     versions},
             {ag::tls::TlsClientProfile::FIREFOX, "FIREFOX",
                     {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1,
-                            SSL_GROUP_SECP521R1, SSL_GROUP_FFDHE2048, SSL_GROUP_FFDHE3072},
-                    key_shares, versions},
+                            SSL_GROUP_SECP521R1},
+                    firefox_key_shares, versions},
             {ag::tls::TlsClientProfile::SAFARI, "SAFARI",
                     {SSL_GROUP_X25519_MLKEM768, SSL_GROUP_X25519, SSL_GROUP_SECP256R1, SSL_GROUP_SECP384R1,
                             SSL_GROUP_SECP521R1},

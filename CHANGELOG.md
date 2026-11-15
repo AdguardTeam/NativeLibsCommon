@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `TlsClientProfile::FIREFOX` now tracks the current Firefox stable ClientHello (captured from Firefox 159.0.1 in November 2026; JA4 `t13d1517h2_8daaf6152771_3cbfd9057e0d`): it no longer offers the `ECDHE-ECDSA-AES128/256-SHA` cipher suites or the FFDHE groups, and it sends three key shares, including `secp256r1`.
+
 ### Deprecated
 
 ### Removed

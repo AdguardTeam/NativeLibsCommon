@@ -63,17 +63,19 @@ For each browser the test does the following:
 6. Compares the two JA4 fingerprints.
 7. Asserts the supported groups, key share groups and supported versions
    separately, because JA4 ignores the group lists and only takes the
-   highest supported version into account.
+   highest supported version into account. For Firefox it also asserts
+   the extension wire order, because JA4 sorts the extension types before
+   hashing.
 
 The test fails when JA4 differs, or when the supported groups, key share
-groups or supported versions differ, including their wire order. JA4
-hashes the cipher suite set, the extension set and the signature
-algorithms, and it takes the first and last character of the first ALPN
-protocol. A difference in the cipher suite order, the extension order or
-in the ALPN list beyond the first protocol is written to the artifacts but
-does not fail the test. Chrome permutes the extension order on every
-handshake, so for Chrome profiles the test compares the extension set, not
-the order.
+groups or supported versions differ, including their wire order. It also
+fails when the Firefox extension order differs. JA4 hashes the cipher
+suite set, the extension set and the signature algorithms, and it takes
+the first and last character of the first ALPN protocol. A difference in
+the cipher suite order or in the ALPN list beyond the first protocol is
+written to the artifacts but does not fail the test. Chrome permutes the
+extension order on every handshake, so for Chrome profiles the test
+compares the extension set, not the order.
 
 ## Environment variables
 
@@ -126,7 +128,8 @@ local experiment. Then do the following:
      `SSL_set_max_proto_version()`);
    - the extension order in `extension_order_for()`;
    - the profile-specific blocks in `make_ssl()`.
-   The key-share groups follow the `groups_for()` order.
+   The key-share groups follow the `groups_for()` order, except where a profile
+   pins an explicit list (`FIREFOX` sets `FIREFOX_KEY_SHARES` in `make_ssl()`).
 3. Run `make PRESET=clang-debug test-clienthello` again until the JA4
    fingerprints and the supported groups, key share groups and supported
    versions match.

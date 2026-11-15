@@ -1075,7 +1075,8 @@ static void check_browser(const BrowserSpec &browser) {
 
     // JA4 is the compatibility criterion for the fields it hashes: the cipher suite set, the
     // extension set and the signature algorithms. It does not hash the group lists or the
-    // supported versions, so assert those separately.
+    // supported versions, so assert those separately. It also sorts the extension types, so
+    // assert the Firefox wire order explicitly.
     //
     // An empty fingerprint means that `ag::ja4::compute` rejected the bytes. Two empty strings
     // compare equal, so assert them first or the test passes without checking anything.
@@ -1085,9 +1086,13 @@ static void check_browser(const BrowserSpec &browser) {
     EXPECT_EQ(browser_hello.groups, profile_hello.groups) << diff;
     EXPECT_EQ(browser_hello.key_share_groups, profile_hello.key_share_groups) << diff;
     EXPECT_EQ(browser_hello.supported_versions, profile_hello.supported_versions) << diff;
+    if (browser.profile == TlsClientProfile::FIREFOX) {
+        EXPECT_EQ(browser_hello.extensions, profile_hello.extensions) << diff;
+    }
 
-    // A raw-order difference (for example, Safari puts TLS_AES_256_GCM_SHA384 first) is reported
-    // in the diff artifact but does not fail the test.
+    // A raw cipher-order difference (for example, Safari puts TLS_AES_256_GCM_SHA384 first) is
+    // reported in the diff artifact but does not fail the test. The Firefox extension order is
+    // asserted above.
     if (browser_ja4 != profile_ja4) {
         FAIL() << browser.display_name << " does not match the make_ssl profile\n"
                << "    browser JA4: " << browser_ja4 << "\n"
