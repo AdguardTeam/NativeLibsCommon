@@ -10,8 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- `TlsClientProfile::FIREFOX` now tracks the current Firefox stable ClientHello (captured from Firefox 159.0.1 in November 2026; JA4 `t13d1517h2_8daaf6152771_3cbfd9057e0d`): it no longer offers the `ECDHE-ECDSA-AES128/256-SHA` cipher suites or the FFDHE groups, and it sends three key shares, including `secp256r1`.
-
 ### Deprecated
 
 ### Removed
@@ -19,6 +17,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 ### Security
+
+## [8.2.1] - 2026-11-18
+
+### Changed
+
+- `TlsClientProfile::FIREFOX` now tracks the current Firefox stable ClientHello (captured from Firefox 159.0.1 in November 2026; JA4 `t13d1517h2_8daaf6152771_3cbfd9057e0d`): it no longer offers the `ECDHE-ECDSA-AES128/256-SHA` cipher suites or the FFDHE groups, and it sends three key shares, including `secp256r1`.
 
 ## [8.2.0] - 2026-11-11
 
@@ -1323,7 +1327,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.2.0...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.2.1...HEAD
+[8.2.1]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.2.0...v8.2.1
 [8.2.0]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.55...v8.2.0
 [8.1.55]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.54...v8.1.55
 [8.1.54]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.53...v8.1.54
