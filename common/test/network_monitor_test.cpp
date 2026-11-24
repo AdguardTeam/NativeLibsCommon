@@ -27,6 +27,12 @@ public:
     void simulate_status_change(const std::string &new_if_name, bool is_satisfied) {
         handle_network_change(new_if_name, is_satisfied);
     }
+
+#ifdef __linux__
+    void simulate_disconnect_timeout() {
+        handle_disconnect_timeout();
+    }
+#endif // __linux__
 };
 
 class NetworkMonitorTest : public testing::Test {
@@ -34,6 +40,8 @@ protected:
     std::unique_ptr<SimulateStatusNetworkMonitor> m_monitor;
     std::string m_bound_if;
     bool m_is_connected = false;
+    int m_connected_calls = 0;
+    int m_disconnected_calls = 0;
 
 #ifdef __linux__
     UniquePtr<event_base, &event_base_free> m_ev_base;
@@ -44,6 +52,11 @@ protected:
                 std::make_unique<SimulateStatusNetworkMonitor>([this](const std::string &if_name, bool is_connected) {
                     m_is_connected = is_connected;
                     m_bound_if = if_name;
+                    if (is_connected) {
+                        ++m_connected_calls;
+                    } else {
+                        ++m_disconnected_calls;
+                    }
                 });
 
 #ifdef __linux__
@@ -54,6 +67,8 @@ protected:
     void TearDown() override {
         m_bound_if.clear();
         m_is_connected = false;
+        m_connected_calls = 0;
+        m_disconnected_calls = 0;
 #ifdef __linux__
         if (m_ev_base) {
             m_ev_base.reset();
@@ -107,6 +122,9 @@ TEST_F(NetworkMonitorTest, NetworkStatusChange) {
     ASSERT_EQ(m_bound_if, if_name_test_1);
 
     m_monitor->simulate_status_change(if_name_test_2, false);
+#ifdef __linux__
+    m_monitor->simulate_disconnect_timeout();
+#endif // __linux__
     ASSERT_FALSE(m_is_connected);
     ASSERT_TRUE(m_bound_if.empty());
 
@@ -116,6 +134,122 @@ TEST_F(NetworkMonitorTest, NetworkStatusChange) {
 
     m_monitor->stop();
 }
+
+#ifdef __linux__
+// AG-61728: a same-address DHCP renewal can remove and restore the default
+// route within a short window. The monitor must not report that transient gap
+// as a network change, because the core tears down the tunnel on any change.
+TEST_F(NetworkMonitorTest, TransientDisconnectIsIgnored) {
+    const std::string if_name_test = "eth_tmp_1";
+
+    start_monitor();
+
+    m_monitor->simulate_status_change(if_name_test, true);
+    ASSERT_TRUE(m_is_connected);
+    ASSERT_EQ(m_bound_if, if_name_test);
+    ASSERT_EQ(m_connected_calls, 1);
+
+    // The default route disappears for a moment.
+    m_monitor->simulate_status_change("", false);
+    EXPECT_TRUE(m_is_connected) << "A transient route gap must not report a disconnect";
+    EXPECT_EQ(m_disconnected_calls, 0);
+
+    // The same interface comes back before the debounce timeout.
+    m_monitor->simulate_status_change(if_name_test, true);
+    EXPECT_TRUE(m_is_connected);
+    EXPECT_EQ(m_bound_if, if_name_test);
+    EXPECT_EQ(m_connected_calls, 1) << "The same interface must not report a second connect";
+    EXPECT_EQ(m_disconnected_calls, 0);
+
+    m_monitor->stop();
+}
+
+// AG-61728: the first network change after startup is the common case in the
+// field report. The monitor must start with the current default interface, so
+// a transient gap on that interface is not reported as a connect.
+TEST_F(NetworkMonitorTest, TransientDisconnectAtStartupIsIgnored) {
+    start_monitor();
+
+    const std::string if_name_test = m_monitor->get_default_interface();
+    ASSERT_FALSE(if_name_test.empty());
+
+    m_monitor->simulate_status_change("", false);
+    EXPECT_EQ(m_disconnected_calls, 0);
+
+    m_monitor->simulate_status_change(if_name_test, true);
+    EXPECT_EQ(m_connected_calls, 0) << "Startup must not report the same interface as a new connect";
+    EXPECT_EQ(m_disconnected_calls, 0);
+
+    m_monitor->stop();
+}
+
+TEST_F(NetworkMonitorTest, DisconnectIsReportedAfterDebounce) {
+    const std::string if_name_test = "eth_tmp_1";
+
+    start_monitor();
+
+    m_monitor->simulate_status_change(if_name_test, true);
+    ASSERT_EQ(m_connected_calls, 1);
+
+    m_monitor->simulate_status_change("", false);
+    EXPECT_TRUE(m_is_connected) << "The disconnect must wait for the debounce";
+    EXPECT_EQ(m_disconnected_calls, 0);
+
+    m_monitor->simulate_disconnect_timeout();
+    EXPECT_FALSE(m_is_connected);
+    EXPECT_EQ(m_disconnected_calls, 1);
+
+    m_monitor->simulate_status_change(if_name_test, true);
+    EXPECT_TRUE(m_is_connected);
+    EXPECT_EQ(m_bound_if, if_name_test);
+    EXPECT_EQ(m_connected_calls, 2);
+
+    m_monitor->stop();
+}
+
+// AG-61728: the debounce must be armed on the monitor event loop. This test
+// runs the real timer instead of calling the timeout handler directly.
+TEST_F(NetworkMonitorTest, DebounceTimerReportsDisconnect) {
+    const std::string if_name_test = "eth_tmp_1";
+
+    start_monitor();
+
+    m_monitor->simulate_status_change(if_name_test, true);
+    ASSERT_EQ(m_connected_calls, 1);
+
+    m_monitor->simulate_status_change("", false);
+    ASSERT_TRUE(m_is_connected) << "The disconnect must wait for the timer";
+    ASSERT_EQ(m_disconnected_calls, 0);
+
+    // The debounce is one second. Run the loop long enough for the timer to
+    // fire, then leave the loop.
+    timeval tv{.tv_sec = 2, .tv_usec = 0};
+    event_base_loopexit(m_ev_base.get(), &tv);
+    event_base_dispatch(m_ev_base.get());
+
+    EXPECT_FALSE(m_is_connected);
+    EXPECT_EQ(m_disconnected_calls, 1);
+
+    m_monitor->stop();
+}
+
+TEST_F(NetworkMonitorTest, InterfaceChangeWithinDebounceIsReported) {
+    start_monitor();
+
+    m_monitor->simulate_status_change("eth_tmp_1", true);
+    ASSERT_EQ(m_connected_calls, 1);
+
+    m_monitor->simulate_status_change("", false);
+    m_monitor->simulate_status_change("eth_tmp_2", true);
+
+    EXPECT_TRUE(m_is_connected);
+    EXPECT_EQ(m_bound_if, "eth_tmp_2");
+    EXPECT_EQ(m_connected_calls, 2);
+    EXPECT_EQ(m_disconnected_calls, 0);
+
+    m_monitor->stop();
+}
+#endif // __linux__
 
 #ifdef __linux__
 TEST(RouteEntryTest, Sorting) {

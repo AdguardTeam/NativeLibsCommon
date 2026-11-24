@@ -32,6 +32,11 @@
 #include <unistd.h>
 
 static constexpr size_t NETLINK_BUFFER_SIZE = 8192;
+
+// A same-address DHCP renewal can briefly remove and restore the default route.
+// Report a disconnection only if the route stays missing for this long, so a
+// short gap does not tear down the VPN tunnel.
+static constexpr long DISCONNECT_DEBOUNCE_SECONDS = 1;
 #endif // __linux__
 
 namespace ag::utils {
@@ -105,6 +110,7 @@ void NetworkMonitorImpl::start(event_base *ev_base) {
     }
 
     init_routing_table();
+    m_if_name = m_routing_table.get_default_if_name();
 
     m_monitor_event.reset(event_new(
             ev_base, m_monitor_sock_fd, EV_READ | EV_PERSIST,
@@ -117,6 +123,13 @@ void NetworkMonitorImpl::start(event_base *ev_base) {
             this));
 
     event_add(m_monitor_event.get(), nullptr);
+
+    m_disconnect_event.reset(evtimer_new(
+            ev_base,
+            [](evutil_socket_t, short, void *arg) {
+                static_cast<NetworkMonitorImpl *>(arg)->handle_disconnect_timeout();
+            },
+            this));
 #endif // __linux__
 }
 
@@ -138,6 +151,11 @@ void NetworkMonitorImpl::stop() {
 #ifdef __linux__
     event_del(m_monitor_event.get());
     m_monitor_event.reset();
+    if (m_disconnect_event) {
+        event_del(m_disconnect_event.get());
+        m_disconnect_event.reset();
+    }
+    m_disconnect_pending = false;
     close_socket();
 #endif // __linux__
     m_if_name.clear();
@@ -757,6 +775,30 @@ std::string NetworkMonitorImpl::query_default_interface_from_kernel() {
 #endif // __linux__
 
 void NetworkMonitorImpl::handle_network_change(const std::string &new_if_name, bool is_satisfied) {
+#ifdef __linux__
+    if (m_disconnect_event) {
+        if (is_satisfied) {
+            if (m_disconnect_pending) {
+                m_disconnect_pending = false;
+                event_del(m_disconnect_event.get());
+            }
+        } else {
+            if (m_disconnect_pending) {
+                return;
+            }
+            m_disconnect_pending = true;
+            timeval tv{.tv_sec = DISCONNECT_DEBOUNCE_SECONDS, .tv_usec = 0};
+            if (event_add(m_disconnect_event.get(), &tv) == 0) {
+                return;
+            }
+            // The timer could not be armed. Report the disconnect now instead of
+            // staying in the connected state.
+            errlog(m_logger, "Failed to arm the disconnect debounce timer, reporting the disconnect now");
+            m_disconnect_pending = false;
+        }
+    }
+#endif // __linux__
+
     if (!is_satisfied) {
         dbglog(m_logger, "Network not connected");
         if (m_cmd_handler) {
@@ -771,6 +813,21 @@ void NetworkMonitorImpl::handle_network_change(const std::string &new_if_name, b
         m_if_name = new_if_name;
     }
 }
+
+#ifdef __linux__
+void NetworkMonitorImpl::handle_disconnect_timeout() {
+    if (!m_disconnect_pending) {
+        return;
+    }
+    m_disconnect_pending = false;
+
+    dbglog(m_logger, "Network not connected after {} s debounce", DISCONNECT_DEBOUNCE_SECONDS);
+    if (m_cmd_handler) {
+        m_cmd_handler("", false);
+    }
+    m_if_name.clear();
+}
+#endif // __linux__
 
 NetworkMonitor::NetworkMonitor(std::function<void(const std::string &, bool)> cmd_handler)
         : m_cmd_handler(std::move(cmd_handler)) {

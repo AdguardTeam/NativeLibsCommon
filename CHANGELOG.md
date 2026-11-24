@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Linux: a brief default-route disappearance during a same-address DHCP renewal no longer reports a network change, so the VPN tunnel is not torn down (AG-61728).
+
 ### Security
 
 ## [8.2.1] - 2026-11-18
