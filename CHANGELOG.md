@@ -16,9 +16,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- Linux: a brief default-route disappearance during a same-address DHCP renewal no longer reports a network change, so the VPN tunnel is not torn down (AG-61728).
-
 ### Security
+
+## [8.2.2] - 2026-11-26
+
+### Fixed
+
+- Linux: a brief default-route disappearance during a same-address DHCP renewal no longer reports a network change, so the VPN tunnel is not torn down (AG-61728).
 
 ## [8.2.1] - 2026-11-18
 
@@ -1329,7 +1333,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Introduce Error class
 
-[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.2.1...HEAD
+[Unreleased]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.2.2...HEAD
+[8.2.2]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.2.1...v8.2.2
 [8.2.1]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.2.0...v8.2.1
 [8.2.0]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.55...v8.2.0
 [8.1.55]: https://github.com/AdguardTeam/NativeLibsCommon/compare/v8.1.54...v8.1.55
