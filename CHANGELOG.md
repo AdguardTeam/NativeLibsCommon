@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Added a `version` output to the reusable `prepare-release` workflow, so callers can use the resolved release version in follow-up jobs.
+
 ### Changed
 
 ### Deprecated
